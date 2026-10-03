@@ -44,26 +44,61 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+const nameTaken = (n, except) => [...sessions].some(([t, u]) => t !== except && u.name.toLowerCase() === n.toLowerCase());
+const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0 });
+const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
+const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
+const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
+
 app.get('/api/me', (req, res) => {
   const u = sessions.get((req.headers.authorization || '').replace('Bearer ', ''));
-  u ? res.json(u) : res.sendStatus(401);
+  u ? res.json(pubUser(u)) : res.sendStatus(401);
 });
 app.post('/api/guest', (req, res) => {
-  let name = String(req.body?.name || '').replace(/[^\w]/g, '').slice(0, 16);
-  if (name.length < 2) name = 'Guest' + Math.floor(1000 + Math.random() * 9000);
+  const raw = String(req.body?.name || '').trim();
+  let name = cleanName(raw);
+  if (raw) {
+    if (name.length < 2) return res.status(400).json({ error: 'Nama minimal 2 karakter (huruf/angka)' });
+    if (nameTaken(name)) return res.status(400).json({ error: 'Nama sudah dipakai, coba yang lain' });
+  } else {
+    do { name = 'Guest' + Math.floor(1000 + Math.random() * 9000); } while (nameTaken(name));
+  }
   const token = crypto.randomBytes(16).toString('hex');
-  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)] };
+  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null };
   if (sessions.size > 5000) sessions.delete(sessions.keys().next().value);
   sessions.set(token, user);
-  res.json({ token, user });
+  res.json({ token, user: pubUser(user) });
 });
+app.get('/api/avatar/:uid', (req, res) => sendImg([...sessions.values()].find(x => x.uid === req.params.uid)?.avatar, res));
+app.post('/api/profile', (req, res) => {
+  const tok = (req.headers.authorization || '').replace('Bearer ', ''), user = sessions.get(tok);
+  if (!user) return res.sendStatus(401);
+  const b = req.body || {};
+  if (b.name !== undefined) {
+    const name = cleanName(b.name);
+    if (name.length < 2) return res.status(400).json({ error: 'Nama minimal 2 karakter (huruf/angka)' });
+    if (nameTaken(name, tok)) return res.status(400).json({ error: 'Nama sudah dipakai' });
+    user.name = name;
+    Object.values(GAMES).forEach(g => { if (g.ownerToken === tok) g.owner = name; });
+  }
+  if (b.avatar === null) { user.avatar = null; user.av = 0; }
+  else if (b.avatar !== undefined) {
+    const img = parseImg(b.avatar, 60 * 1024);
+    if (!img) return res.status(400).json({ error: 'Gambar tidak valid atau terlalu besar' });
+    if (!user.avatar && [...sessions.values()].filter(x => x.avatar).length >= 300) return res.status(400).json({ error: 'Penyimpanan foto penuh' });
+    user.avatar = img; user.av = Date.now();
+  }
+  res.json(pubUser(user));
+});
+
 const bearer = req => (req.headers.authorization || '').replace('Bearer ', '');
-const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, mine: !!tok && g.ownerToken === tok, online: rooms[id].size });
+const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, thumb: g.thumb ? g.thumbV : 0, mine: !!tok && g.ownerToken === tok, online: rooms[id].size });
 app.get('/api/games', (req, res) => res.json(Object.entries(GAMES).map(([id, g]) => pub(id, g, bearer(req)))));
 
 app.get('/api/people', (_req, res) => {
-  const list = [...sessions.values()].map(u => ({ name: u.name, color: u.color, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null }));
+  const list = [...sessions.values()].map(u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null }));
   list.sort((a, b) => !!b.game - !!a.game);
   res.json(list.slice(0, 200));
 });
@@ -87,13 +122,15 @@ app.post('/api/games', (req, res) => {
     c: HEX.test(x?.c) ? x.c : '#888888'
   }));
   if (!boxes.length) return res.status(400).json({ error: 'Tambahkan minimal 1 platform' });
+  const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
+  if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
   const f = boxes[0], id = 'u' + crypto.randomBytes(4).toString('hex');
   const tags = (Array.isArray(b.tags) ? b.tags : []).map(t => txt(t, 14)).filter(Boolean).slice(0, 3);
   GAMES[id] = {
     title, tagline: txt(b.tagline, 60) || 'Game buatan komunitas.', desc: txt(b.desc, 400) || 'Belum ada deskripsi.',
     tags: tags.length ? tags : ['Community'], sky: HEX.test(b.sky) ? b.sky : '#7ec8ff',
     art: [HEX.test(b.art?.[0]) ? b.art[0] : '#1463ff', HEX.test(b.art?.[1]) ? b.art[1] : '#0a0f1a'],
-    spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes, owner: user.name, ownerToken: tok
+    spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes, owner: user.name, ownerToken: tok, thumb, thumbV: thumb ? Date.now() : 0
   };
   rooms[id] = new Map();
   res.json({ id });
@@ -103,6 +140,15 @@ app.delete('/api/games/:id', (req, res) => {
   if (!g || !g.ownerToken || g.ownerToken !== bearer(req)) return res.sendStatus(403);
   delete GAMES[req.params.id]; // rooms[id] stays so players still inside can leave cleanly
   res.sendStatus(204);
+});
+app.get('/api/thumb/:id', (req, res) => sendImg(GAMES[req.params.id]?.thumb, res));
+app.post('/api/games/:id/thumb', (req, res) => {
+  const g = GAMES[req.params.id];
+  if (!g || !g.ownerToken || g.ownerToken !== bearer(req)) return res.sendStatus(403);
+  const thumb = parseImg(req.body?.image, 400 * 1024);
+  if (!thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
+  g.thumb = thumb; g.thumbV = Date.now();
+  res.json({ ok: true });
 });
 app.get('/', (_req, res) => res.send('Voxely game server is running'));
 
