@@ -150,6 +150,154 @@ app.post('/api/games/:id/thumb', (req, res) => {
   g.thumb = thumb; g.thumbV = Date.now();
   res.json({ ok: true });
 });
+// ---------- Reviews (need >= 5 minutes of playtime) ----------
+const MIN_REVIEW = 5;
+const plain = (v, n) => String(v || '').replace(/\r/g, '').trim().slice(0, n);
+const uidMap = () => new Map([...sessions.values()].map(u => [u.uid, u]));
+const playMins = (u, gid) => Math.floor(((u.play?.[gid] || 0) + (u.live?.id === gid ? (Date.now() - u.live.start) / 1000 : 0)) / 60);
+const reviewsOf = g => (g.reviews = g.reviews || []);
+
+app.get('/api/games/:id/reviews', (req, res) => {
+  const gid = req.params.id, g = GAMES[gid];
+  if (!g) return res.sendStatus(404);
+  const tok = bearer(req), me = sessions.get(tok), users = uidMap();
+  const visible = reviewsOf(g).filter(r => r.reports.size < 3);
+  const items = visible.map(r => {
+    const u = users.get(r.uid);
+    return {
+      id: r.id, uid: r.uid, name: u?.name || r.name, av: u?.avatar ? u.av : 0, color: u?.color || '#1463ff',
+      up: r.up, text: r.text, ts: r.ts, mins: r.mins, rec: u ? playMins(u, gid) : r.mins,
+      yes: r.yes.size, no: r.no.size, mine: me ? (r.yes.has(me.uid) ? 'yes' : r.no.has(me.uid) ? 'no' : null) : null, own: me?.uid === r.uid
+    };
+  });
+  items.sort(req.query.sort === 'helpful' ? (a, b) => b.yes - a.yes || b.ts - a.ts : (a, b) => b.ts - a.ts);
+  const playtime = me ? playMins(me, gid) : 0, isOwner = !!me && g.ownerToken === tok;
+  res.json({
+    playtime, isOwner, canReview: !!me && !isOwner && playtime >= MIN_REVIEW, min: MIN_REVIEW,
+    mine: items.find(x => x.own) || null, total: items.length, up: items.filter(x => x.up).length, reviews: items.slice(0, 100)
+  });
+});
+app.post('/api/games/:id/reviews', (req, res) => {
+  const gid = req.params.id, g = GAMES[gid], tok = bearer(req), me = sessions.get(tok);
+  if (!me) return res.sendStatus(401);
+  if (!g) return res.sendStatus(404);
+  if (g.ownerToken === tok) return res.status(400).json({ error: 'Kamu tidak bisa mereview game buatanmu sendiri' });
+  const mins = playMins(me, gid);
+  if (mins < MIN_REVIEW) return res.status(400).json({ error: `Butuh minimal ${MIN_REVIEW} menit bermain` });
+  const text = plain(req.body?.text, 500);
+  if (!text) return res.status(400).json({ error: 'Tulis reviewnya dulu' });
+  const list = reviewsOf(g), up = !!req.body?.up, ex = list.find(r => r.uid === me.uid);
+  if (ex) Object.assign(ex, { up, text, mins, ts: Date.now() });
+  else if (list.length >= 500) return res.status(400).json({ error: 'Review untuk game ini sudah penuh' });
+  else list.push({ id: crypto.randomBytes(4).toString('hex'), uid: me.uid, name: me.name, up, text, ts: Date.now(), mins, yes: new Set(), no: new Set(), reports: new Set() });
+  res.json({ ok: true });
+});
+app.delete('/api/games/:id/reviews', (req, res) => {
+  const g = GAMES[req.params.id], me = sessions.get(bearer(req));
+  if (!me || !g) return res.sendStatus(403);
+  g.reviews = reviewsOf(g).filter(r => r.uid !== me.uid);
+  res.sendStatus(204);
+});
+const findReview = (req) => { const g = GAMES[req.params.id]; return g && reviewsOf(g).find(x => x.id === req.params.rid); };
+app.post('/api/games/:id/reviews/:rid/vote', (req, res) => {
+  const me = sessions.get(bearer(req)), r = findReview(req);
+  if (!me) return res.sendStatus(401);
+  if (!r) return res.sendStatus(404);
+  if (r.uid === me.uid) return res.status(400).json({ error: 'Tidak bisa vote review sendiri' });
+  r.yes.delete(me.uid); r.no.delete(me.uid);
+  if (req.body?.v === 'yes') r.yes.add(me.uid); else if (req.body?.v === 'no') r.no.add(me.uid);
+  res.json({ yes: r.yes.size, no: r.no.size });
+});
+app.post('/api/games/:id/reviews/:rid/report', (req, res) => {
+  const me = sessions.get(bearer(req)), r = findReview(req);
+  if (!me) return res.sendStatus(401);
+  if (!r) return res.sendStatus(404);
+  if (r.uid !== me.uid) r.reports.add(me.uid); // 3 different reports hide a review
+  res.json({ ok: true });
+});
+
+// ---------- Forum ----------
+const CATS = [
+  { id: 'general', name: 'General Discussion', desc: 'Talk about anything and everything related to Voxely!', color: '#5b8def' },
+  { id: 'games', name: 'Game Discussion', desc: 'Discuss your favorite games, share strategies, and find teammates.', color: '#6cc04a' },
+  { id: 'dev', name: 'Game Development', desc: 'Share tips, tutorials, and get help building games in the Developer Portal.', color: '#d08b5b' },
+  { id: 'suggest', name: 'Suggestions & Feedback', desc: 'Share your ideas to help improve Voxely!', color: '#d45d8a' },
+  { id: 'bugs', name: 'Bug Reports', desc: 'Report bugs and technical issues you encounter.', color: '#6b8fb5' },
+  { id: 'off', name: 'Off-Topic', desc: 'Discuss topics unrelated to Voxely and gaming.', color: '#a9b05b' }
+];
+const threads = []; let tid = 0;
+const byLast = (a, b) => b.last - a.last;
+const author = (users, uid, name) => { const u = users.get(uid); return { name: u?.name || name, uid, av: u?.avatar ? u.av : 0, color: u?.color || '#1463ff' }; };
+const item = (users, t) => ({ id: t.id, title: t.title, ts: t.ts, replies: t.posts.length, views: t.views, author: author(users, t.uid, t.name) });
+const meOf = req => sessions.get(bearer(req));
+
+app.get('/api/forum', (_req, res) => {
+  const cats = CATS.map(c => { const ts = threads.filter(t => t.cat === c.id); return { ...c, threads: ts.length, posts: ts.reduce((n, t) => n + 1 + t.posts.length, 0) }; });
+  res.json({ cats, stats: { categories: cats.length, threads: threads.length, posts: cats.reduce((n, c) => n + c.posts, 0) } });
+});
+app.get('/api/forum/search', (req, res) => {
+  const q = String(req.query.q || '').toLowerCase().trim(), users = uidMap();
+  res.json(q.length < 2 ? [] : threads.filter(t => (t.title + ' ' + t.body + ' ' + t.posts.map(p => p.body).join(' ')).toLowerCase().includes(q)).sort(byLast).slice(0, 50).map(t => item(users, t)));
+});
+app.get('/api/forum/mine', (req, res) => {
+  const me = meOf(req); if (!me) return res.sendStatus(401);
+  const users = uidMap();
+  res.json(threads.filter(t => t.uid === me.uid || t.posts.some(p => p.uid === me.uid)).sort(byLast).slice(0, 100).map(t => item(users, t)));
+});
+app.get('/api/forum/cat/:cat', (req, res) => {
+  const cat = CATS.find(c => c.id === req.params.cat); if (!cat) return res.sendStatus(404);
+  const users = uidMap();
+  res.json({ cat, threads: threads.filter(t => t.cat === cat.id).sort(byLast).slice(0, 100).map(t => item(users, t)) });
+});
+app.post('/api/forum/cat/:cat', (req, res) => {
+  const me = meOf(req); if (!me) return res.sendStatus(401);
+  const cat = CATS.find(c => c.id === req.params.cat); if (!cat) return res.sendStatus(404);
+  const title = plain(req.body?.title, 100).replace(/\s+/g, ' '), body = plain(req.body?.body, 2000);
+  if (title.length < 3) return res.status(400).json({ error: 'Judul minimal 3 karakter' });
+  if (!body) return res.status(400).json({ error: 'Isi thread tidak boleh kosong' });
+  const now = Date.now();
+  if (now - (me.lastThread || 0) < 30000) return res.status(400).json({ error: 'Tunggu 30 detik sebelum membuat thread lagi' });
+  me.lastThread = now;
+  if (threads.length >= 500) threads.splice(threads.reduce((m, t, i, a) => (t.last < a[m].last ? i : m), 0), 1);
+  const t = { id: String(++tid), cat: cat.id, title, body, uid: me.uid, name: me.name, ts: now, last: now, views: 0, posts: [] };
+  threads.push(t);
+  res.json({ id: t.id });
+});
+app.get('/api/forum/thread/:id', (req, res) => {
+  const t = threads.find(x => x.id === req.params.id); if (!t) return res.sendStatus(404);
+  t.views++;
+  const users = uidMap(), me = meOf(req);
+  res.json({ ...item(users, t), category: CATS.find(c => c.id === t.cat), body: t.body, own: me?.uid === t.uid,
+    posts: t.posts.map(p => ({ id: p.id, body: p.body, ts: p.ts, own: me?.uid === p.uid, author: author(users, p.uid, p.name) })) });
+});
+app.post('/api/forum/thread/:id/reply', (req, res) => {
+  const me = meOf(req); if (!me) return res.sendStatus(401);
+  const t = threads.find(x => x.id === req.params.id); if (!t) return res.sendStatus(404);
+  const body = plain(req.body?.body, 2000);
+  if (!body) return res.status(400).json({ error: 'Balasan tidak boleh kosong' });
+  if (t.posts.length >= 300) return res.status(400).json({ error: 'Thread ini sudah penuh' });
+  const now = Date.now();
+  if (now - (me.lastReply || 0) < 5000) return res.status(400).json({ error: 'Tunggu beberapa detik sebelum membalas lagi' });
+  me.lastReply = now;
+  t.posts.push({ id: crypto.randomBytes(3).toString('hex'), uid: me.uid, name: me.name, body, ts: now });
+  t.last = now;
+  res.json({ ok: true });
+});
+app.delete('/api/forum/thread/:id', (req, res) => {
+  const me = meOf(req), i = threads.findIndex(x => x.id === req.params.id);
+  if (!me || i < 0 || threads[i].uid !== me.uid) return res.sendStatus(403);
+  threads.splice(i, 1);
+  res.sendStatus(204);
+});
+app.delete('/api/forum/thread/:id/post/:pid', (req, res) => {
+  const me = meOf(req), t = threads.find(x => x.id === req.params.id);
+  if (!me || !t) return res.sendStatus(403);
+  const i = t.posts.findIndex(p => p.id === req.params.pid && p.uid === me.uid);
+  if (i < 0) return res.sendStatus(403);
+  t.posts.splice(i, 1);
+  res.sendStatus(204);
+});
+
 app.get('/', (_req, res) => res.send('Voxely game server is running'));
 
 // ---------- Multiplayer ----------
@@ -162,7 +310,7 @@ io.on('connection', socket => {
   let gameId = null, lastChat = 0;
   socket.on('join', id => {
     if (!GAMES[id] || gameId) return;
-    gameId = id; socket.join(id); socket.user.game = id;
+    gameId = id; socket.join(id); socket.user.game = id; socket.user.live = { id, start: Date.now() };
     const g = GAMES[id];
     const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0 };
     rooms[id].set(socket.id, me);
@@ -182,6 +330,8 @@ io.on('connection', socket => {
   });
   socket.on('disconnect', () => {
     if (!gameId) return;
+    const lv = socket.user.live;
+    if (lv && lv.id === gameId) { socket.user.play = socket.user.play || {}; socket.user.play[gameId] = (socket.user.play[gameId] || 0) + (Date.now() - lv.start) / 1000; socket.user.live = null; }
     socket.user.game = null;
     rooms[gameId].delete(socket.id);
     io.to(gameId).emit('leave', socket.id);
