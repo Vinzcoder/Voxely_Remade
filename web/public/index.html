@@ -5,91 +5,108 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Voxely</title>
 <style>
-  :root { --bg:#090909; --grid:#171717; --ac:#ff7a1a; --ac2:#e85d04; --cream:#f6ecd9; --ink:#2a1d0f; --mut:#8a7a62; }
-  * { box-sizing:border-box; margin:0; }
-  body { font:14px/1.4 system-ui,"Segoe UI",Arial,sans-serif; color:#eee; min-height:100vh; background:var(--bg) linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px, linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px; }
-  a { color:var(--ac); cursor:pointer; text-decoration:none; }
-  .in { max-width:1180px; margin:auto; padding:0 16px; display:flex; align-items:center; }
-  .top { background:linear-gradient(#1d1d1d,#0d0d0d); border-bottom:3px solid var(--ac); }
-  .top .in { height:50px; }
-  .logo { font-weight:800; font-size:22px; letter-spacing:3px; color:#fff; } .logo b { color:var(--ac); }
-  .sub { background:linear-gradient(#262626,#151515); border-bottom:1px solid #000; }
-  .sub .in { height:44px; justify-content:center; gap:30px; } .sub a { color:#fff; font-weight:600; } .sub a:hover { color:var(--ac); }
-  #me { margin-left:auto; }
-  .user { position:relative; display:flex; align-items:center; gap:8px; font-weight:700; color:#fff; cursor:pointer; }
-  .av { width:28px; height:28px; border-radius:4px; }
-  .menu { display:none; position:absolute; right:0; top:38px; width:220px; background:var(--cream); color:var(--ink); border-radius:4px; box-shadow:0 8px 24px #000c; padding:6px 0; z-index:5; font-weight:400; }
+  :root { --bg:#04060b; --panel:#0a0f1a; --line:#15233f; --blue:#1463ff; --blue2:#0a3fb8; --text:#e6edf7; --dim:#7d8aa3; }
+  * { box-sizing:border-box; margin:0; border-radius:0; }
+  body { background:var(--bg); color:var(--text); font:14px "Segoe UI",Arial,sans-serif; min-height:100vh; }
+  a { color:inherit; text-decoration:none; cursor:pointer; }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 16px; }
+  /* header */
+  .top { background:linear-gradient(var(--blue),var(--blue2)); }
+  .top .wrap { height:52px; display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-size:22px; font-weight:800; letter-spacing:4px; color:#fff; }
+  .user { position:relative; }
+  .user > button { background:none; border:0; color:#fff; display:flex; align-items:center; gap:8px; font:inherit; font-weight:600; cursor:pointer; }
+  .av { width:28px; height:28px; display:inline-block; border:1px solid rgba(255,255,255,.4); }
+  .menu { display:none; position:absolute; right:0; top:42px; width:230px; background:var(--panel); border:1px solid var(--line); z-index:5; }
   .menu.on { display:block; }
-  .menu .mh { padding:8px 16px 10px; border-bottom:1px solid #d9c9aa; margin-bottom:4px; } .menu small { display:block; color:var(--mut); }
-  .menu a { display:block; padding:8px 16px; color:var(--ink); } .menu a:hover { background:#ecdcbc; } .menu a.red { color:#c0392b; }
-  main { max-width:1180px; margin:auto; padding:0 16px 60px; }
-  .ribbon { display:inline-block; background:linear-gradient(#ff9a4a,var(--ac2)); color:#fff; font-weight:800; text-transform:uppercase; padding:8px 18px; border-radius:3px; box-shadow:0 2px 0 #7a2e00; margin:24px 0 12px; text-shadow:0 1px 1px #0006; }
-  .row2 { display:flex; gap:16px; }
-  .fwrap { flex:1; position:relative; min-width:0; }
-  .fcard { display:flex; background:var(--cream); color:var(--ink); border-radius:3px; overflow:hidden; height:330px; box-shadow:0 4px 16px #000a; }
-  .fart { flex:1.15; position:relative; cursor:pointer; }
-  .cap { position:absolute; left:0; right:0; bottom:0; padding:50px 18px 16px; background:linear-gradient(transparent,#000b); color:#fff; } .cap h2 { font-size:32px; }
-  .finfo { flex:1; padding:16px 18px; display:flex; flex-direction:column; gap:8px; } .finfo h3 { font-size:22px; } .finfo p { color:#5b4a33; font-size:13px; }
-  .shots { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:auto; } .shots > div { height:78px; cursor:pointer; border:1px solid #d9c9aa; }
-  .arr { position:absolute; top:50%; transform:translateY(-50%); width:34px; height:60px; border:0; background:linear-gradient(#ff9a4a,var(--ac2)); color:#fff; font-size:26px; cursor:pointer; z-index:2; }
-  .arr.l { left:-2px; border-radius:0 4px 4px 0; } .arr.r { right:-2px; border-radius:4px 0 0 4px; }
-  .dots { display:flex; justify-content:center; gap:8px; margin-top:12px; } .dots i { width:34px; height:7px; border-radius:4px; background:#333; cursor:pointer; } .dots i.on { background:var(--ac); }
-  .side { width:250px; flex:none; display:flex; flex-direction:column; gap:14px; }
-  .sc { background:var(--cream); color:var(--ink); border-radius:3px; overflow:hidden; box-shadow:0 4px 16px #000a; }
-  .sc h4 { background:var(--ac2); color:#fff; font-size:12px; padding:7px 12px; letter-spacing:.04em; }
-  .sb { padding:12px; } .sb small, .mut { color:var(--mut); }
-  .th { height:150px; cursor:pointer; }
-  .act { display:flex; align-items:center; justify-content:space-between; } .big { text-align:right; } .big b { font-size:30px; display:block; line-height:1; } .big small { font-size:10px; letter-spacing:.06em; }
-  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#1f9d55; margin-right:4px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
-  .gc { cursor:pointer; transition:transform .12s; } .gc:hover { transform:translateY(-3px); } .gc .t { height:130px; }
-  .art { position:relative; overflow:hidden; width:100%; height:100%; background:linear-gradient(135deg,var(--a),var(--b)); }
-  .art i { position:absolute; bottom:0; background:rgba(0,0,0,.28); border-top:4px solid rgba(255,255,255,.25); }
-  .tag { display:inline-block; background:#ecdcbc; color:#7a4a12; padding:1px 8px; border-radius:2px; font-size:12px; margin:0 4px 4px 0; }
-  .crumb { margin:20px 0 10px; color:#999; font-size:12px; }
-  .gp { display:flex; gap:16px; } .gart { flex:1.6; height:360px; border-radius:3px; overflow:hidden; box-shadow:0 4px 16px #000a; } .gi { flex:1; } .gi h2 { font-size:26px; margin-bottom:8px; } .gi p { margin-bottom:12px; color:#5b4a33; }
-  .buy { margin-top:16px; background:linear-gradient(90deg,#222,#141414); border-left:4px solid var(--ac); padding:16px; display:flex; align-items:center; justify-content:space-between; } .buy h3 { font-size:20px; }
-  .price { background:#000; padding:5px 10px; border-radius:2px; color:var(--ac); font-weight:700; }
-  .note { margin-top:12px; color:#aaa; }
-  .play { background:linear-gradient(#ff9a4a,var(--ac2)); color:#fff; border:0; padding:10px 30px; border-radius:3px; font-weight:800; font-size:15px; cursor:pointer; box-shadow:0 2px 0 #7a2e00; } .play:hover { filter:brightness(1.12); }
-  .veil { position:fixed; inset:0; background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index:9; } .veil.on { display:flex; }
-  .box { width:370px; background:var(--cream); color:var(--ink); border-radius:4px; padding:26px; border-top:5px solid var(--ac); }
-  .box h3 { font-size:20px; margin-bottom:6px; } .box p { color:#5b4a33; margin-bottom:16px; }
-  .box input { width:100%; padding:10px; margin-bottom:12px; border:1px solid #cdb98f; border-radius:3px; background:#fff; }
-  .box .play { width:100%; }
-  @media (max-width:860px) { .row2, .gp { flex-direction:column; } .side { width:auto; } .fcard { flex-direction:column; height:auto; } .fart { height:220px; flex:none; } .gart { height:230px; } }
+  .menu .mh { padding:12px 14px; border-bottom:1px solid var(--line); } .menu .mh small { display:block; color:var(--dim); margin-top:2px; }
+  .menu a { display:block; padding:10px 14px; } .menu a:hover { background:#101a2e; }
+  .menu .out { color:#ff5c6c; border-top:1px solid var(--line); }
+  .sub { background:#071127; border-bottom:1px solid var(--line); }
+  .sub .wrap { height:44px; display:flex; justify-content:center; gap:36px; align-items:center; }
+  .sub a { color:var(--dim); font-weight:600; } .sub a.on, .sub a:hover { color:#fff; }
+  /* layout */
+  main { padding:22px 0 60px; }
+  .label { display:inline-block; background:var(--blue); color:#fff; font-weight:700; letter-spacing:.04em; padding:8px 16px; margin-bottom:12px; font-size:13px; }
+  .cols { display:grid; grid-template-columns:1fr 300px; gap:18px; }
+  .card { background:var(--panel); border:1px solid var(--line); }
+  .card h4 { background:var(--blue2); color:#fff; font-size:12px; letter-spacing:.05em; padding:8px 12px; }
+  .art { position:relative; overflow:hidden; background:linear-gradient(135deg,var(--a),var(--b)); width:100%; height:100%; min-height:60px; }
+  .art i { position:absolute; bottom:0; background:rgba(0,0,0,.3); border-top:3px solid rgba(255,255,255,.22); }
+  /* carousel */
+  .car { position:relative; display:grid; grid-template-columns:1.15fr 1fr; height:330px; background:var(--panel); border:1px solid var(--line); }
+  .car .l { cursor:pointer; } .car .r { padding:18px; display:flex; flex-direction:column; gap:6px; }
+  .car h2 { font-size:24px; color:#fff; } .car .meta { color:#5aa0ff; font-size:13px; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; flex:1; min-height:0; }
+  .shots > div:first-child { grid-column:span 2; } .shots > div { min-height:0; }
+  .arr { position:absolute; top:50%; margin-top:-22px; width:30px; height:44px; background:var(--blue); color:#fff; border:0; font-size:18px; cursor:pointer; z-index:2; }
+  .arr:hover { background:#3a82ff; }
+  .dots { display:flex; justify-content:center; gap:8px; margin:12px 0 0; }
+  .dots b { width:26px; height:6px; background:#1b2a4a; cursor:pointer; } .dots b.on { background:var(--blue); }
+  /* side cards */
+  .side { display:flex; flex-direction:column; gap:18px; }
+  .trend .art { height:150px; } .trend .in { padding:10px 12px; } .trend b { font-size:16px; color:#fff; display:block; } .trend small { color:#5aa0ff; }
+  .act .in { padding:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .act svg { width:150px; height:46px; } .act .n { font-size:34px; font-weight:800; color:#fff; line-height:1; text-align:right; } .act .n small { display:block; font-size:10px; color:var(--dim); letter-spacing:.06em; font-weight:600; }
+  .act .foot { padding:0 12px 12px; color:var(--dim); font-size:12px; } .live { display:inline-block; width:8px; height:8px; background:#22c55e; margin-right:6px; }
+  /* grid */
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .gc { background:var(--panel); border:1px solid var(--line); cursor:pointer; transition:border-color .15s, transform .15s; }
+  .gc:hover { border-color:var(--blue); transform:translateY(-2px); }
+  .gc .art { height:120px; } .gc .in { padding:10px 12px; } .gc b { color:#fff; display:block; } .gc small { color:var(--dim); }
+  h3.sec { margin:30px 0 12px; font-size:13px; letter-spacing:.06em; color:var(--dim); }
+  .tag { display:inline-block; border:1px solid var(--blue); color:#6fa8ff; padding:1px 8px; font-size:12px; margin:0 4px 4px 0; }
+  /* game page */
+  .crumb { color:var(--dim); font-size:12px; margin-bottom:8px; } .crumb a:hover { color:#fff; }
+  .gtitle { font-size:28px; color:#fff; margin-bottom:14px; }
+  .gmain { display:grid; grid-template-columns:1fr 320px; gap:18px; } .gmain .art { height:380px; }
+  .info { padding:16px; line-height:1.55; } .info dt { color:var(--dim); font-size:11px; letter-spacing:.06em; margin-top:12px; } .info dd { margin:2px 0 0; }
+  .buy { margin-top:18px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .buy h3 { font-size:20px; color:#fff; font-weight:600; }
+  .btn { background:var(--blue); color:#fff; border:0; padding:11px 34px; font:600 15px inherit; font-family:inherit; cursor:pointer; }
+  .btn:hover { background:#3a82ff; } .btn.alt { background:#1b2a4a; }
+  .about { margin-top:18px; padding:16px; line-height:1.6; color:#b6c2d9; } .about a { color:#6fa8ff; }
+  .free { border:1px solid var(--line); padding:6px 12px; color:#6fa8ff; margin-right:10px; }
+  /* modals */
+  .veil { position:fixed; inset:0; background:rgba(0,0,0,.82); display:none; align-items:center; justify-content:center; z-index:9; } .veil.on { display:flex; }
+  .box { width:360px; background:var(--panel); border:1px solid var(--blue); padding:26px; }
+  .box h3 { color:#fff; font-size:20px; margin-bottom:6px; } .box p { color:var(--dim); margin-bottom:16px; line-height:1.45; }
+  .box input { width:100%; background:#050913; border:1px solid var(--line); color:#fff; padding:11px; margin-bottom:12px; font:inherit; } .box .btn { width:100%; }
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--blue); color:#fff; padding:10px 18px; display:none; z-index:10; }
+  @media (max-width:860px) { .cols, .gmain, .car { grid-template-columns:1fr; } .car { height:auto; } .car .l { height:200px; } .gmain .art { height:240px; } }
 </style>
 </head>
 <body>
-<div class="top"><div class="in"><div class="logo">VOX<b>ELY</b></div><div id="me"></div></div></div>
-<div class="sub"><div class="in"><a href="#/">Games</a><a onclick="download()">Download Client</a></div></div>
-<main id="view"></main>
+<div class="top"><div class="wrap"><a class="logo" href="#/">VOXELY</a><div class="user" id="me"></div></div></div>
+<div class="sub"><div class="wrap"><a class="on" href="#/">Games</a><a onclick="soon()">People</a></div></div>
+<main><div class="wrap" id="view"></div></main>
 
 <div class="veil" id="login"><div class="box">
   <h3>Masuk ke Voxely</h3>
-  <p>Tidak perlu daftar. Masuk sebagai guest dan langsung pilih game.</p>
+  <p>Tanpa daftar. Masuk sebagai guest dan langsung pilih game.</p>
   <input id="nick" maxlength="16" placeholder="Nama guest (boleh kosong)">
-  <button class="play" id="guestBtn">Lanjut sebagai Guest</button>
+  <button class="btn" id="guestBtn">Lanjut sebagai Guest</button>
 </div></div>
-
 <div class="veil" id="launch"><div class="box">
   <h3 id="lTitle"></h3><p id="lText"></p>
-  <button class="play" id="lDl" style="display:none;margin-bottom:8px" onclick="download()">Download Voxely Client</button>
-  <button class="play" style="background:#3a3a3a;box-shadow:none" onclick="document.getElementById('launch').classList.remove('on')">Tutup</button>
+  <button class="btn" id="lDl" style="display:none;margin-bottom:8px" onclick="download()">Download Voxely Client</button>
+  <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Tutup</button>
 </div></div>
+<div id="toast"></div>
 
 <script src="/config.js"></script>
 <script>
 const S = window.VOXELY.server.replace(/\/$/, '');
 const $ = s => document.querySelector(s);
-let games = [], hist = [], fi = 0, session = JSON.parse(localStorage.getItem('voxely') || 'null');
+let games = [], session = JSON.parse(localStorage.getItem('voxely') || 'null'), idx = 0, timer = null, hist = [0, 0, 0, 0, 0, 0];
 
-const art = g => {
-  let b = ''; for (let i = 0; i < 7; i++) b += `<i style="left:${i*15-2}%;width:14%;height:${20+((i*37+g.title.length*9)%45)}%"></i>`;
+const art = (g, seed = 0) => {
+  let b = ''; for (let i = 0; i < 8; i++) b += `<i style="left:${i*13-2}%;width:12%;height:${18+((i*37+seed*23+g.title.length*9)%50)}%"></i>`;
   return `<div class="art" style="--a:${g.art[0]};--b:${g.art[1]}">${b}</div>`;
 };
 const tags = g => g.tags.map(t => `<span class="tag">${t}</span>`).join('');
-const go = id => (location.hash = '#/game/' + id);
+const total = () => games.reduce((n, g) => n + g.online, 0);
+function soon() { const t = $('#toast'); t.textContent = 'Segera hadir'; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1500); }
 
 async function guestLogin() {
   const r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) });
@@ -98,55 +115,51 @@ async function guestLogin() {
 }
 function logout() { localStorage.removeItem('voxely'); session = null; renderMe(); $('#login').classList.add('on'); }
 function renderMe() {
-  $('#me').innerHTML = session ? `<div class="user" onclick="event.stopPropagation();$('#menu').classList.toggle('on')"><div class="av" style="background:${session.user.color}"></div>${session.user.name} ▾
-    <div class="menu" id="menu"><div class="mh"><b>${session.user.name}</b><small>Guest account</small></div><a onclick="download()">Download Client</a><a class="red" onclick="logout()">Logout</a></div></div>` : '';
+  if (!session) { $('#me').innerHTML = ''; return; }
+  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')"><span class="av" style="background:${session.user.color}"></span>${session.user.name} ▾</button>
+    <div class="menu" id="menu"><div class="mh"><b>${session.user.name}</b><small>Guest account</small></div>
+    <a onclick="soon()">Profile</a><a onclick="soon()">Notifications</a><a onclick="soon()">Friends</a><a onclick="soon()">Settings</a><a onclick="soon()">Developer Portal</a><a class="out" onclick="logout()">Logout</a></div>`;
 }
 document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
 
-async function loadGames() {
-  games = await (await fetch(S + '/api/games')).json();
-  hist.push(games.reduce((n, g) => n + g.online, 0)); if (hist.length > 24) hist.shift();
+async function loadGames() { games = await (await fetch(S + '/api/games')).json(); hist.push(total()); hist = hist.slice(-20); }
+const spark = () => {
+  const mx = Math.max(1, ...hist), pts = hist.map((v, i) => `${(i / (hist.length - 1)) * 150},${44 - (v / mx) * 40}`).join(' ');
+  return `<svg viewBox="0 0 150 46"><polyline points="${pts}" fill="none" stroke="#22c55e" stroke-width="2"/></svg>`;
+};
+
+function drawCar() {
+  const g = games[idx];
+  $('#car').innerHTML = `<button class="arr" style="left:0" onclick="go(-1)">‹</button><button class="arr" style="right:0" onclick="go(1)">›</button>
+    <div class="l" onclick="location.hash='#/game/${g.id}'">${art(g)}</div>
+    <div class="r"><h2>${g.title}</h2><div class="meta">${g.tagline}</div><small style="color:var(--dim)">${g.online} players online</small>
+    <div class="shots">${[1, 2, 3].map(n => art(g, n)).map(a => `<div>${a}</div>`).join('')}</div></div>`;
+  $('#dots').innerHTML = games.map((_, i) => `<b class="${i === idx ? 'on' : ''}" onclick="idx=${i};drawCar()"></b>`).join('');
 }
-function spark() {
-  const h = hist.length > 1 ? hist : [hist[0] || 0, hist[0] || 0], m = Math.max(...h, 1);
-  const pts = h.map((v, i) => `${(i * 120 / (h.length - 1)).toFixed(1)},${(38 - v / m * 34).toFixed(1)}`).join(' ');
-  return `<svg viewBox="0 0 120 40" width="120" height="40"><polyline points="${pts}" fill="none" stroke="#1f9d55" stroke-width="2"/></svg>`;
-}
+function go(d) { idx = (idx + d + games.length) % games.length; drawCar(); }
 
 function home() {
-  const trend = [...games].sort((a, b) => b.online - a.online)[0], total = hist[hist.length - 1] || 0;
-  $('#view').innerHTML = `
-    <div class="ribbon">Featured &amp; Recommended</div>
-    <div class="row2">
-      <div class="fwrap"><div class="fcard" id="fc"></div>
-        <button class="arr l" onclick="step(-1)">‹</button><button class="arr r" onclick="step(1)">›</button><div class="dots" id="dots"></div></div>
-      <div class="side">
-        <div class="sc"><h4>TRENDING NOW</h4><div class="th" onclick="go('${trend.id}')">${art(trend)}</div><div class="sb"><b>${trend.title}</b><br><small>${trend.online} online</small></div></div>
-        <div class="sc"><h4>COMMUNITY ACTIVITY</h4><div class="sb act">${spark()}<div class="big"><b>${total}</b><small>GAMERS ONLINE</small></div></div><div class="sb" style="padding-top:0"><span class="dot"></span>${total} playing right now</div></div>
-      </div>
-    </div>
-    <div class="ribbon">All Games</div>
-    <div class="grid">${games.map(g => `<div class="sc gc" onclick="go('${g.id}')"><div class="t">${art(g)}</div><div class="sb"><b>${g.title}</b> <span class="price" style="float:right">Free</span><br><small>${g.online} online</small><div style="margin-top:6px">${tags(g)}</div></div></div>`).join('')}</div>`;
-  feat();
+  const top = [...games].sort((a, b) => b.online - a.online)[0];
+  $('#view').innerHTML = `<span class="label">FEATURED &amp; RECOMMENDED</span>
+    <div class="cols"><div><div class="car" id="car"></div><div class="dots" id="dots"></div></div>
+    <div class="side">
+      <div class="card trend"><h4>TRENDING NOW</h4><a href="#/game/${top.id}">${art(top)}<div class="in"><b>${top.title}</b><small>${top.online} online</small></div></a></div>
+      <div class="card act"><h4>COMMUNITY ACTIVITY</h4><div class="in">${spark()}<div class="n">${total()}<small>GAMERS ONLINE</small></div></div>
+      <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} game sedang aktif</div></div>
+    </div></div>
+    <h3 class="sec">ALL GAMES</h3>
+    <div class="grid">${games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${g.title}</b><small>${g.online} online · Free</small></div></a>`).join('')}</div>`;
+  idx = Math.min(idx, games.length - 1); drawCar();
+  timer = setInterval(() => $('#car') && go(1), 6000);
 }
-function feat() {
-  const g = games[fi], others = games.filter((_, i) => i !== fi).slice(0, 4);
-  $('#fc').innerHTML = `<div class="fart" onclick="go('${g.id}')">${art(g)}<div class="cap"><h2>${g.title}</h2></div></div>
-    <div class="finfo"><h3>${g.title}</h3><div><b style="color:var(--ac2)">Free</b> · <span class="mut">${g.online} online</span></div><div>${tags(g)}</div><p>${g.tagline} ${g.desc}</p>
-    <div class="shots">${others.map(o => `<div onclick="go('${o.id}')">${art(o)}</div>`).join('')}</div></div>`;
-  $('#dots').innerHTML = games.map((_, i) => `<i class="${i === fi ? 'on' : ''}" onclick="fi=${i};feat()"></i>`).join('');
-}
-function step(d) { fi = (fi + d + games.length) % games.length; feat(); }
-setInterval(() => $('#fc') && step(1), 6000);
 
 function gamePage(id) {
   const g = games.find(x => x.id === id); if (!g) return (location.hash = '#/');
-  $('#view').innerHTML = `
-    <div class="crumb"><a href="#/">Games</a> › ${g.title}</div>
-    <div class="gp"><div class="gart">${art(g)}</div>
-      <div class="sc gi"><div class="sb"><h2>${g.title}</h2><p>${g.tagline} ${g.desc}</p><div>${tags(g)}</div><p class="mut" style="margin-top:10px">${g.online} players online</p></div></div></div>
-    <div class="buy"><h3>Play ${g.title}</h3><div><span class="price">Free</span> &nbsp; <button class="play" onclick="play('${g.id}')">Play</button></div></div>
-    <p class="note">Butuh Voxely Client di PC kamu. Belum punya? <a onclick="download()">Download Voxely Client</a>, install, lalu klik Play.</p>`;
+  $('#view').innerHTML = `<div class="crumb"><a href="#/">Games</a> &gt; ${g.title}</div><div class="gtitle">${g.title}</div>
+    <div class="gmain">${art(g)}<div class="card info"><div>${g.tagline}</div><p style="color:#b6c2d9;margin-top:8px">${g.desc}</p>
+      <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>TAGS</dt><dd>${tags(g)}</dd></dl></div></div>
+    <div class="card buy"><h3>Play ${g.title}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
+    <div class="card about"><b style="color:#fff">About this game</b><br>${g.desc}<br><br>Butuh Voxely Client di PC kamu. Belum punya? <a onclick="download()">Download Voxely Client</a>, install, lalu klik Play.</div>`;
 }
 
 function download() {
@@ -170,6 +183,7 @@ async function play(id) {
 }
 
 async function route() {
+  clearInterval(timer);
   if (!session) return $('#login').classList.add('on');
   await loadGames();
   const m = location.hash.match(/^#\/game\/(\w+)/);
@@ -178,7 +192,7 @@ async function route() {
 $('#guestBtn').onclick = guestLogin;
 $('#nick').onkeydown = e => e.key === 'Enter' && guestLogin();
 window.onhashchange = route;
-setInterval(() => session && route(), 8000);
+setInterval(() => session && !$('#launch').classList.contains('on') && route(), 10000);
 renderMe(); route();
 </script>
 </body>
