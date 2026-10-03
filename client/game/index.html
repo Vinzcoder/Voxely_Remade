@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Voxely</title>
+<style>
+  html, body { margin:0; height:100%; overflow:hidden; background:#000; font:14px Arial, sans-serif; color:#fff; }
+  #c { width:100%; height:100%; display:block; outline:none; }
+  #hud { position:fixed; top:10px; left:12px; text-shadow:0 1px 3px #000; pointer-events:none; }
+  #leave { position:fixed; top:10px; right:12px; background:#c0392b; color:#fff; border:0; padding:8px 16px; border-radius:3px; cursor:pointer; }
+  #chat { position:fixed; left:12px; bottom:12px; width:340px; }
+  #log { max-height:160px; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; text-shadow:0 1px 3px #000; margin-bottom:6px; }
+  #log div { background:rgba(0,0,0,.35); padding:2px 6px; margin-top:2px; border-radius:3px; }
+  #msg { width:100%; box-sizing:border-box; background:rgba(0,0,0,.55); border:1px solid #555; color:#fff; padding:7px; border-radius:3px; }
+  #help { position:fixed; bottom:12px; right:12px; color:#ddd; text-shadow:0 1px 3px #000; text-align:right; }
+  #status { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; font-size:20px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><b id="title"></b><br>Players: <span id="count">1</span></div>
+<button id="leave">Leave game</button>
+<div id="chat"><div id="log"></div><input id="msg" maxlength="140" placeholder="Press Enter to chat"></div>
+<div id="help">WASD move · Space jump · Drag mouse to look · Scroll to zoom</div>
+<div id="status">Connecting…</div>
+
+<script src="vendor/babylon.js"></script>
+<script src="vendor/socket.io.min.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+const socket = io(q.get('server'), { auth: { token: q.get('token') } });
+$('leave').onclick = () => window.close();
+socket.on('connect_error', e => { $('status').textContent = 'Cannot connect: ' + e.message + ' (login again on the website)'; });
+socket.on('connect', () => socket.emit('join', q.get('game')));
+
+const engine = new BABYLON.Engine($('c'), true);
+const scene = new BABYLON.Scene(engine);
+const c3 = h => BABYLON.Color3.FromHexString(h);
+const mat = hex => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = c3(hex); m.specularColor = BABYLON.Color3.Black(); return m; };
+
+new BABYLON.HemisphericLight('h', new BABYLON.Vector3(0.3, 1, 0.2), scene).intensity = 0.95;
+const camTarget = BABYLON.MeshBuilder.CreateBox('ct', { size: 0.01 }, scene); camTarget.isVisible = false;
+const cam = new BABYLON.ArcRotateCamera('cam', -Math.PI / 2, 1.1, 12, camTarget, scene);
+cam.lockedTarget = camTarget; cam.lowerRadiusLimit = 4; cam.upperRadiusLimit = 25;
+cam.lowerBetaLimit = 0.2; cam.upperBetaLimit = 1.5; cam.panningSensibility = 0;
+cam.inputs.removeByType('ArcRotateCameraKeyboardMoveInput');
+cam.attachControl($('c'), true);
+
+// ---------- Blocky character ----------
+function makeChar(p) {
+  const root = new BABYLON.TransformNode('p', scene), body = new BABYLON.TransformNode('b', scene);
+  body.parent = root;
+  const part = (w, h, d, x, y, hex) => { const m = BABYLON.MeshBuilder.CreateBox('part', { width: w, height: h, depth: d }, scene); m.parent = body; m.position.set(x, y, 0); m.material = mat(hex); return m; };
+  const legL = part(0.4, 0.7, 0.4, -0.2, 0.35, '#2d3a8c'), legR = part(0.4, 0.7, 0.4, 0.2, 0.35, '#2d3a8c');
+  part(0.8, 0.7, 0.4, 0, 1.05, p.color); part(0.4, 0.4, 0.4, 0, 1.6, '#f5cd9a');
+  const armL = part(0.2, 0.7, 0.2, -0.5, 1.05, p.color), armR = part(0.2, 0.7, 0.2, 0.5, 1.05, p.color);
+  [legL, legR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, 0.35, 0)));
+  [armL, armR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, 0.35, 0)));
+  const tag = BABYLON.MeshBuilder.CreatePlane('tag', { width: 2.4, height: 0.6 }, scene);
+  tag.parent = root; tag.position.y = 2.3; tag.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+  const dt = new BABYLON.DynamicTexture('t', { width: 512, height: 128 }, scene, true); dt.hasAlpha = true;
+  dt.drawText(p.name, null, 85, 'bold 56px Arial', '#fff', 'transparent', true);
+  const tm = new BABYLON.StandardMaterial('tm', scene);
+  tm.diffuseTexture = dt; tm.useAlphaFromDiffuseTexture = true; tm.emissiveColor = BABYLON.Color3.White(); tm.disableLighting = true; tm.backFaceCulling = false;
+  tag.material = tm;
+  return { root, body, legL, legR, armL, armR };
+}
+function swing(ch, moving, t) {
+  const a = moving ? Math.sin(t * 10) * 0.8 : 0;
+  ch.legL.rotation.x = a; ch.legR.rotation.x = -a; ch.armL.rotation.x = -a; ch.armR.rotation.x = a;
+}
+
+// ---------- World + physics (simple AABB) ----------
+let boxes = [], spawn = [0, 2, 0], me = null, myChar = null;
+const pos = { x: 0, y: 2, z: 0 }; let vy = 0, grounded = false, ry = 0;
+const others = new Map();
+const HALF = { x: [-0.4, 0.4], y: [0, 1.8], z: [-0.4, 0.4] };
+const hit = b => pos.x + 0.4 > b.x - b.w / 2 && pos.x - 0.4 < b.x + b.w / 2 && pos.y + 1.8 > b.y - b.h / 2 && pos.y < b.y + b.h / 2 && pos.z + 0.4 > b.z - b.d / 2 && pos.z - 0.4 < b.z + b.d / 2;
+const size = { x: 'w', y: 'h', z: 'd' };
+function moveAxis(axis, delta) {
+  pos[axis] += delta;
+  for (const b of boxes) {
+    if (!hit(b)) continue;
+    if (delta > 0) pos[axis] = b[axis] - b[size[axis]] / 2 - HALF[axis][1];
+    else pos[axis] = b[axis] + b[size[axis]] / 2 - HALF[axis][0];
+    if (axis === 'y') { if (delta < 0) grounded = true; vy = 0; }
+  }
+}
+
+socket.on('init', d => {
+  me = d.me; boxes = d.game.boxes; spawn = d.game.spawn;
+  scene.clearColor = c3(d.game.sky).toColor4(); scene.fogMode = BABYLON.Scene.FOGMODE_EXP2; scene.fogColor = c3(d.game.sky); scene.fogDensity = 0.004;
+  $('title').textContent = d.game.title; $('count').textContent = d.players.length;
+  boxes.forEach(b => { const m = BABYLON.MeshBuilder.CreateBox('w', { width: b.w, height: b.h, depth: b.d }, scene); m.position.set(b.x, b.y, b.z); m.material = mat(b.c); });
+  Object.assign(pos, { x: spawn[0], y: spawn[1], z: spawn[2] });
+  myChar = makeChar(me);
+  d.players.filter(p => p.id !== me.id).forEach(addOther);
+  $('status').style.display = 'none';
+});
+function addOther(p) { others.set(p.id, { ch: makeChar(p), t: p, last: { x: p.x, z: p.z } }); }
+socket.on('join', addOther);
+socket.on('leave', id => { const o = others.get(id); if (o) { o.ch.root.dispose(); others.delete(id); } });
+socket.on('move', p => { const o = others.get(p.id); if (o) o.t = p; });
+socket.on('count', n => ($('count').textContent = n));
+socket.on('chat', m => {
+  const d = document.createElement('div'), n = document.createElement('b');
+  n.textContent = m.name + ': '; n.style.color = m.color; d.append(n, m.text);
+  $('log').append(d); while ($('log').children.length > 8) $('log').firstChild.remove();
+});
+
+// ---------- Input ----------
+const keys = {};
+const typing = () => document.activeElement === $('msg');
+addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !typing()) { e.preventDefault(); $('msg').focus(); return; }
+  if (typing()) { if (e.key === 'Enter') { const t = $('msg').value.trim(); if (t) socket.emit('chat', t); $('msg').value = ''; $('msg').blur(); } if (e.key === 'Escape') $('msg').blur(); return; }
+  keys[e.code] = true;
+});
+addEventListener('keyup', e => (keys[e.code] = false));
+addEventListener('blur', () => Object.keys(keys).forEach(k => (keys[k] = false)));
+
+// ---------- Game loop ----------
+let t = 0, sendAcc = 0;
+scene.onBeforeRenderObservable.add(() => {
+  if (!myChar) return;
+  const dt = Math.min(engine.getDeltaTime() / 1000, 0.05); t += dt;
+  const fx = -Math.cos(cam.alpha), fz = -Math.sin(cam.alpha), rx = fz, rz = -fx;
+  let ix = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), iz = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+  let dx = fx * iz + rx * ix, dz = fz * iz + rz * ix; const len = Math.hypot(dx, dz);
+  const moving = len > 0;
+  if (moving) { dx /= len; dz /= len; ry = Math.atan2(dx, dz); }
+  if (grounded && keys.Space) vy = 12;
+  vy -= 30 * dt; grounded = false;
+  moveAxis('x', dx * 8 * dt); moveAxis('z', dz * 8 * dt); moveAxis('y', vy * dt);
+  if (pos.y < -30) { Object.assign(pos, { x: spawn[0], y: spawn[1], z: spawn[2] }); vy = 0; }
+  myChar.root.position.set(pos.x, pos.y, pos.z); myChar.body.rotation.y = ry; swing(myChar, moving, t);
+  camTarget.position.set(pos.x, pos.y + 1.4, pos.z);
+
+  sendAcc += dt; if (sendAcc > 0.066) { sendAcc = 0; socket.volatile.emit('move', { x: pos.x, y: pos.y, z: pos.z, ry }); }
+  others.forEach(o => {
+    const r = o.ch.root.position, k = Math.min(1, dt * 12);
+    const px = r.x, pz = r.z;
+    r.x += (o.t.x - r.x) * k; r.y += (o.t.y - r.y) * k; r.z += (o.t.z - r.z) * k;
+    o.ch.body.rotation.y = o.t.ry; swing(o.ch, Math.hypot(r.x - px, r.z - pz) > 0.002, t);
+  });
+});
+engine.runRenderLoop(() => scene.render());
+addEventListener('resize', () => engine.resize());
+</script>
+</body>
+</html>
