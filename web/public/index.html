@@ -85,6 +85,10 @@
   .mrow { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); } .mrow a { flex:1; color:#6fa8ff; } .mrow small { color:var(--dim); }
   .empty { padding:16px; color:var(--dim); } .search { margin-bottom:14px; max-width:420px; }
   .pc { display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line); padding:12px; } .pc small { display:block; color:var(--dim); margin-top:2px; } .av2 { width:40px; height:40px; flex:none; }
+  .art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; } img.av { object-fit:cover; }
+  .prow { display:flex; gap:16px; align-items:center; margin-bottom:6px; }
+  .trow { display:flex; gap:12px; align-items:center; }
+  .tprev { width:160px; height:90px; background:#050913; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--dim); overflow:hidden; } .tprev img { width:100%; height:100%; object-fit:cover; }
   @media (max-width:860px) { .cols, .gmain, .car { grid-template-columns:1fr; } .car { height:auto; } .car .l { height:200px; } .gmain .art { height:240px; } }
 </style>
 </head>
@@ -96,7 +100,7 @@
 <div class="veil" id="login"><div class="box">
   <h3>Masuk ke Voxely</h3>
   <p>Tanpa daftar. Masuk sebagai guest dan langsung pilih game.</p>
-  <input id="nick" maxlength="16" placeholder="Nama guest (boleh kosong)">
+  <input id="nick" maxlength="16" placeholder="Nama kamu (boleh kosong = acak)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
   <button class="btn" id="guestBtn">Lanjut sebagai Guest</button>
 </div></div>
 <div class="veil" id="launch"><div class="box">
@@ -114,24 +118,45 @@ let games = [], session = JSON.parse(localStorage.getItem('voxely') || 'null'), 
 
 const art = (g, seed = 0) => {
   let b = ''; for (let i = 0; i < 8; i++) b += `<i style="left:${i*13-2}%;width:12%;height:${18+((i*37+seed*23+g.title.length*9)%50)}%"></i>`;
-  return `<div class="art" style="--a:${g.art[0]};--b:${g.art[1]}">${b}</div>`;
+  return `<div class="art" style="--a:${g.art[0]};--b:${g.art[1]}">${g.thumb ? `<img src="${S}/api/thumb/${g.id}?v=${g.thumb}" alt="">` : b}</div>`;
 };
 const E = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const tags = g => g.tags.map(t => `<span class="tag">${E(t)}</span>`).join('');
 const total = () => games.reduce((n, g) => n + g.online, 0);
-function soon() { const t = $('#toast'); t.textContent = 'Segera hadir'; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1500); }
+function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1800); }
+function soon() { toast('Segera hadir'); }
+function avatar(u, n) {
+  const st = `width:${n}px;height:${n}px;flex:none`;
+  return u.av ? `<img class="av" style="${st}" src="${S}/api/avatar/${u.uid}?v=${u.av}" alt="">` : `<span class="av" style="${st};background:${u.color}"></span>`;
+}
+function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small JPEG data URL
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const k = Math.max(w / img.width, h / img.height), dw = img.width * k, dh = img.height * k;
+      c.getContext('2d').drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => alert('File bukan gambar yang valid');
+    img.src = url;
+  };
+  inp.click();
+}
 
 async function guestLogin() {
   const r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) });
-  session = await r.json(); localStorage.setItem('voxely', JSON.stringify(session));
+  const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Gagal login'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
   $('#login').classList.remove('on'); renderMe(); route();
 }
 function logout() { localStorage.removeItem('voxely'); session = null; renderMe(); $('#login').classList.add('on'); }
 function renderMe() {
   if (!session) { $('#me').innerHTML = ''; return; }
-  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')"><span class="av" style="background:${session.user.color}"></span>${session.user.name} ▾</button>
-    <div class="menu" id="menu"><div class="mh"><b>${session.user.name}</b><small>Guest account</small></div>
-    <a onclick="soon()">Profile</a><a onclick="soon()">Notifications</a><a onclick="soon()">Friends</a><a onclick="soon()">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout()">Logout</a></div>`;
+  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)} ▾</button>
+    <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>Guest account</small></div>
+    <a href="#/profile">Profile</a><a onclick="soon()">Notifications</a><a onclick="soon()">Friends</a><a onclick="soon()">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout()">Logout</a></div>`;
 }
 document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
 
@@ -146,7 +171,7 @@ function drawCar() {
   $('#car').innerHTML = `<button class="arr" style="left:0" onclick="go(-1)">‹</button><button class="arr" style="right:0" onclick="go(1)">›</button>
     <div class="l" onclick="location.hash='#/game/${g.id}'">${art(g)}</div>
     <div class="r"><h2>${E(g.title)}</h2><div class="meta">${E(g.tagline)}</div><small style="color:var(--dim)">${g.online} players online</small>
-    <div class="shots">${[1, 2, 3].map(n => art(g, n)).map(a => `<div>${a}</div>`).join('')}</div></div>`;
+    <div class="shots">${(g.thumb ? [0] : [1, 2, 3]).map(n => art(g, n)).map(a => `<div>${a}</div>`).join('')}</div></div>`;
   $('#dots').innerHTML = games.map((_, i) => `<b class="${i === idx ? 'on' : ''}" onclick="idx=${i};drawCar()"></b>`).join('');
 }
 function go(d) { idx = (idx + d + games.length) % games.length; drawCar(); }
@@ -195,6 +220,45 @@ async function play(id) {
   }, 2500);
 }
 
+/* ---------- Profile ---------- */
+async function api(path, body) {
+  const r = await fetch(S + path, { method: 'POST', headers: AH(), body: JSON.stringify(body) });
+  if (r.status === 401) { logout(); throw new Error('login'); }
+  return { ok: r.ok, data: await r.json().catch(() => ({})) };
+}
+async function saveProfile(patch) {
+  const r = await api('/api/profile', patch);
+  if (r.ok) { session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); }
+  return r;
+}
+function profilePage() {
+  const u = session.user;
+  $('#view').innerHTML = `<span class="label">PROFILE</span>
+    <div class="card pad" style="max-width:520px"><div class="prow">${avatar(u, 96)}<div>
+      <button class="btn alt" onclick="changeAvatar()">Upload foto profil</button> ${u.av ? '<button class="x" onclick="removeAvatar()">Hapus foto</button>' : ''}
+      <small style="display:block;color:var(--dim);margin-top:6px">PNG/JPG/WEBP, otomatis dipotong persegi</small></div></div>
+      <label>Nama tampilan</label><input id="pName" maxlength="16" value="${E(u.name)}">
+      <div id="pErr" style="color:#ff5c6c;margin-top:8px"></div>
+      <button class="btn" onclick="saveName()">Simpan nama</button></div>`;
+}
+function changeAvatar() { pickImage(128, 128, async img => { const r = await saveProfile({ avatar: img }); r.ok ? profilePage() : alert(r.data.error || 'Gagal upload'); }); }
+async function removeAvatar() { await saveProfile({ avatar: null }); profilePage(); }
+async function saveName() {
+  const r = await saveProfile({ name: $('#pName').value });
+  if (r.ok) { $('#pErr').textContent = ''; toast('Nama disimpan'); } else $('#pErr').textContent = r.data.error || 'Gagal menyimpan';
+}
+
+/* ---------- Thumbnails ---------- */
+function drawThumb() { const t = $('#tprev'); if (t) t.innerHTML = dev.thumb ? `<img src="${dev.thumb}" alt="">` : '16:9'; }
+function pickThumb() { pickImage(640, 360, img => { dev.thumb = img; drawThumb(); }); }
+function setThumb(id) {
+  pickImage(640, 360, async img => {
+    const r = await api('/api/games/' + id + '/thumb', { image: img });
+    if (!r.ok) return alert(r.data.error || 'Gagal upload');
+    await loadGames(); drawMine(); toast('Thumbnail diperbarui');
+  });
+}
+
 /* ---------- People ---------- */
 let pq = '', ppl = [];
 async function peoplePage() {
@@ -204,7 +268,7 @@ async function peoplePage() {
 }
 function drawPeople() {
   const l = ppl.filter(p => p.name.toLowerCase().includes(pq.toLowerCase()));
-  $('#pp').innerHTML = l.length ? l.map(p => `<div class="pc"><span class="av2" style="background:${p.color}"></span><div><b>${E(p.name)}</b><small>${p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline'}</small></div></div>`).join('') : '<div class="empty">Tidak ada pemain.</div>';
+  $('#pp').innerHTML = l.length ? l.map(p => `<div class="pc">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline'}</small></div></div>`).join('') : '<div class="empty">Tidak ada pemain.</div>';
 }
 
 /* ---------- Developer Portal ---------- */
@@ -219,6 +283,7 @@ async function devPage() {
       <label>Tagline</label><input maxlength="60" value="${E(dev.tagline)}" oninput="dev.tagline=this.value">
       <label>Deskripsi</label><textarea maxlength="400" oninput="dev.desc=this.value">${E(dev.desc)}</textarea>
       <label>Tag (pisahkan koma, maks 3)</label><input value="${E(dev.tags)}" oninput="dev.tags=this.value">
+      <label>Thumbnail game</label><div class="trow"><div class="tprev" id="tprev"></div><button class="btn alt" onclick="pickThumb()">Upload thumbnail</button></div>
       <div class="row3"><div><label>Warna langit</label><input type="color" value="${dev.sky}" oninput="dev.sky=this.value;preview()"></div>
         <div><label>Cover 1</label><input type="color" value="${dev.a1}" oninput="dev.a1=this.value"></div>
         <div><label>Cover 2</label><input type="color" value="${dev.a2}" oninput="dev.a2=this.value"></div></div>
@@ -227,7 +292,7 @@ async function devPage() {
       <canvas id="pv" width="520" height="260"></canvas>
       <button class="btn" onclick="publish()">Publish game</button></div>
     <div class="side"><div class="card"><h4>GAME SAYA</h4><div id="mine"></div></div></div></div>`;
-  drawBoxes(); preview(); drawMine();
+  drawBoxes(); preview(); drawMine(); drawThumb();
 }
 function drawBoxes() {
   $('#boxes').innerHTML = dev.boxes.map((b, i) => `<div class="brow">${['x', 'y', 'z', 'w', 'h', 'd'].map(k => `<label>${k}<input type="number" step="0.5" value="${b[k]}" onchange="setBox(${i},'${k}',this.value)"></label>`).join('')}<input type="color" value="${b.c}" oninput="setBox(${i},'c',this.value)"><button class="x" onclick="delBox(${i})">✕</button></div>`).join('');
@@ -247,14 +312,14 @@ function preview() { // top-down view
 }
 function drawMine() {
   const m = games.filter(g => g.mine);
-  $('#mine').innerHTML = m.length ? m.map(g => `<div class="mrow"><a href="#/game/${g.id}">${E(g.title)}</a><small>${g.online} online</small><button class="x" onclick="delGame('${g.id}')">Hapus</button></div>`).join('') : '<div class="empty">Belum ada game. Buat yang pertama!</div>';
+  $('#mine').innerHTML = m.length ? m.map(g => `<div class="mrow"><a href="#/game/${g.id}">${E(g.title)}</a><small>${g.online} online</small><button class="x" onclick="setThumb('${g.id}')">Thumbnail</button><button class="x" onclick="delGame('${g.id}')">Hapus</button></div>`).join('') : '<div class="empty">Belum ada game. Buat yang pertama!</div>';
 }
 async function delGame(id) {
   if (!confirm('Hapus game ini?')) return;
   await fetch(S + '/api/games/' + id, { method: 'DELETE', headers: AH() }); await loadGames(); drawMine();
 }
 async function publish() {
-  const body = { title: dev.title, tagline: dev.tagline, desc: dev.desc, tags: dev.tags.split(',').map(t => t.trim()).filter(Boolean), sky: dev.sky, art: [dev.a1, dev.a2], boxes: dev.boxes };
+  const body = { title: dev.title, tagline: dev.tagline, desc: dev.desc, tags: dev.tags.split(',').map(t => t.trim()).filter(Boolean), sky: dev.sky, art: [dev.a1, dev.a2], boxes: dev.boxes, thumb: dev.thumb || undefined };
   const r = await fetch(S + '/api/games', { method: 'POST', headers: AH(), body: JSON.stringify(body) });
   if (r.status === 401) return logout();
   const d = await r.json().catch(() => ({}));
@@ -269,6 +334,7 @@ async function route() {
   $('#nGames').classList.toggle('on', !h.startsWith('#/people'));
   $('#nPeople').classList.toggle('on', h.startsWith('#/people'));
   if (h.startsWith('#/dev')) return devPage();
+  if (h.startsWith('#/profile')) return profilePage();
   if (h.startsWith('#/people')) return peoplePage();
   await loadGames();
   const m = h.match(/^#\/game\/(\w+)/);
@@ -277,8 +343,14 @@ async function route() {
 $('#guestBtn').onclick = guestLogin;
 $('#nick').onkeydown = e => e.key === 'Enter' && guestLogin();
 window.onhashchange = route;
-setInterval(() => session && !location.hash.startsWith('#/dev') && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
-renderMe(); route();
+setInterval(() => session && !/^#\/(dev|profile)/.test(location.hash) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
+async function refreshMe() { // validate the saved session and pick up uid/avatar
+  if (!session) return;
+  const r = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).catch(() => null);
+  if (r && r.status === 401) { localStorage.removeItem('voxely'); session = null; renderMe(); }
+  else if (r && r.ok) { session.user = await r.json(); localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); }
+}
+renderMe(); refreshMe().then(route);
 </script>
 </body>
 </html>
