@@ -2,7 +2,7 @@ const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
 const PROTOCOL = 'voxely';
-const STORE_URL = process.env.VOXELY_STORE || 'https://YOUR-STORE.vercel.app' /* <- ganti dengan URL Vercel kamu */;
+const STORE_URL = process.env.VOXELY_STORE || 'https://playvoxely.vercel.app.' /* <- ganti dengan URL Vercel kamu */;
 let gameWin = null, launcherWin = null, pendingUrl = null;
 
 // Register voxely:// so the website's Play button can open this app.
