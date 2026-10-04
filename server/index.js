@@ -40,7 +40,7 @@ const rooms = Object.fromEntries(Object.keys(GAMES).map(k => [k, new Map()]));
 const sessions = new Map();
 const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 app.use((req, res, next) => {
-  res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS' });
+  res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS' });
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -66,7 +66,7 @@ app.post('/api/guest', (req, res) => {
     do { name = 'Guest' + Math.floor(1000 + Math.random() * 9000); } while (nameTaken(name));
   }
   const token = crypto.randomBytes(16).toString('hex');
-  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null };
+  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), notes: [] };
   if (sessions.size > 5000) sessions.delete(sessions.keys().next().value);
   sessions.set(token, user);
   res.json({ token, user: pubUser(user) });
@@ -107,33 +107,54 @@ app.get('/api/people', (_req, res) => {
 const HEX = /^#[0-9a-f]{6}$/i;
 const num = (v, lo, hi, d) => { v = parseFloat(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
 const txt = (v, n) => String(v || '').replace(/[<>]/g, '').trim().slice(0, n);
-app.post('/api/games', (req, res) => {
-  const tok = bearer(req), user = sessions.get(tok);
-  if (!user) return res.sendStatus(401);
-  const b = req.body || {};
+const buildGame = b => {
   const title = txt(b.title, 30);
-  if (title.length < 3) return res.status(400).json({ error: 'Judul minimal 3 huruf' });
-  const all = Object.values(GAMES).filter(g => g.ownerToken);
-  if (all.filter(g => g.ownerToken === tok).length >= 5) return res.status(400).json({ error: 'Maksimal 5 game per akun' });
-  if (all.length >= 50) return res.status(400).json({ error: 'Server penuh, coba lagi nanti' });
+  if (title.length < 3) return { error: 'Judul minimal 3 huruf' };
   const boxes = (Array.isArray(b.boxes) ? b.boxes : []).slice(0, 40).map(x => ({
     x: num(x?.x, -500, 500, 0), y: num(x?.y, -20, 200, 0), z: num(x?.z, -500, 500, 0),
     w: num(x?.w, 0.5, 200, 4), h: num(x?.h, 0.5, 100, 1), d: num(x?.d, 0.5, 200, 4),
     c: HEX.test(x?.c) ? x.c : '#888888'
   }));
-  if (!boxes.length) return res.status(400).json({ error: 'Tambahkan minimal 1 platform' });
-  const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
-  if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
-  const f = boxes[0], id = 'u' + crypto.randomBytes(4).toString('hex');
+  if (!boxes.length) return { error: 'Tambahkan minimal 1 platform' };
+  const f = boxes[0];
   const tags = (Array.isArray(b.tags) ? b.tags : []).map(t => txt(t, 14)).filter(Boolean).slice(0, 3);
-  GAMES[id] = {
+  return { game: {
     title, tagline: txt(b.tagline, 60) || 'Game buatan komunitas.', desc: txt(b.desc, 400) || 'Belum ada deskripsi.',
     tags: tags.length ? tags : ['Community'], sky: HEX.test(b.sky) ? b.sky : '#7ec8ff',
     art: [HEX.test(b.art?.[0]) ? b.art[0] : '#1463ff', HEX.test(b.art?.[1]) ? b.art[1] : '#0a0f1a'],
-    spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes, owner: user.name, ownerToken: tok, thumb, thumbV: thumb ? Date.now() : 0
-  };
+    spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes
+  } };
+};
+app.post('/api/games', (req, res) => {
+  const tok = bearer(req), user = sessions.get(tok);
+  if (!user) return res.sendStatus(401);
+  const b = req.body || {};
+  const all = Object.values(GAMES).filter(g => g.ownerToken);
+  if (all.filter(g => g.ownerToken === tok).length >= 5) return res.status(400).json({ error: 'Maksimal 5 game per akun' });
+  if (all.length >= 50) return res.status(400).json({ error: 'Server penuh, coba lagi nanti' });
+  const built = buildGame(b);
+  if (built.error) return res.status(400).json({ error: built.error });
+  const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
+  if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
+  const id = 'u' + crypto.randomBytes(4).toString('hex');
+  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, ownerToken: tok, thumb, thumbV: thumb ? Date.now() : 0 };
   rooms[id] = new Map();
   res.json({ id });
+});
+const mineGame = req => { const g = GAMES[req.params.id]; return g && g.ownerToken && g.ownerToken === bearer(req) ? g : null; };
+app.get('/api/games/:id/source', (req, res) => {
+  const g = mineGame(req); if (!g) return res.sendStatus(403);
+  res.json({ title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, boxes: g.boxes, hasThumb: !!g.thumb });
+});
+app.put('/api/games/:id', (req, res) => {
+  const g = mineGame(req); if (!g) return res.sendStatus(403);
+  const b = req.body || {}, built = buildGame(b);
+  if (built.error) return res.status(400).json({ error: built.error });
+  const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
+  if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
+  Object.assign(g, built.game);
+  if (thumb) { g.thumb = thumb; g.thumbV = Date.now(); }
+  res.json({ ok: true });
 });
 app.delete('/api/games/:id', (req, res) => {
   const g = GAMES[req.params.id];
@@ -150,46 +171,38 @@ app.post('/api/games/:id/thumb', (req, res) => {
   g.thumb = thumb; g.thumbV = Date.now();
   res.json({ ok: true });
 });
-// ---------- Reviews (need >= 5 minutes of playtime) ----------
-const MIN_REVIEW = 5;
+// ---------- Reviews (any logged-in user, one per game) ----------
 const plain = (v, n) => String(v || '').replace(/\r/g, '').trim().slice(0, n);
 const uidMap = () => new Map([...sessions.values()].map(u => [u.uid, u]));
-const playMins = (u, gid) => Math.floor(((u.play?.[gid] || 0) + (u.live?.id === gid ? (Date.now() - u.live.start) / 1000 : 0)) / 60);
 const reviewsOf = g => (g.reviews = g.reviews || []);
 
 app.get('/api/games/:id/reviews', (req, res) => {
-  const gid = req.params.id, g = GAMES[gid];
+  const g = GAMES[req.params.id];
   if (!g) return res.sendStatus(404);
   const tok = bearer(req), me = sessions.get(tok), users = uidMap();
-  const visible = reviewsOf(g).filter(r => r.reports.size < 3);
-  const items = visible.map(r => {
+  const items = reviewsOf(g).filter(r => r.reports.size < 3).map(r => {
     const u = users.get(r.uid);
     return {
       id: r.id, uid: r.uid, name: u?.name || r.name, av: u?.avatar ? u.av : 0, color: u?.color || '#1463ff',
-      up: r.up, text: r.text, ts: r.ts, mins: r.mins, rec: u ? playMins(u, gid) : r.mins,
-      yes: r.yes.size, no: r.no.size, mine: me ? (r.yes.has(me.uid) ? 'yes' : r.no.has(me.uid) ? 'no' : null) : null, own: me?.uid === r.uid
+      up: r.up, text: r.text, ts: r.ts, yes: r.yes.size, no: r.no.size,
+      mine: me ? (r.yes.has(me.uid) ? 'yes' : r.no.has(me.uid) ? 'no' : null) : null, own: me?.uid === r.uid
     };
   });
   items.sort(req.query.sort === 'helpful' ? (a, b) => b.yes - a.yes || b.ts - a.ts : (a, b) => b.ts - a.ts);
-  const playtime = me ? playMins(me, gid) : 0, isOwner = !!me && g.ownerToken === tok;
-  res.json({
-    playtime, isOwner, canReview: !!me && !isOwner && playtime >= MIN_REVIEW, min: MIN_REVIEW,
-    mine: items.find(x => x.own) || null, total: items.length, up: items.filter(x => x.up).length, reviews: items.slice(0, 100)
-  });
+  const isOwner = !!me && g.ownerToken === tok;
+  res.json({ isOwner, canReview: !!me && !isOwner, mine: items.find(x => x.own) || null, total: items.length, up: items.filter(x => x.up).length, reviews: items.slice(0, 100) });
 });
 app.post('/api/games/:id/reviews', (req, res) => {
-  const gid = req.params.id, g = GAMES[gid], tok = bearer(req), me = sessions.get(tok);
+  const g = GAMES[req.params.id], tok = bearer(req), me = sessions.get(tok);
   if (!me) return res.sendStatus(401);
   if (!g) return res.sendStatus(404);
   if (g.ownerToken === tok) return res.status(400).json({ error: 'Kamu tidak bisa mereview game buatanmu sendiri' });
-  const mins = playMins(me, gid);
-  if (mins < MIN_REVIEW) return res.status(400).json({ error: `Butuh minimal ${MIN_REVIEW} menit bermain` });
   const text = plain(req.body?.text, 500);
   if (!text) return res.status(400).json({ error: 'Tulis reviewnya dulu' });
   const list = reviewsOf(g), up = !!req.body?.up, ex = list.find(r => r.uid === me.uid);
-  if (ex) Object.assign(ex, { up, text, mins, ts: Date.now() });
+  if (ex) Object.assign(ex, { up, text, ts: Date.now() });
   else if (list.length >= 500) return res.status(400).json({ error: 'Review untuk game ini sudah penuh' });
-  else list.push({ id: crypto.randomBytes(4).toString('hex'), uid: me.uid, name: me.name, up, text, ts: Date.now(), mins, yes: new Set(), no: new Set(), reports: new Set() });
+  else list.push({ id: crypto.randomBytes(4).toString('hex'), uid: me.uid, name: me.name, up, text, ts: Date.now(), yes: new Set(), no: new Set(), reports: new Set() });
   res.json({ ok: true });
 });
 app.delete('/api/games/:id/reviews', (req, res) => {
@@ -298,6 +311,69 @@ app.delete('/api/forum/thread/:id/post/:pid', (req, res) => {
   res.sendStatus(204);
 });
 
+// ---------- Friends & notifications ----------
+const userCard = u => ({ uid: u.uid, name: u.name, color: u.color, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null });
+const friendState = (me, o) => me.friends.has(o.uid) ? 'friends' : me.reqOut.has(o.uid) ? 'sent' : me.reqIn.has(o.uid) ? 'received' : 'none';
+const needMe = (req, res) => { const me = sessions.get(bearer(req)); if (!me) res.sendStatus(401); return me; };
+const other = (req, me) => { const o = uidMap().get(req.params.uid); return o && o.uid !== me.uid ? o : null; };
+function makeFriends(me, o) {
+  me.reqIn.delete(o.uid); me.reqOut.delete(o.uid); o.reqIn.delete(me.uid); o.reqOut.delete(me.uid);
+  me.friends.add(o.uid); o.friends.add(me.uid);
+  o.notes.unshift({ uid: me.uid, ts: Date.now(), read: false }); o.notes.length = Math.min(o.notes.length, 50);
+}
+app.get('/api/users/:uid', (req, res) => {
+  const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
+  const me = sessions.get(bearer(req));
+  res.json({ ...userCard(u), friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', friends: u.friends.size,
+    games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))) });
+});
+app.get('/api/friends', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const users = uidMap();
+  res.json({ friends: [...me.friends].map(id => users.get(id)).filter(Boolean).map(userCard).sort((a, b) => !!b.game - !!a.game) });
+});
+app.post('/api/friends/:uid/request', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const o = other(req, me); if (!o) return res.sendStatus(404);
+  if (me.friends.has(o.uid) || me.reqOut.has(o.uid)) return res.json({ ok: true });
+  if (me.reqIn.has(o.uid)) { makeFriends(me, o); return res.json({ ok: true }); } // they already asked me
+  if (me.friends.size >= 100 || me.reqOut.size >= 50) return res.status(400).json({ error: 'Batas teman / permintaan tercapai' });
+  me.reqOut.add(o.uid); o.reqIn.set(me.uid, Date.now());
+  res.json({ ok: true });
+});
+app.post('/api/friends/:uid/accept', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const o = other(req, me); if (!o || !me.reqIn.has(o.uid)) return res.sendStatus(404);
+  if (me.friends.size >= 100) return res.status(400).json({ error: 'Daftar teman penuh' });
+  makeFriends(me, o); res.json({ ok: true });
+});
+app.post('/api/friends/:uid/decline', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const o = other(req, me); if (!o) return res.sendStatus(404);
+  me.reqIn.delete(o.uid); o.reqOut.delete(me.uid); res.json({ ok: true });
+});
+app.post('/api/friends/:uid/cancel', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const o = other(req, me); if (!o) return res.sendStatus(404);
+  me.reqOut.delete(o.uid); o.reqIn.delete(me.uid); res.json({ ok: true });
+});
+app.delete('/api/friends/:uid', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const o = other(req, me); if (!o) return res.sendStatus(404);
+  me.friends.delete(o.uid); o.friends.delete(me.uid); res.sendStatus(204);
+});
+app.get('/api/notifications', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const users = uidMap(), card = id => (users.get(id) ? userCard(users.get(id)) : null);
+  const requests = [...me.reqIn].map(([id, ts]) => ({ ts, user: card(id) })).filter(x => x.user).sort((a, b) => b.ts - a.ts);
+  const accepted = me.notes.map(n => ({ ts: n.ts, read: n.read, user: card(n.uid) })).filter(x => x.user);
+  res.json({ requests, accepted, unread: requests.length + accepted.filter(x => !x.read).length });
+});
+app.post('/api/notifications/read', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  me.notes.forEach(n => (n.read = true)); res.json({ ok: true });
+});
+
 app.get('/', (_req, res) => res.send('Voxely game server is running'));
 
 // ---------- Multiplayer ----------
@@ -310,7 +386,7 @@ io.on('connection', socket => {
   let gameId = null, lastChat = 0;
   socket.on('join', id => {
     if (!GAMES[id] || gameId) return;
-    gameId = id; socket.join(id); socket.user.game = id; socket.user.live = { id, start: Date.now() };
+    gameId = id; socket.join(id); socket.user.game = id;
     const g = GAMES[id];
     const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0 };
     rooms[id].set(socket.id, me);
@@ -330,8 +406,6 @@ io.on('connection', socket => {
   });
   socket.on('disconnect', () => {
     if (!gameId) return;
-    const lv = socket.user.live;
-    if (lv && lv.id === gameId) { socket.user.play = socket.user.play || {}; socket.user.play[gameId] = (socket.user.play[gameId] || 0) + (Date.now() - lv.start) / 1000; socket.user.live = null; }
     socket.user.game = null;
     rooms[gameId].delete(socket.id);
     io.to(gameId).emit('leave', socket.id);
