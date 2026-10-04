@@ -117,6 +117,17 @@
   .flag { position:absolute; right:12px; top:12px; background:none; border:0; color:var(--dim); cursor:pointer; } .flag:hover { color:#fff; }
   .rform { background:var(--panel); border:1px solid var(--line); padding:16px; margin-bottom:10px; } .rform textarea { width:100%; height:90px; background:#050913; border:1px solid var(--line); color:#fff; padding:9px; font:inherit; margin:10px 0; }
   .rform .tg { display:flex; gap:8px; } .rform .vb { padding:8px 16px; }
+  .bdg { background:#ef4444; color:#fff; font-size:11px; padding:1px 6px; margin-left:6px; } .bdg:empty { display:none; }
+  a.pc:hover { border-color:var(--blue); } .prof { display:flex; gap:22px; align-items:center; }
+  .nr { display:flex; align-items:center; gap:14px; padding:14px; border-bottom:1px solid var(--line); } .nt { flex:1; } .nt small { color:var(--dim); } .nt a { color:#6fa8ff; }
+  .step .ft { display:flex; align-items:center; gap:10px; margin-bottom:10px; } .sn { background:var(--blue); color:#fff; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; font-style:normal; font-size:14px; }
+  .hint { background:#071127; border:1px solid var(--line); padding:10px 12px; color:#9fb3d6; margin:8px 0; line-height:1.5; } .err { color:#ff5c6c; margin-bottom:8px; }
+  .tpl { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:12px 0; color:var(--dim); } .tools { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  #cv { width:100%; border:1px solid var(--line); touch-action:none; cursor:crosshair; display:block; }
+  .selp { margin-top:12px; padding:12px; border:1px solid var(--line); background:#050913; } .row2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+  .pad input[type=range] { background:none; border:0; padding:0; accent-color:var(--blue); }
+  .sw { display:flex; gap:6px; flex-wrap:wrap; align-items:center; } .swb { width:26px; height:26px; border:2px solid transparent; cursor:pointer; } .swb.on { border-color:#fff; }
+  .acts { display:flex; gap:8px; margin-top:12px; } .mrow { flex-wrap:wrap; }
   @media (max-width:860px) { .cols, .gmain, .car { grid-template-columns:1fr; } .car { height:auto; } .car .l { height:200px; } .gmain .art { height:240px; } }
 </style>
 </head>
@@ -182,9 +193,9 @@ async function guestLogin() {
 function logout() { localStorage.removeItem('voxely'); session = null; renderMe(); $('#login').classList.add('on'); }
 function renderMe() {
   if (!session) { $('#me').innerHTML = ''; return; }
-  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)} ▾</button>
+  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}<span class="bdg">${nCount || ''}</span> ▾</button>
     <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>Guest account</small></div>
-    <a href="#/profile">Profile</a><a onclick="soon()">Notifications</a><a onclick="soon()">Friends</a><a onclick="soon()">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout()">Logout</a></div>`;
+    <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a onclick="soon()">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout()">Logout</a></div>`;
 }
 document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
 
@@ -250,6 +261,7 @@ async function play(id) {
 }
 
 /* ---------- shared helpers ---------- */
+let nCount = 0;
 const AGO = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['min', 60]];
 function ago(ts) {
   const s = Math.max(0, (Date.now() - ts) / 1000);
@@ -277,30 +289,27 @@ async function loadReviews(id) {
   if (!r.ok || !$('#reviews')) return;
   const d = await r.json();
   if (rvDraft === null && d.mine) rvUp = d.mine.up;
-  const notice = d.isOwner ? 'Kamu tidak bisa mereview game buatanmu sendiri.'
-    : d.canReview ? `Your playtime: ${d.playtime} mins<small>${d.mine ? 'Kamu sudah mereview game ini. Kirim lagi untuk mengubah.' : 'Kamu bisa menulis review untuk game ini.'}</small>`
-    : `You need at least ${d.min} minutes of playtime to review this game.<small>Your playtime: ${d.playtime} mins</small>`;
-  const form = d.canReview ? `<div class="rform"><div class="tg">
+  const form = d.isOwner ? '<div class="notice">Kamu tidak bisa mereview game buatanmu sendiri.</div>' : `<div class="rform"><div class="tg">
       <button id="rvY" class="vb ${rvUp ? 'on' : ''}" onclick="setUp(true)">${IC.up} Recommend</button>
       <button id="rvN" class="vb ${rvUp ? '' : 'on'}" onclick="setUp(false)">${IC.down} Not Recommend</button></div>
       <textarea id="rvText" maxlength="500" placeholder="Tulis review kamu…" oninput="rvDraft=this.value">${E(rvDraft ?? d.mine?.text ?? '')}</textarea>
       <button class="btn" onclick="submitReview('${id}')">${d.mine ? 'Update review' : 'Post review'}</button>
-      ${d.mine ? `<button class="btn alt" onclick="delReview('${id}')">Hapus review</button>` : ''}</div>` : '';
-  const card = x => `<div class="rv"><div>${avatar(x, 56)}</div><div class="rvr">
+      ${d.mine ? `<button class="btn alt" onclick="delReview('${id}')">Hapus review</button>` : ''}</div>`;
+  const card = x => `<div class="rv"><div><a href="#/user/${x.uid}">${avatar(x, 56)}</a></div><div class="rvr">
       <button class="flag" title="Report" onclick="reportReview('${id}','${x.id}')">${IC.flag}</button>
-      <div class="rvh"><b>${E(x.name)}</b> <span>- ${dateStr(x.ts)}</span></div>
-      <div class="rec ${x.up ? '' : 'neg'}">${x.up ? IC.up : IC.down}<div><b>${x.up ? 'Recommended' : 'Not Recommended'}</b><small>${x.mins} mins at review time (${x.rec} mins on record)</small></div></div>
+      <div class="rvh"><a href="#/user/${x.uid}"><b>${E(x.name)}</b></a> <span>- ${dateStr(x.ts)}</span></div>
+      <div class="rec ${x.up ? '' : 'neg'}">${x.up ? IC.up : IC.down}<div><b>${x.up ? 'Recommended' : 'Not Recommended'}</b></div></div>
       <p>${E(x.text)}</p>
       <div class="rvf">Helpful?
         <button class="vb ${x.mine === 'yes' ? 'on' : ''}" ${x.own ? 'disabled' : ''} onclick="voteReview('${id}','${x.id}','${x.mine === 'yes' ? '' : 'yes'}')">${IC.up} Yes</button>
         <button class="vb ${x.mine === 'no' ? 'on' : ''}" ${x.own ? 'disabled' : ''} onclick="voteReview('${id}','${x.id}','${x.mine === 'no' ? '' : 'no'}')">${IC.down} No</button>
         <span>${x.yes} people found this helpful</span></div></div></div>`;
   $('#reviews').innerHTML = `<h3 class="ft" style="font-size:22px;margin:32px 0 12px">Reviews <small style="color:var(--dim);font-size:13px;font-weight:400">${d.total} reviews${d.total ? ' · ' + Math.round(d.up / d.total * 100) + '% recommended' : ''}</small></h3>
-    <div class="notice">${notice}</div>${form}
+    ${form}
     <div class="sortbar">Sort by:
       <button class="btn sm ${rvSort === 'recent' ? '' : 'alt'}" onclick="rvSort='recent';loadReviews('${id}')">Most Recent</button>
       <button class="btn sm ${rvSort === 'helpful' ? '' : 'alt'}" onclick="rvSort='helpful';loadReviews('${id}')">Most Helpful</button></div>
-    ${d.reviews.length ? d.reviews.map(card).join('') : '<div class="card empty">Belum ada review.</div>'}`;
+    ${d.reviews.length ? d.reviews.map(card).join('') : '<div class="card empty">Belum ada review. Jadilah yang pertama!</div>'}`;
 }
 function setUp(v) { rvUp = v; $('#rvY').classList.toggle('on', v); $('#rvN').classList.toggle('on', !v); }
 async function submitReview(id) {
@@ -434,63 +443,188 @@ async function peoplePage() {
 }
 function drawPeople() {
   const l = ppl.filter(p => p.name.toLowerCase().includes(pq.toLowerCase()));
-  $('#pp').innerHTML = l.length ? l.map(p => `<div class="pc">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline'}</small></div></div>`).join('') : '<div class="empty">Tidak ada pemain.</div>';
+  $('#pp').innerHTML = l.length ? l.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline'}</small></div></a>`).join('') : '<div class="empty">Tidak ada pemain.</div>';
 }
 
-/* ---------- Developer Portal ---------- */
+/* ---------- Developer Portal (visual editor) ---------- */
 let dev = null;
-const newDev = () => ({ title: '', tagline: '', desc: '', tags: '', sky: '#7ec8ff', a1: '#1463ff', a2: '#0a0f1a', boxes: [{ x: 0, y: -0.5, z: 0, w: 30, h: 1, d: 30, c: '#5cb85c' }] });
 const AH = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token });
+const PAL = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#9ca3af', '#374151', '#8b5a2b'];
+const GR = c => ({ x: 0, y: -0.5, z: 0, w: 40, h: 1, d: 40, c });
+const TPL = {
+  flat: { n: 'Lapangan', sky: '#7ec8ff', b: () => [GR('#5cb85c'), { x: 6, y: 1, z: 4, w: 4, h: 2, d: 4, c: '#e0a040' }, { x: -8, y: 0.75, z: -6, w: 6, h: 1.5, d: 3, c: '#8e6bd0' }] },
+  obby: { n: 'Obby melayang', sky: '#1b2a49', b: () => [{ x: 0, y: -0.5, z: 0, w: 10, h: 1, d: 10, c: '#3b82f6' }, { x: 0, y: 1, z: 11, w: 4, h: 1, d: 4, c: '#f97316' }, { x: 5, y: 2.5, z: 17, w: 4, h: 1, d: 4, c: '#eab308' }, { x: 11, y: 4, z: 20, w: 4, h: 1, d: 4, c: '#22c55e' }, { x: 17, y: 5.5, z: 14, w: 3, h: 1, d: 3, c: '#ec4899' }, { x: 20, y: 7, z: 7, w: 8, h: 1, d: 8, c: '#ffffff' }] },
+  stairs: { n: 'Tangga', sky: '#ffd6e8', b: () => [GR('#f9a8d4'), ...Array.from({ length: 8 }, (_, i) => ({ x: 0, y: i * 0.8 + 0.4, z: i * 3 - 6, w: 8, h: 0.8, d: 3, c: i % 2 ? '#a7f3d0' : '#fde68a' }))] },
+  blank: { n: 'Kosong', sky: '#7ec8ff', b: () => [{ x: 0, y: -0.5, z: 0, w: 12, h: 1, d: 12, c: '#5cb85c' }] }
+};
+const topOf = b => +(b.y + b.h / 2).toFixed(1);
+const fresh = () => ({ id: null, title: '', tagline: '', desc: '', tags: '', sky: '#7ec8ff', a1: '#1463ff', a2: '#0a0f1a', boxes: TPL.flat.b(), sel: 0, scale: 8, thumb: null });
+function newDev() {
+  try { const d = JSON.parse(localStorage.getItem('voxelyDraft')); if (d && d.boxes?.length) return { ...fresh(), ...d, id: null, thumb: null, sel: 0 }; } catch (e) {}
+  return fresh();
+}
+function draft() { if (!dev.id) try { localStorage.setItem('voxelyDraft', JSON.stringify({ ...dev, thumb: null })); } catch (e) {} }
+function devNew() { dev = fresh(); localStorage.removeItem('voxelyDraft'); devPage(); }
+
 async function devPage() {
   await loadGames(); dev = dev || newDev();
+  const ed = !!dev.id;
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
-    <div class="cols"><div class="card pad"><h3 class="ft">Buat game baru</h3>
-      <label>Judul</label><input maxlength="30" value="${E(dev.title)}" oninput="dev.title=this.value">
-      <label>Tagline</label><input maxlength="60" value="${E(dev.tagline)}" oninput="dev.tagline=this.value">
-      <label>Deskripsi</label><textarea maxlength="400" oninput="dev.desc=this.value">${E(dev.desc)}</textarea>
-      <label>Tag (pisahkan koma, maks 3)</label><input value="${E(dev.tags)}" oninput="dev.tags=this.value">
-      <label>Thumbnail game</label><div class="trow"><div class="tprev" id="tprev"></div><button class="btn alt" onclick="pickThumb()">Upload thumbnail</button></div>
-      <div class="row3"><div><label>Warna langit</label><input type="color" value="${dev.sky}" oninput="dev.sky=this.value;preview()"></div>
-        <div><label>Cover 1</label><input type="color" value="${dev.a1}" oninput="dev.a1=this.value"></div>
-        <div><label>Cover 2</label><input type="color" value="${dev.a2}" oninput="dev.a2=this.value"></div></div>
-      <label>Platform — yang pertama jadi tempat spawn. y = tinggi tengah balok.</label>
-      <div id="boxes"></div><button class="btn alt" onclick="addBox()">+ Tambah platform</button>
-      <canvas id="pv" width="520" height="260"></canvas>
-      <button class="btn" onclick="publish()">Publish game</button></div>
+    <div class="cols"><div>
+      <div class="card pad step"><h3 class="ft"><i class="sn">1</i> Info game</h3>
+        ${ed ? '<div class="hint">Kamu sedang mengedit game yang sudah dipublish. <a style="color:#6fa8ff" onclick="devNew()">Buat game baru</a></div>' : '<div class="hint">Isi nama dan deskripsi game kamu. Semua bisa diubah lagi nanti.</div>'}
+        <label>Judul game</label><input maxlength="30" placeholder="Contoh: Pulau Obby" value="${E(dev.title)}" oninput="dev.title=this.value;draft()">
+        <label>Tagline (kalimat pendek)</label><input maxlength="60" placeholder="Contoh: Lompat sampai puncak!" value="${E(dev.tagline)}" oninput="dev.tagline=this.value;draft()">
+        <label>Deskripsi</label><textarea maxlength="400" placeholder="Ceritakan tentang game kamu…" oninput="dev.desc=this.value;draft()">${E(dev.desc)}</textarea>
+        <label>Tag (pisahkan dengan koma, maks 3)</label><input placeholder="Obby, Santai, Seru" value="${E(dev.tags)}" oninput="dev.tags=this.value;draft()">
+        <label>Thumbnail <small>(opsional — kalau kosong dipakai warna cover)</small></label>
+        <div class="trow"><div class="tprev" id="tprev"></div><button class="btn alt" onclick="pickThumb()">Upload thumbnail</button></div>
+        <div class="row3"><div><label>Warna langit</label><input type="color" value="${dev.sky}" oninput="dev.sky=this.value;draw();draft()"></div>
+          <div><label>Cover 1</label><input type="color" value="${dev.a1}" oninput="dev.a1=this.value;draft()"></div>
+          <div><label>Cover 2</label><input type="color" value="${dev.a2}" oninput="dev.a2=this.value;draft()"></div></div>
+      </div>
+      <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">2</i> Bangun dunia</h3>
+        <div class="hint"><b>Cara pakai:</b> tarik kotak untuk memindahkan · klik dua kali di peta untuk menambah platform · kotak pertama (<b>START</b>) adalah tempat pemain muncul · angka di kotak = ketinggiannya.</div>
+        <div class="tpl">Mulai dari template: ${Object.entries(TPL).map(([k, t]) => `<button class="vb" onclick="applyTpl('${k}')">${t.n}</button>`).join('')}</div>
+        <div class="tools"><button class="btn sm" onclick="addPlat()">+ Platform</button><button class="btn sm alt" onclick="zoom(1.25)">Zoom +</button><button class="btn sm alt" onclick="zoom(0.8)">Zoom −</button><small id="cnt" style="color:var(--dim)"></small></div>
+        <canvas id="cv" width="720" height="440"></canvas><div id="selp"></div>
+      </div>
+      <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">3</i> Publish</h3>
+        <div class="hint">Setelah publish, game langsung muncul di Store dan bisa dimainkan lewat tombol Play.</div>
+        <div id="dErr" class="err"></div><button class="btn" onclick="publish()">${ed ? 'Simpan perubahan' : 'Publish game'}</button></div>
+    </div>
     <div class="side"><div class="card"><h4>GAME SAYA</h4><div id="mine"></div></div></div></div>`;
-  drawBoxes(); preview(); drawMine(); drawThumb();
+  bindCanvas(); draw(); drawSel(); drawMine(); drawThumb();
 }
-function drawBoxes() {
-  $('#boxes').innerHTML = dev.boxes.map((b, i) => `<div class="brow">${['x', 'y', 'z', 'w', 'h', 'd'].map(k => `<label>${k}<input type="number" step="0.5" value="${b[k]}" onchange="setBox(${i},'${k}',this.value)"></label>`).join('')}<input type="color" value="${b.c}" oninput="setBox(${i},'c',this.value)"><button class="x" onclick="delBox(${i})">✕</button></div>`).join('');
+function applyTpl(k) {
+  if (dev.boxes.length > 3 && !confirm('Ganti dunia dengan template ini? Perubahan di peta akan hilang.')) return;
+  dev.boxes = TPL[k].b(); dev.sky = TPL[k].sky; dev.sel = 0; draft(); devPage();
 }
-function setBox(i, k, v) { dev.boxes[i][k] = k === 'c' ? v : parseFloat(v) || 0; preview(); }
-function addBox() { if (dev.boxes.length >= 40) return; const l = dev.boxes[dev.boxes.length - 1]; dev.boxes.push({ x: l.x + 6, y: l.y + 1, z: l.z, w: 4, h: 1, d: 4, c: '#1463ff' }); drawBoxes(); preview(); }
-function delBox(i) { if (dev.boxes.length > 1) { dev.boxes.splice(i, 1); drawBoxes(); preview(); } }
-function preview() { // top-down view
-  const c = $('#pv'); if (!c) return; const g = c.getContext('2d'), B = dev.boxes;
-  g.fillStyle = dev.sky; g.fillRect(0, 0, c.width, c.height);
-  const x0 = Math.min(...B.map(b => b.x - b.w / 2)), x1 = Math.max(...B.map(b => b.x + b.w / 2)), z0 = Math.min(...B.map(b => b.z - b.d / 2)), z1 = Math.max(...B.map(b => b.z + b.d / 2));
-  const s = Math.min((c.width - 24) / Math.max(1, x1 - x0), (c.height - 24) / Math.max(1, z1 - z0));
-  const ox = (c.width - (x1 - x0) * s) / 2, oz = (c.height - (z1 - z0) * s) / 2;
-  const px = b => ox + (b.x - b.w / 2 - x0) * s, pz = b => oz + (z1 - (b.z + b.d / 2)) * s;
-  [...B].sort((a, b) => a.y - b.y).forEach(b => { g.fillStyle = b.c; g.fillRect(px(b), pz(b), b.w * s, b.d * s); g.strokeStyle = 'rgba(0,0,0,.45)'; g.strokeRect(px(b), pz(b), b.w * s, b.d * s); });
-  const f = B[0]; g.fillStyle = '#fff'; g.fillRect(px(f) + f.w * s / 2 - 5, pz(f) + f.d * s / 2 - 5, 10, 10);
+function zoom(f) { dev.scale = Math.max(2, Math.min(24, dev.scale * f)); draw(); }
+function addPlat(x, z) {
+  if (dev.boxes.length >= 40) return toast('Maksimal 40 platform');
+  const n = dev.boxes.length;
+  dev.boxes.push({ x: x ?? (n * 3) % 15 - 6, y: 0.5, z: z ?? 0, w: 4, h: 1, d: 4, c: PAL[Math.floor(Math.random() * 8)] });
+  dev.sel = n; draw(); drawSel(); draft();
+}
+function dupPlat() { const b = dev.boxes[dev.sel]; if (b) { addPlat(b.x + 2, b.z + 2); Object.assign(dev.boxes[dev.sel], { y: b.y, w: b.w, h: b.h, d: b.d, c: b.c }); draw(); drawSel(); draft(); } }
+function delPlat() { if (dev.boxes.length < 2) return toast('Minimal 1 platform'); dev.boxes.splice(dev.sel, 1); dev.sel = Math.min(dev.sel, dev.boxes.length - 1); draw(); drawSel(); draft(); }
+function makeStart() { const i = dev.sel; [dev.boxes[0], dev.boxes[i]] = [dev.boxes[i], dev.boxes[0]]; dev.sel = 0; draw(); drawSel(); draft(); }
+function setProp(k, v) {
+  const b = dev.boxes[dev.sel]; if (!b) return;
+  if (k === 'c') b.c = v;
+  else if (k === 'top') b.y = v - b.h / 2;
+  else if (k === 'h') { const t = topOf(b); b.h = v; b.y = t - v / 2; }
+  else b[k] = v;
+  const lab = $('#v_' + k); if (lab) lab.textContent = k === 'top' ? v : b[k];
+  draw(); draft();
+}
+function drawSel() {
+  const el = $('#selp'); if (!el) return;
+  $('#cnt').textContent = dev.boxes.length + ' platform';
+  const b = dev.boxes[dev.sel];
+  if (!b) { el.innerHTML = '<div class="empty">Klik sebuah platform di peta untuk mengubah ukuran dan warnanya.</div>'; return; }
+  const sl = (k, lab, min, max, val) => `<div><label>${lab}: <b id="v_${k}">${val}</b></label><input type="range" min="${min}" max="${max}" step="0.5" value="${val}" oninput="setProp('${k}', +this.value)"></div>`;
+  el.innerHTML = `<div class="selp"><b>Platform ${dev.sel + 1}${dev.sel === 0 ? ' · START' : ''}</b>
+    <div class="row2">${sl('w', 'Lebar (kiri-kanan)', 1, 60, b.w)}${sl('d', 'Panjang (depan-belakang)', 1, 60, b.d)}${sl('h', 'Tebal', 0.5, 10, b.h)}${sl('top', 'Ketinggian dari dasar', 0, 40, topOf(b))}</div>
+    <label>Warna</label><div class="sw">${PAL.map(c => `<button class="swb ${c === b.c ? 'on' : ''}" style="background:${c}" onclick="setProp('c','${c}');drawSel()"></button>`).join('')}<input type="color" value="${b.c}" oninput="setProp('c',this.value)"></div>
+    <div class="acts"><button class="btn sm alt" ${dev.sel === 0 ? 'disabled' : ''} onclick="makeStart()">Jadikan START</button><button class="btn sm alt" onclick="dupPlat()">Duplikat</button><button class="x" onclick="delPlat()">Hapus</button></div></div>`;
+}
+function draw() {
+  const c = $('#cv'); if (!c) return;
+  const g = c.getContext('2d'), s = dev.scale, W = c.width, H = c.height;
+  g.fillStyle = dev.sky; g.fillRect(0, 0, W, H); g.lineWidth = 1;
+  for (let u = -500; u <= 500; u += 5) {
+    const px = W / 2 + u * s, pz = H / 2 - u * s;
+    g.strokeStyle = u === 0 ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.14)';
+    if (px >= 0 && px <= W) { g.beginPath(); g.moveTo(px, 0); g.lineTo(px, H); g.stroke(); }
+    if (pz >= 0 && pz <= H) { g.beginPath(); g.moveTo(0, pz); g.lineTo(W, pz); g.stroke(); }
+  }
+  g.font = 'bold 12px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  dev.boxes.map((b, i) => i).sort((a, b) => topOf(dev.boxes[a]) - topOf(dev.boxes[b])).forEach(i => {
+    const b = dev.boxes[i], x = W / 2 + (b.x - b.w / 2) * s, y = H / 2 - (b.z + b.d / 2) * s, w = b.w * s, h = b.d * s;
+    g.fillStyle = b.c; g.fillRect(x, y, w, h);
+    g.lineWidth = i === dev.sel ? 3 : 1; g.strokeStyle = i === dev.sel ? '#fff' : 'rgba(0,0,0,.5)'; g.strokeRect(x, y, w, h);
+    if (w > 22 && h > 16) { const t = (i === 0 ? 'START ' : '') + topOf(b); g.lineWidth = 3; g.strokeStyle = '#000'; g.strokeText(t, x + w / 2, y + h / 2); g.fillStyle = '#fff'; g.fillText(t, x + w / 2, y + h / 2); }
+  });
+}
+function bindCanvas() {
+  const c = $('#cv'); let drag = null;
+  const pt = e => { const r = c.getBoundingClientRect(); return { x: ((e.clientX - r.left) * c.width / r.width - c.width / 2) / dev.scale, z: -((e.clientY - r.top) * c.height / r.height - c.height / 2) / dev.scale }; };
+  const hit = p => dev.boxes.map((b, i) => i).sort((a, b) => topOf(dev.boxes[b]) - topOf(dev.boxes[a])).find(i => { const b = dev.boxes[i]; return Math.abs(p.x - b.x) <= b.w / 2 && Math.abs(p.z - b.z) <= b.d / 2; });
+  c.onpointerdown = e => {
+    const p = pt(e), i = hit(p); dev.sel = i === undefined ? -1 : i;
+    if (i !== undefined) { drag = { dx: p.x - dev.boxes[i].x, dz: p.z - dev.boxes[i].z }; c.setPointerCapture(e.pointerId); }
+    draw(); drawSel();
+  };
+  c.onpointermove = e => {
+    if (!drag) return; const p = pt(e), b = dev.boxes[dev.sel], sn = v => Math.max(-500, Math.min(500, Math.round(v * 2) / 2));
+    b.x = sn(p.x - drag.dx); b.z = sn(p.z - drag.dz); draw();
+  };
+  c.onpointerup = () => { if (drag) draft(); drag = null; };
+  c.ondblclick = e => { const p = pt(e); addPlat(Math.round(p.x * 2) / 2, Math.round(p.z * 2) / 2); };
 }
 function drawMine() {
   const m = games.filter(g => g.mine);
-  $('#mine').innerHTML = m.length ? m.map(g => `<div class="mrow"><a href="#/game/${g.id}">${E(g.title)}</a><small>${g.online} online</small><button class="x" onclick="setThumb('${g.id}')">Thumbnail</button><button class="x" onclick="delGame('${g.id}')">Hapus</button></div>`).join('') : '<div class="empty">Belum ada game. Buat yang pertama!</div>';
+  $('#mine').innerHTML = m.length ? m.map(g => `<div class="mrow"><a href="#/game/${g.id}">${E(g.title)}</a><small>${g.online} online</small><button class="x" onclick="editGame('${g.id}')">Edit</button><button class="x" onclick="setThumb('${g.id}')">Thumb</button><button class="x" onclick="delGame('${g.id}')">Hapus</button></div>`).join('') : '<div class="empty">Belum ada game. Buat yang pertama di sebelah kiri!</div>';
+}
+async function editGame(id) {
+  const d = await gj('/api/games/' + id + '/source'); if (!d) return alert('Tidak bisa memuat game ini');
+  dev = { id, title: d.title, tagline: d.tagline, desc: d.desc, tags: d.tags.join(', '), sky: d.sky, a1: d.art[0], a2: d.art[1], boxes: d.boxes, sel: 0, scale: 8, thumb: null };
+  await devPage(); window.scrollTo(0, 0);
 }
 async function delGame(id) {
   if (!confirm('Hapus game ini?')) return;
-  await fetch(S + '/api/games/' + id, { method: 'DELETE', headers: AH() }); await loadGames(); drawMine();
+  await fetch(S + '/api/games/' + id, { method: 'DELETE', headers: AH() });
+  if (dev && dev.id === id) dev = null;
+  devPage();
 }
 async function publish() {
+  const err = $('#dErr'); err.textContent = '';
+  if (dev.title.trim().length < 3) { err.textContent = 'Isi judul game dulu (minimal 3 huruf) di langkah 1.'; return; }
   const body = { title: dev.title, tagline: dev.tagline, desc: dev.desc, tags: dev.tags.split(',').map(t => t.trim()).filter(Boolean), sky: dev.sky, art: [dev.a1, dev.a2], boxes: dev.boxes, thumb: dev.thumb || undefined };
-  const r = await fetch(S + '/api/games', { method: 'POST', headers: AH(), body: JSON.stringify(body) });
-  if (r.status === 401) return logout();
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) return alert(d.error || 'Gagal publish');
-  dev = null; location.hash = '#/game/' + d.id;
+  const r = await rq(dev.id ? 'PUT' : 'POST', dev.id ? '/api/games/' + dev.id : '/api/games', body);
+  if (!r.ok) { err.textContent = r.data.error || 'Gagal publish'; return; }
+  const id = dev.id || r.data.id; localStorage.removeItem('voxelyDraft'); dev = null; location.hash = '#/game/' + id;
+}
+
+/* ---------- Friends & notifications ---------- */
+async function refreshBadge() {
+  if (!session) return;
+  const d = await gj('/api/notifications').catch(() => null); if (!d) return;
+  nCount = d.unread; document.querySelectorAll('.bdg').forEach(b => (b.textContent = nCount || ''));
+}
+async function friendAct(uid, a) {
+  const r = await rq('POST', '/api/friends/' + uid + '/' + a, {});
+  if (!r.ok) alert(r.data.error || 'Gagal'); route(); refreshBadge();
+}
+async function unfriend(uid) { if (!confirm('Hapus dari daftar teman?')) return; await rq('DELETE', '/api/friends/' + uid); route(); refreshBadge(); }
+const status = p => p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline';
+async function userPage(uid) {
+  if (uid === session.user.uid) return (location.hash = '#/profile');
+  const d = await gj('/api/users/' + uid);
+  if (!d) return ($('#view').innerHTML = '<div class="card empty">Pengguna tidak ditemukan (mungkin server sempat restart).</div>');
+  const A = (a, t, c) => `<button class="btn ${c || ''}" onclick="friendAct('${uid}','${a}')">${t}</button>`;
+  const act = { none: A('request', '+ Add Friend'), sent: `<button class="btn alt" disabled>Request terkirim</button> ${A('cancel', 'Batalkan', 'alt')}`,
+    received: `${A('accept', 'Terima pertemanan')} ${A('decline', 'Tolak', 'alt')}`, friends: `<span class="free">✓ Friends</span><button class="x" onclick="unfriend('${uid}')">Unfriend</button>` }[d.friend] || '';
+  $('#view').innerHTML = `<div class="crumb"><a href="#/people">People</a> &gt; ${E(d.name)}</div>
+    <div class="card pad prof">${avatar(d, 110)}<div><h1 class="ftitle" style="margin:0">${E(d.name)}</h1>
+      <div style="color:var(--dim);margin:6px 0 14px">${status(d)} · ${d.friends} friends</div><div>${act}</div></div></div>
+    <h3 class="sec">GAMES BY ${E(d.name).toUpperCase()}</h3>
+    ${d.games.length ? `<div class="grid">${d.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.online} online</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum membuat game.</div>'}`;
+}
+async function notifPage() {
+  const d = await gj('/api/notifications'); if (!d) return;
+  const row = (x, body, btns) => `<div class="nr"><a href="#/user/${x.user.uid}">${avatar(x.user, 44)}</a><div class="nt"><div>${body}</div><small>${ago(x.ts)}</small></div><div>${btns}</div></div>`;
+  const nm = x => `<a href="#/user/${x.user.uid}"><b>${E(x.user.name)}</b></a>`;
+  const all = [...d.requests.map(x => row(x, nm(x) + ' ingin berteman denganmu', `<button class="btn sm" onclick="friendAct('${x.user.uid}','accept')">Terima</button> <button class="btn sm alt" onclick="friendAct('${x.user.uid}','decline')">Tolak</button>`)),
+    ...d.accepted.map(x => row(x, nm(x) + ' menerima permintaan pertemananmu', ''))];
+  $('#view').innerHTML = `<span class="label">NOTIFICATIONS</span>${all.length ? `<div class="card">${all.join('')}</div>` : '<div class="card empty">Belum ada notifikasi.</div>'}`;
+  if (d.accepted.some(x => !x.read)) { await rq('POST', '/api/notifications/read', {}); refreshBadge(); }
+}
+async function friendsPage() {
+  const d = await gj('/api/friends'); if (!d) return;
+  $('#view').innerHTML = `<span class="label">FRIENDS</span>${d.friends.length ? `<div class="grid">${d.friends.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${status(p)}</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum punya teman. Buka <a href="#/people" style="color:#6fa8ff">People</a>, klik profil seseorang, lalu Add Friend.</div>'}`;
 }
 
 async function route() {
@@ -503,6 +637,9 @@ async function route() {
   if (h.startsWith('#/dev')) return devPage();
   if (h.startsWith('#/profile')) return profilePage();
   if (h.startsWith('#/forum')) return forumRoute(h);
+  if (h.startsWith('#/user/')) return userPage(h.slice(7));
+  if (h.startsWith('#/notifications')) return notifPage();
+  if (h.startsWith('#/friends')) return friendsPage();
   if (h.startsWith('#/people')) return peoplePage();
   await loadGames();
   const m = h.match(/^#\/game\/(\w+)/);
@@ -518,7 +655,7 @@ async function refreshMe() { // validate the saved session and pick up uid/avata
   if (r && r.status === 401) { localStorage.removeItem('voxely'); session = null; renderMe(); }
   else if (r && r.ok) { session.user = await r.json(); localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); }
 }
-renderMe(); refreshMe().then(route);
+renderMe(); refreshMe().then(() => { route(); refreshBadge(); }); setInterval(refreshBadge, 10000);
 </script>
 </body>
 </html>
