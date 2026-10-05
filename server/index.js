@@ -46,7 +46,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '1mb' }));
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
-const nameTaken = (n, except) => [...sessions].some(([t, u]) => t !== except && u.name.toLowerCase() === n.toLowerCase());
+const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
 const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0 });
 const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
@@ -71,6 +71,36 @@ app.post('/api/guest', (req, res) => {
   sessions.set(token, user);
   res.json({ token, user: pubUser(user) });
 });
+// ---------- Google login (Supabase Auth) ----------
+// Only the public (publishable) key is needed: Supabase itself verifies the access token.
+const SUPA_URL = process.env.SUPABASE_URL || 'https://kleqnciieeouapaxpora.supabase.co';
+const SUPA_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_Wmi1NDV2tMoDe7cZKwGsZg_V0fsK8OE';
+const byGoogle = new Map(); // google user id -> user object (same account across devices)
+app.post('/api/login/google', async (req, res) => {
+  const at = String(req.body?.access_token || '');
+  if (!at) return res.status(400).json({ error: 'Token tidak ada' });
+  let info;
+  try {
+    const r = await fetch(SUPA_URL + '/auth/v1/user', { headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + at } });
+    if (!r.ok) return res.status(401).json({ error: 'Login Google tidak valid / kedaluwarsa' });
+    info = await r.json();
+  } catch (e) { return res.status(502).json({ error: 'Gagal menghubungi Supabase' }); }
+  if (!info?.id) return res.status(401).json({ error: 'Login Google tidak valid' });
+  let user = byGoogle.get(info.id);
+  if (!user) {
+    const m = info.user_metadata || {};
+    let base = cleanName(m.full_name || m.name || String(info.email || '').split('@')[0]);
+    if (base.length < 2) base = 'Player';
+    let name = base;
+    while (nameTaken(name)) name = base.slice(0, 12) + Math.floor(100 + Math.random() * 900);
+    user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.createHash('sha256').update(info.id).digest('hex').slice(0, 8),
+      game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), notes: [] };
+    byGoogle.set(info.id, user);
+  }
+  const token = crypto.randomBytes(16).toString('hex');
+  sessions.set(token, user);
+  res.json({ token, user: pubUser(user) });
+});
 app.get('/api/avatar/:uid', (req, res) => sendImg([...sessions.values()].find(x => x.uid === req.params.uid)?.avatar, res));
 app.post('/api/profile', (req, res) => {
   const tok = (req.headers.authorization || '').replace('Bearer ', ''), user = sessions.get(tok);
@@ -81,7 +111,7 @@ app.post('/api/profile', (req, res) => {
     if (name.length < 2) return res.status(400).json({ error: 'Nama minimal 2 karakter (huruf/angka)' });
     if (nameTaken(name, tok)) return res.status(400).json({ error: 'Nama sudah dipakai' });
     user.name = name;
-    Object.values(GAMES).forEach(g => { if (g.ownerToken === tok) g.owner = name; });
+    Object.values(GAMES).forEach(g => { if (g.ownerUid === user.uid) g.owner = name; });
   }
   if (b.avatar === null) { user.avatar = null; user.av = 0; }
   else if (b.avatar !== undefined) {
@@ -94,7 +124,7 @@ app.post('/api/profile', (req, res) => {
 });
 
 const bearer = req => (req.headers.authorization || '').replace('Bearer ', '');
-const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, thumb: g.thumb ? g.thumbV : 0, mine: !!tok && g.ownerToken === tok, online: rooms[id].size });
+const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, thumb: g.thumb ? g.thumbV : 0, mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: rooms[id].size });
 app.get('/api/games', (req, res) => res.json(Object.entries(GAMES).map(([id, g]) => pub(id, g, bearer(req)))));
 
 app.get('/api/people', (_req, res) => {
@@ -129,19 +159,19 @@ app.post('/api/games', (req, res) => {
   const tok = bearer(req), user = sessions.get(tok);
   if (!user) return res.sendStatus(401);
   const b = req.body || {};
-  const all = Object.values(GAMES).filter(g => g.ownerToken);
-  if (all.filter(g => g.ownerToken === tok).length >= 5) return res.status(400).json({ error: 'Maksimal 5 game per akun' });
+  const all = Object.values(GAMES).filter(g => g.ownerUid);
+  if (all.filter(g => g.ownerUid === user.uid).length >= 5) return res.status(400).json({ error: 'Maksimal 5 game per akun' });
   if (all.length >= 50) return res.status(400).json({ error: 'Server penuh, coba lagi nanti' });
   const built = buildGame(b);
   if (built.error) return res.status(400).json({ error: built.error });
   const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
   if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
   const id = 'u' + crypto.randomBytes(4).toString('hex');
-  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, ownerToken: tok, thumb, thumbV: thumb ? Date.now() : 0 };
+  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, thumb, thumbV: thumb ? Date.now() : 0 };
   rooms[id] = new Map();
   res.json({ id });
 });
-const mineGame = req => { const g = GAMES[req.params.id]; return g && g.ownerToken && g.ownerToken === bearer(req) ? g : null; };
+const mineGame = req => { const g = GAMES[req.params.id]; return g && g.ownerUid && g.ownerUid === sessions.get(bearer(req))?.uid ? g : null; };
 app.get('/api/games/:id/source', (req, res) => {
   const g = mineGame(req); if (!g) return res.sendStatus(403);
   res.json({ title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, boxes: g.boxes, hasThumb: !!g.thumb });
@@ -158,14 +188,14 @@ app.put('/api/games/:id', (req, res) => {
 });
 app.delete('/api/games/:id', (req, res) => {
   const g = GAMES[req.params.id];
-  if (!g || !g.ownerToken || g.ownerToken !== bearer(req)) return res.sendStatus(403);
+  if (!g || !g.ownerUid || g.ownerUid !== sessions.get(bearer(req))?.uid) return res.sendStatus(403);
   delete GAMES[req.params.id]; // rooms[id] stays so players still inside can leave cleanly
   res.sendStatus(204);
 });
 app.get('/api/thumb/:id', (req, res) => sendImg(GAMES[req.params.id]?.thumb, res));
 app.post('/api/games/:id/thumb', (req, res) => {
   const g = GAMES[req.params.id];
-  if (!g || !g.ownerToken || g.ownerToken !== bearer(req)) return res.sendStatus(403);
+  if (!g || !g.ownerUid || g.ownerUid !== sessions.get(bearer(req))?.uid) return res.sendStatus(403);
   const thumb = parseImg(req.body?.image, 400 * 1024);
   if (!thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
   g.thumb = thumb; g.thumbV = Date.now();
@@ -189,14 +219,14 @@ app.get('/api/games/:id/reviews', (req, res) => {
     };
   });
   items.sort(req.query.sort === 'helpful' ? (a, b) => b.yes - a.yes || b.ts - a.ts : (a, b) => b.ts - a.ts);
-  const isOwner = !!me && g.ownerToken === tok;
+  const isOwner = !!me && g.ownerUid === me.uid;
   res.json({ isOwner, canReview: !!me && !isOwner, mine: items.find(x => x.own) || null, total: items.length, up: items.filter(x => x.up).length, reviews: items.slice(0, 100) });
 });
 app.post('/api/games/:id/reviews', (req, res) => {
   const g = GAMES[req.params.id], tok = bearer(req), me = sessions.get(tok);
   if (!me) return res.sendStatus(401);
   if (!g) return res.sendStatus(404);
-  if (g.ownerToken === tok) return res.status(400).json({ error: 'Kamu tidak bisa mereview game buatanmu sendiri' });
+  if (g.ownerUid === me.uid) return res.status(400).json({ error: 'Kamu tidak bisa mereview game buatanmu sendiri' });
   const text = plain(req.body?.text, 500);
   if (!text) return res.status(400).json({ error: 'Tulis reviewnya dulu' });
   const list = reviewsOf(g), up = !!req.body?.up, ex = list.find(r => r.uid === me.uid);
