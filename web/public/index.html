@@ -128,6 +128,8 @@
   .pad input[type=range] { background:none; border:0; padding:0; accent-color:var(--blue); }
   .sw { display:flex; gap:6px; flex-wrap:wrap; align-items:center; } .swb { width:26px; height:26px; border:2px solid transparent; cursor:pointer; } .swb.on { border-color:#fff; }
   .acts { display:flex; gap:8px; margin-top:12px; } .mrow { flex-wrap:wrap; }
+  .gbtn { background:#fff !important; color:#222 !important; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; } .gbtn:hover { background:#e8e8e8 !important; }
+  .or { color:var(--dim); text-align:center; font-size:12px; margin:14px 0 10px; }
   @media (max-width:860px) { .cols, .gmain, .car { grid-template-columns:1fr; } .car { height:auto; } .car .l { height:200px; } .gmain .art { height:240px; } }
 </style>
 </head>
@@ -138,7 +140,8 @@
 
 <div class="veil" id="login"><div class="box">
   <h3>Masuk ke Voxely</h3>
-  <p>Tanpa daftar. Masuk sebagai guest dan langsung pilih game.</p>
+  <p>Masuk dengan Google, atau langsung main sebagai guest tanpa daftar.</p>
+  <button class="btn gbtn" id="googleBtn"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Lanjut dengan Google</button><div class="or">atau sebagai guest</div>
   <input id="nick" maxlength="16" placeholder="Nama kamu (boleh kosong = acak)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
   <button class="btn" id="guestBtn">Lanjut sebagai Guest</button>
 </div></div>
@@ -149,9 +152,11 @@
 </div></div>
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script>
 const S = window.VOXELY.server.replace(/\/$/, '');
+const sb = window.supabase && VOXELY.supabaseUrl ? supabase.createClient(VOXELY.supabaseUrl, VOXELY.supabaseKey, { auth: { flowType: 'pkce' } }) : null;
 const $ = s => document.querySelector(s);
 let games = [], session = JSON.parse(localStorage.getItem('voxely') || 'null'), idx = 0, timer = null, hist = [0, 0, 0, 0, 0, 0];
 
@@ -190,12 +195,12 @@ async function guestLogin() {
   const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Gagal login'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
   $('#login').classList.remove('on'); renderMe(); route();
 }
-function logout() { localStorage.removeItem('voxely'); session = null; renderMe(); $('#login').classList.add('on'); }
+function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
 function renderMe() {
   if (!session) { $('#me').innerHTML = ''; return; }
   $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}<span class="bdg">${nCount || ''}</span> ▾</button>
     <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>Guest account</small></div>
-    <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a onclick="soon()">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout()">Logout</a></div>`;
+    <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a onclick="soon()">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
 }
 document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
 
@@ -655,7 +660,28 @@ async function refreshMe() { // validate the saved session and pick up uid/avata
   if (r && r.status === 401) { localStorage.removeItem('voxely'); session = null; renderMe(); }
   else if (r && r.ok) { session.user = await r.json(); localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); }
 }
-renderMe(); refreshMe().then(() => { route(); refreshBadge(); }); setInterval(refreshBadge, 10000);
+/* ---------- Google login (Supabase) ---------- */
+async function googleLogin() { // exchange an existing Supabase session for a Voxely session
+  if (!sb) return false;
+  const { data } = await sb.auth.getSession();
+  const at = data?.session?.access_token; if (!at) return false;
+  const r = await fetch(S + '/api/login/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ access_token: at }) }).catch(() => null);
+  if (!r || !r.ok) { $('#loginErr').textContent = r ? ((await r.json().catch(() => ({}))).error || 'Login Google gagal') : 'Server tidak bisa dihubungi'; return false; }
+  session = await r.json(); localStorage.setItem('voxely', JSON.stringify(session)); return true;
+}
+if (!sb) $('#googleBtn').style.display = 'none';
+$('#googleBtn').onclick = async () => {
+  $('#loginErr').textContent = '';
+  if (await googleLogin()) { $('#login').classList.remove('on'); renderMe(); route(); refreshBadge(); return; }
+  sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/' } });
+};
+(async () => {
+  renderMe();
+  await refreshMe();                                  // checks the saved session (guest or Google)
+  if (!session) await googleLogin();                  // coming back from Google, or server restarted
+  renderMe(); route(); refreshBadge();
+})();
+setInterval(refreshBadge, 10000);
 </script>
 </body>
 </html>
