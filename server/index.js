@@ -11,13 +11,14 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 // ---------- Games (each one is just a list of boxes) ----------
 const B = (x, y, z, w, h, d, c) => ({ x, y, z, w, h, d, c });
+const L = (x, y, z, w, h, d, c) => ({ x, y, z, w, h, d, c, l: 1 }); // climbable ladder
 const GAMES = {
   plaza: {
     title: 'Block Plaza', tagline: 'Hang out, chat and jump around.',
     desc: 'A big open plaza with a few blocks to climb. The best place to meet other players and test chat.',
     tags: ['Social', 'Chill', 'Multiplayer'], sky: '#7ec8ff', art: ['#2b6cb0', '#63b3ed'],
     spawn: [0, 2, 0],
-    boxes: [B(0, -0.5, 0, 80, 1, 80, '#5cb85c'), B(6, 1, 4, 4, 2, 4, '#e0a040'), B(10, 2, 8, 4, 4, 4, '#d9534f'), B(-8, 0.75, -6, 6, 1.5, 3, '#8e6bd0')]
+    boxes: [B(0, -0.5, 0, 80, 1, 80, '#5cb85c'), B(6, 1, 4, 4, 2, 4, '#e0a040'), B(10, 2, 8, 4, 4, 4, '#d9534f'), L(10, 2, 5.85, 1.4, 4, 0.3, '#c8903c'), B(-8, 0.75, -6, 6, 1.5, 3, '#8e6bd0')]
   },
   obby: {
     title: 'Sky Obby', tagline: 'Jump your way up to the top.',
@@ -143,7 +144,7 @@ const buildGame = b => {
   const boxes = (Array.isArray(b.boxes) ? b.boxes : []).slice(0, 40).map(x => ({
     x: num(x?.x, -500, 500, 0), y: num(x?.y, -20, 200, 0), z: num(x?.z, -500, 500, 0),
     w: num(x?.w, 0.5, 200, 4), h: num(x?.h, 0.5, 100, 1), d: num(x?.d, 0.5, 200, 4),
-    c: HEX.test(x?.c) ? x.c : '#888888'
+    c: HEX.test(x?.c) ? x.c : '#888888', l: x?.l ? 1 : 0
   }));
   if (!boxes.length) return { error: 'Tambahkan minimal 1 platform' };
   const f = boxes[0];
@@ -426,13 +427,13 @@ io.on('connection', socket => {
   });
   socket.on('move', m => {
     const p = rooms[gameId]?.get(socket.id); if (!p) return;
-    Object.assign(p, { x: +m.x || 0, y: +m.y || 0, z: +m.z || 0, ry: +m.ry || 0 });
+    Object.assign(p, { x: +m.x || 0, y: +m.y || 0, z: +m.z || 0, ry: +m.ry || 0, st: [0, 1, 2, 3, 4].includes(+m.st) ? +m.st : 0 });
     socket.to(gameId).volatile.emit('move', p);
   });
   socket.on('chat', text => {
     if (!gameId || Date.now() - lastChat < 400) return;
     lastChat = Date.now();
-    io.to(gameId).emit('chat', { name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
+    io.to(gameId).emit('chat', { id: socket.id, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
   });
   socket.on('disconnect', () => {
     if (!gameId) return;
