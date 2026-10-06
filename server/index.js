@@ -35,7 +35,21 @@ const GAMES = {
     boxes: [B(0, -0.5, 0, 60, 1, 60, '#f9a8d4'), ...Array.from({ length: 10 }, (_, i) => B(0, i * 0.8 + 0.4, i * 3, 8, 0.8, 3, i % 2 ? '#a7f3d0' : '#fde68a'))]
   }
 };
-const rooms = Object.fromEntries(Object.keys(GAMES).map(k => [k, new Map()]));
+// ---------- Servers (instances): every game can run several rooms ----------
+const MAX_PLAYERS = Number(process.env.MAX_PLAYERS) || 12;
+const instances = new Map(); // id -> { id, game, max, ts, players: Map(socketId -> player) }
+const instOf = gid => [...instances.values()].filter(i => i.game === gid);
+const online = gid => instOf(gid).reduce((n, i) => n + i.players.size, 0);
+function pickInstance(gid, want) {
+  if (want && want !== 'new') { const i = instances.get(want); if (i && i.game === gid && i.players.size < i.max) return i; }
+  if (want !== 'new') { // best open server = the fullest one that still has room
+    const open = instOf(gid).filter(i => i.players.size < i.max).sort((a, b) => b.players.size - a.players.size)[0];
+    if (open) return open;
+  }
+  const inst = { id: crypto.randomBytes(4).toString('hex'), game: gid, max: MAX_PLAYERS, ts: Date.now(), players: new Map() };
+  instances.set(inst.id, inst);
+  return inst;
+}
 
 // ---------- Guest login ----------
 const sessions = new Map();
@@ -48,7 +62,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
-const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0 });
+const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid });
 const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
 const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
@@ -95,7 +109,7 @@ app.post('/api/login/google', async (req, res) => {
     let name = base;
     while (nameTaken(name)) name = base.slice(0, 12) + Math.floor(100 + Math.random() * 900);
     user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.createHash('sha256').update(info.id).digest('hex').slice(0, 8),
-      game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), notes: [] };
+      game: null, gid: info.id, friends: new Set(), reqIn: new Map(), reqOut: new Set(), notes: [] };
     byGoogle.set(info.id, user);
   }
   const token = crypto.randomBytes(16).toString('hex');
@@ -112,7 +126,7 @@ app.post('/api/profile', (req, res) => {
     if (name.length < 2) return res.status(400).json({ error: 'Nama minimal 2 karakter (huruf/angka)' });
     if (nameTaken(name, tok)) return res.status(400).json({ error: 'Nama sudah dipakai' });
     user.name = name;
-    Object.values(GAMES).forEach(g => { if (g.ownerUid === user.uid) g.owner = name; });
+    Object.entries(GAMES).forEach(([gid, g]) => { if (g.ownerUid === user.uid) { g.owner = name; saveGame(gid); } });
   }
   if (b.avatar === null) { user.avatar = null; user.av = 0; }
   else if (b.avatar !== undefined) {
@@ -125,7 +139,7 @@ app.post('/api/profile', (req, res) => {
 });
 
 const bearer = req => (req.headers.authorization || '').replace('Bearer ', '');
-const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, thumb: g.thumb ? g.thumbV : 0, mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: rooms[id].size });
+const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, thumb: g.thumb ? g.thumbV : 0, mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: online(id) });
 app.get('/api/games', (req, res) => res.json(Object.entries(GAMES).map(([id, g]) => pub(id, g, bearer(req)))));
 
 app.get('/api/people', (_req, res) => {
@@ -168,8 +182,8 @@ app.post('/api/games', (req, res) => {
   const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
   if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
   const id = 'u' + crypto.randomBytes(4).toString('hex');
-  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, thumb, thumbV: thumb ? Date.now() : 0 };
-  rooms[id] = new Map();
+  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, ownerGoogle: !!user.gid, thumb, thumbV: thumb ? Date.now() : 0 };
+  saveGame(id);
   res.json({ id });
 });
 const mineGame = req => { const g = GAMES[req.params.id]; return g && g.ownerUid && g.ownerUid === sessions.get(bearer(req))?.uid ? g : null; };
@@ -185,12 +199,13 @@ app.put('/api/games/:id', (req, res) => {
   if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
   Object.assign(g, built.game);
   if (thumb) { g.thumb = thumb; g.thumbV = Date.now(); }
+  saveGame(req.params.id);
   res.json({ ok: true });
 });
 app.delete('/api/games/:id', (req, res) => {
   const g = GAMES[req.params.id];
   if (!g || !g.ownerUid || g.ownerUid !== sessions.get(bearer(req))?.uid) return res.sendStatus(403);
-  delete GAMES[req.params.id]; // rooms[id] stays so players still inside can leave cleanly
+  delete GAMES[req.params.id]; dropGame(req.params.id);
   res.sendStatus(204);
 });
 app.get('/api/thumb/:id', (req, res) => sendImg(GAMES[req.params.id]?.thumb, res));
@@ -200,6 +215,7 @@ app.post('/api/games/:id/thumb', (req, res) => {
   const thumb = parseImg(req.body?.image, 400 * 1024);
   if (!thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
   g.thumb = thumb; g.thumbV = Date.now();
+  saveGame(req.params.id);
   res.json({ ok: true });
 });
 // ---------- Reviews (any logged-in user, one per game) ----------
@@ -405,6 +421,51 @@ app.post('/api/notifications/read', (req, res) => {
   me.notes.forEach(n => (n.read = true)); res.json({ ok: true });
 });
 
+// ---------- Server list ----------
+app.get('/api/games/:id/servers', (req, res) => {
+  if (!GAMES[req.params.id]) return res.sendStatus(404);
+  res.json(instOf(req.params.id).map(i => ({
+    id: i.id, players: i.players.size, max: i.max, full: i.players.size >= i.max,
+    names: [...i.players.values()].slice(0, 5).map(p => p.name), age: Math.floor((Date.now() - i.ts) / 1000)
+  })).sort((a, b) => b.players - a.players));
+});
+
+// ---------- Persistence: games made by Google users are stored in Supabase ----------
+// Needs the SECRET key as an environment variable (never put it in the code).
+const SUPA_SECRET = process.env.SUPABASE_SECRET_KEY || '';
+async function db(path, opts = {}) {
+  const r = await fetch(SUPA_URL + '/rest/v1/' + path, { ...opts, headers: { apikey: SUPA_SECRET, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 200));
+  return r.status === 204 ? null : r.json().catch(() => null);
+}
+const rowOf = (id, g) => ({
+  id, owner_uid: g.ownerUid, owner_name: g.owner || null,
+  data: { title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, spawn: g.spawn, boxes: g.boxes },
+  thumb_type: g.thumb ? g.thumb.type : null, thumb_b64: g.thumb ? g.thumb.buf.toString('base64') : null, thumb_v: g.thumbV || 0, updated_at: new Date().toISOString()
+});
+function saveGame(id) {
+  const g = GAMES[id];
+  if (!SUPA_SECRET || !g || !g.ownerGoogle) return; // guests' games stay in memory only
+  db('games?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rowOf(id, g)) })
+    .catch(e => console.error('save game failed:', e.message));
+}
+function dropGame(id) {
+  if (!SUPA_SECRET) return;
+  db('games?id=eq.' + encodeURIComponent(id), { method: 'DELETE' }).catch(e => console.error('delete game failed:', e.message));
+}
+async function loadGames() {
+  if (!SUPA_SECRET) { console.log('SUPABASE_SECRET_KEY not set -> user games are kept in memory only'); return; }
+  try {
+    const rows = (await db('games?select=*')) || [];
+    for (const r of rows) {
+      if (GAMES[r.id]) continue;
+      GAMES[r.id] = { ...r.data, owner: r.owner_name, ownerUid: r.owner_uid, ownerGoogle: true,
+        thumb: r.thumb_b64 ? { type: r.thumb_type, buf: Buffer.from(r.thumb_b64, 'base64') } : null, thumbV: Number(r.thumb_v) || 0 };
+    }
+    console.log('Loaded ' + rows.length + ' game(s) from Supabase');
+  } catch (e) { console.error('load games failed:', e.message); }
+}
+
 app.get('/', (_req, res) => res.send('Voxely game server is running'));
 
 // ---------- Multiplayer ----------
@@ -414,34 +475,37 @@ io.use((socket, next) => {
   socket.user = user; next();
 });
 io.on('connection', socket => {
-  let gameId = null, lastChat = 0;
-  socket.on('join', id => {
-    if (!GAMES[id] || gameId) return;
-    gameId = id; socket.join(id); socket.user.game = id;
-    const g = GAMES[id];
-    const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0 };
-    rooms[id].set(socket.id, me);
-    socket.emit('init', { me, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes }, players: [...rooms[id].values()] });
-    socket.to(id).emit('join', me);
-    io.to(id).emit('count', rooms[id].size);
+  let inst = null, lastChat = 0;
+  socket.on('join', arg => {
+    const gid = typeof arg === 'string' ? arg : arg?.game;
+    if (!GAMES[gid] || inst) return;
+    const g = GAMES[gid];
+    inst = pickInstance(gid, arg?.room);
+    socket.join(inst.id); socket.user.game = gid;
+    const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0 };
+    inst.players.set(socket.id, me);
+    socket.emit('init', { me, room: inst.id, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes }, players: [...inst.players.values()] });
+    socket.to(inst.id).emit('join', me);
+    io.to(inst.id).emit('count', inst.players.size);
   });
   socket.on('move', m => {
-    const p = rooms[gameId]?.get(socket.id); if (!p) return;
+    const p = inst?.players.get(socket.id); if (!p) return;
     Object.assign(p, { x: +m.x || 0, y: +m.y || 0, z: +m.z || 0, ry: +m.ry || 0, st: [0, 1, 2, 3, 4].includes(+m.st) ? +m.st : 0 });
-    socket.to(gameId).volatile.emit('move', p);
+    socket.to(inst.id).volatile.emit('move', p);
   });
   socket.on('chat', text => {
-    if (!gameId || Date.now() - lastChat < 400) return;
+    if (!inst || Date.now() - lastChat < 400) return;
     lastChat = Date.now();
-    io.to(gameId).emit('chat', { id: socket.id, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
+    io.to(inst.id).emit('chat', { id: socket.id, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
   });
   socket.on('disconnect', () => {
-    if (!gameId) return;
+    if (!inst) return;
     socket.user.game = null;
-    rooms[gameId].delete(socket.id);
-    io.to(gameId).emit('leave', socket.id);
-    io.to(gameId).emit('count', rooms[gameId].size);
+    inst.players.delete(socket.id);
+    io.to(inst.id).emit('leave', socket.id);
+    io.to(inst.id).emit('count', inst.players.size);
+    if (!inst.players.size) instances.delete(inst.id); // empty servers disappear from the list
   });
 });
 
-server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`));
+loadGames().finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
