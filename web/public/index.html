@@ -127,6 +127,7 @@
   .selp { margin-top:12px; padding:12px; border:1px solid var(--line); background:#050913; } .row2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
   .pad input[type=range] { background:none; border:0; padding:0; accent-color:var(--blue); }
   .sw { display:flex; gap:6px; flex-wrap:wrap; align-items:center; } .swb { width:26px; height:26px; border:2px solid transparent; cursor:pointer; } .swb.on { border-color:#fff; }
+  .pad .chk { display:flex; gap:8px; align-items:center; margin-top:12px; color:var(--text); font-size:13px; } .pad .chk input[type=checkbox] { width:auto; padding:0; }
   .acts { display:flex; gap:8px; margin-top:12px; } .mrow { flex-wrap:wrap; }
   .gbtn { background:#fff !important; color:#222 !important; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; } .gbtn:hover { background:#e8e8e8 !important; }
   .or { color:var(--dim); text-align:center; font-size:12px; margin:14px 0 10px; }
@@ -457,7 +458,7 @@ const AH = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer '
 const PAL = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#9ca3af', '#374151', '#8b5a2b'];
 const GR = c => ({ x: 0, y: -0.5, z: 0, w: 40, h: 1, d: 40, c });
 const TPL = {
-  flat: { n: 'Lapangan', sky: '#7ec8ff', b: () => [GR('#5cb85c'), { x: 6, y: 1, z: 4, w: 4, h: 2, d: 4, c: '#e0a040' }, { x: -8, y: 0.75, z: -6, w: 6, h: 1.5, d: 3, c: '#8e6bd0' }] },
+  flat: { n: 'Lapangan', sky: '#7ec8ff', b: () => [GR('#5cb85c'), { x: 6, y: 1, z: 4, w: 4, h: 2, d: 4, c: '#e0a040' }, { x: -8, y: 0.75, z: -6, w: 6, h: 1.5, d: 3, c: '#8e6bd0' }, { x: 6, y: 1, z: 1.85, w: 1.4, h: 2, d: 0.3, c: '#c8903c', l: 1 }] },
   obby: { n: 'Obby melayang', sky: '#1b2a49', b: () => [{ x: 0, y: -0.5, z: 0, w: 10, h: 1, d: 10, c: '#3b82f6' }, { x: 0, y: 1, z: 11, w: 4, h: 1, d: 4, c: '#f97316' }, { x: 5, y: 2.5, z: 17, w: 4, h: 1, d: 4, c: '#eab308' }, { x: 11, y: 4, z: 20, w: 4, h: 1, d: 4, c: '#22c55e' }, { x: 17, y: 5.5, z: 14, w: 3, h: 1, d: 3, c: '#ec4899' }, { x: 20, y: 7, z: 7, w: 8, h: 1, d: 8, c: '#ffffff' }] },
   stairs: { n: 'Tangga', sky: '#ffd6e8', b: () => [GR('#f9a8d4'), ...Array.from({ length: 8 }, (_, i) => ({ x: 0, y: i * 0.8 + 0.4, z: i * 3 - 6, w: 8, h: 0.8, d: 3, c: i % 2 ? '#a7f3d0' : '#fde68a' }))] },
   blank: { n: 'Kosong', sky: '#7ec8ff', b: () => [{ x: 0, y: -0.5, z: 0, w: 12, h: 1, d: 12, c: '#5cb85c' }] }
@@ -489,9 +490,9 @@ async function devPage() {
           <div><label>Cover 2</label><input type="color" value="${dev.a2}" oninput="dev.a2=this.value;draft()"></div></div>
       </div>
       <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">2</i> Bangun dunia</h3>
-        <div class="hint"><b>Cara pakai:</b> tarik kotak untuk memindahkan · klik dua kali di peta untuk menambah platform · kotak pertama (<b>START</b>) adalah tempat pemain muncul · angka di kotak = ketinggiannya.</div>
+        <div class="hint"><b>Cara pakai:</b> tarik kotak untuk memindahkan · klik dua kali di peta untuk menambah platform · kotak pertama (<b>START</b>) adalah tempat pemain muncul · angka di kotak = ketinggiannya · <b>+ Tangga</b> membuat tangga yang bisa dipanjat pemain (tahan W).</div>
         <div class="tpl">Mulai dari template: ${Object.entries(TPL).map(([k, t]) => `<button class="vb" onclick="applyTpl('${k}')">${t.n}</button>`).join('')}</div>
-        <div class="tools"><button class="btn sm" onclick="addPlat()">+ Platform</button><button class="btn sm alt" onclick="zoom(1.25)">Zoom +</button><button class="btn sm alt" onclick="zoom(0.8)">Zoom −</button><small id="cnt" style="color:var(--dim)"></small></div>
+        <div class="tools"><button class="btn sm" onclick="addPlat()">+ Platform</button><button class="btn sm alt" onclick="addLadder()">+ Tangga</button><button class="btn sm alt" onclick="zoom(1.25)">Zoom +</button><button class="btn sm alt" onclick="zoom(0.8)">Zoom −</button><small id="cnt" style="color:var(--dim)"></small></div>
         <canvas id="cv" width="720" height="440"></canvas><div id="selp"></div>
       </div>
       <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">3</i> Publish</h3>
@@ -512,7 +513,11 @@ function addPlat(x, z) {
   dev.boxes.push({ x: x ?? (n * 3) % 15 - 6, y: 0.5, z: z ?? 0, w: 4, h: 1, d: 4, c: PAL[Math.floor(Math.random() * 8)] });
   dev.sel = n; draw(); drawSel(); draft();
 }
-function dupPlat() { const b = dev.boxes[dev.sel]; if (b) { addPlat(b.x + 2, b.z + 2); Object.assign(dev.boxes[dev.sel], { y: b.y, w: b.w, h: b.h, d: b.d, c: b.c }); draw(); drawSel(); draft(); } }
+function addLadder() {
+  if (dev.boxes.length >= 40) return toast('Maksimal 40 platform');
+  dev.boxes.push({ x: 0, y: 2, z: 0, w: 1.4, h: 4, d: 0.3, c: '#c8903c', l: 1 }); dev.sel = dev.boxes.length - 1; draw(); drawSel(); draft();
+}
+function dupPlat() { const b = dev.boxes[dev.sel]; if (b) { addPlat(b.x + 2, b.z + 2); Object.assign(dev.boxes[dev.sel], { y: b.y, w: b.w, h: b.h, d: b.d, c: b.c, l: b.l }); draw(); drawSel(); draft(); } }
 function delPlat() { if (dev.boxes.length < 2) return toast('Minimal 1 platform'); dev.boxes.splice(dev.sel, 1); dev.sel = Math.min(dev.sel, dev.boxes.length - 1); draw(); drawSel(); draft(); }
 function makeStart() { const i = dev.sel; [dev.boxes[0], dev.boxes[i]] = [dev.boxes[i], dev.boxes[0]]; dev.sel = 0; draw(); drawSel(); draft(); }
 function setProp(k, v) {
@@ -533,6 +538,7 @@ function drawSel() {
   el.innerHTML = `<div class="selp"><b>Platform ${dev.sel + 1}${dev.sel === 0 ? ' · START' : ''}</b>
     <div class="row2">${sl('w', 'Lebar (kiri-kanan)', 1, 60, b.w)}${sl('d', 'Panjang (depan-belakang)', 1, 60, b.d)}${sl('h', 'Tebal', 0.5, 10, b.h)}${sl('top', 'Ketinggian dari dasar', 0, 40, topOf(b))}</div>
     <label>Warna</label><div class="sw">${PAL.map(c => `<button class="swb ${c === b.c ? 'on' : ''}" style="background:${c}" onclick="setProp('c','${c}');drawSel()"></button>`).join('')}<input type="color" value="${b.c}" oninput="setProp('c',this.value)"></div>
+    <label class="chk"><input type="checkbox" ${b.l ? 'checked' : ''} onchange="setProp('l', this.checked ? 1 : 0)"> Bisa dipanjat (tangga, tahan W)</label>
     <div class="acts"><button class="btn sm alt" ${dev.sel === 0 ? 'disabled' : ''} onclick="makeStart()">Jadikan START</button><button class="btn sm alt" onclick="dupPlat()">Duplikat</button><button class="x" onclick="delPlat()">Hapus</button></div></div>`;
 }
 function draw() {
@@ -550,6 +556,7 @@ function draw() {
     const b = dev.boxes[i], x = W / 2 + (b.x - b.w / 2) * s, y = H / 2 - (b.z + b.d / 2) * s, w = b.w * s, h = b.d * s;
     g.fillStyle = b.c; g.fillRect(x, y, w, h);
     g.lineWidth = i === dev.sel ? 3 : 1; g.strokeStyle = i === dev.sel ? '#fff' : 'rgba(0,0,0,.5)'; g.strokeRect(x, y, w, h);
+    if (b.l) { g.lineWidth = 1; g.strokeStyle = 'rgba(0,0,0,.7)'; for (let k = 1; k < 4; k++) { g.beginPath(); g.moveTo(x, y + h * k / 4); g.lineTo(x + w, y + h * k / 4); g.stroke(); } }
     if (w > 22 && h > 16) { const t = (i === 0 ? 'START ' : '') + topOf(b); g.lineWidth = 3; g.strokeStyle = '#000'; g.strokeText(t, x + w / 2, y + h / 2); g.fillStyle = '#fff'; g.fillText(t, x + w / 2, y + h / 2); }
   });
 }
