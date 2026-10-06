@@ -132,6 +132,10 @@
   .acts { display:flex; gap:8px; margin-top:12px; } .mrow { flex-wrap:wrap; }
   .gbtn { background:#fff !important; color:#222 !important; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; } .gbtn:hover { background:#e8e8e8 !important; }
   .or { color:var(--dim); text-align:center; font-size:12px; margin:14px 0 10px; }
+  .srv { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; border-bottom:1px solid var(--line); } .srv.last { border-bottom:0; }
+  .sinfo { flex:1; min-width:0; } .sinfo b { color:#fff; } .sinfo small { display:block; color:var(--dim); margin-top:2px; }
+  .sbar { height:5px; background:#0b1428; margin:8px 0 4px; max-width:260px; } .sbar i { display:block; height:100%; background:var(--blue); }
+  .btn:disabled { opacity:.45; cursor:default; }
   @media (max-width:860px) { .cols, .gmain, .car { grid-template-columns:1fr; } .car { height:auto; } .car .l { height:200px; } .gmain .art { height:240px; } }
 </style>
 </head>
@@ -243,8 +247,8 @@ function gamePage(id) {
     <div class="gmain">${art(g)}<div class="card info"><div>${E(g.tagline)}</div><p style="color:#b6c2d9;margin-top:8px">${E(g.desc)}</p>
       <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
     <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
-    <div class="card about"><b style="color:#fff">About this game</b><br>${E(g.desc)}<br><br>Butuh Voxely Client di PC kamu. Belum punya? <a onclick="download()">Download Voxely Client</a>, install, lalu klik Play.</div><div id="reviews"></div>`;
-  rvDraft = null; loadReviews(id);
+    <div class="card about"><b style="color:#fff">About this game</b><br>${E(g.desc)}<br><br>Butuh Voxely Client di PC kamu. Belum punya? <a onclick="download()">Download Voxely Client</a>, install, lalu klik Play.</div><div id="servers"></div><div id="reviews"></div>`;
+  rvDraft = null; loadServers(id); loadReviews(id);
 }
 
 function download() {
@@ -255,11 +259,11 @@ function show(title, text, dl) {
   $('#lTitle').textContent = title; $('#lText').textContent = text;
   $('#lDl').style.display = dl ? 'block' : 'none'; $('#launch').classList.add('on');
 }
-async function play(id) {
+async function play(id, room) {
   const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
   if (!ok) return logout();
   show('Membuka Voxely Client…', 'Jika browser bertanya, pilih "Open Voxely Client".', false);
-  location.href = `voxely://play?game=${id}&token=${session.token}&server=${encodeURIComponent(S)}`;
+  location.href = `voxely://play?game=${id}&room=${room || ''}&token=${session.token}&server=${encodeURIComponent(S)}`;
   setTimeout(() => {
     if (document.hasFocus() && document.visibilityState === 'visible')
       show('Client belum terpasang', 'Download dan install Voxely Client dulu, lalu klik Play lagi.', true);
@@ -282,6 +286,21 @@ async function rq(method, path, body) {
   return { ok: r.ok, data: await r.json().catch(() => ({})) };
 }
 async function gj(path) { const r = await fetch(S + path, { headers: { Authorization: 'Bearer ' + session.token } }); return r.ok ? r.json() : null; }
+
+/* ---------- Server list ---------- */
+const upt = s => s < 60 ? 'baru dimulai' : s < 3600 ? Math.floor(s / 60) + ' mnt' : Math.floor(s / 3600) + ' jam';
+async function loadServers(id) {
+  if (!$('#servers')) return;
+  const r = await fetch(S + '/api/games/' + id + '/servers'); if (!r.ok || !$('#servers')) return;
+  const l = await r.json();
+  const row = x => `<div class="srv"><div class="sinfo"><b>Server ${E(x.id.slice(0, 4).toUpperCase())}</b><small>${x.players}/${x.max} players · ${upt(x.age)}</small>
+      <div class="sbar"><i style="width:${Math.min(100, x.players / x.max * 100)}%"></i></div>
+      ${x.names.length ? `<small>${x.names.map(E).join(', ')}${x.players > x.names.length ? ' …' : ''}</small>` : ''}</div>
+      <button class="btn sm" ${x.full ? 'disabled' : ''} onclick="play('${id}','${x.id}')">${x.full ? 'Full' : 'Join'}</button></div>`;
+  $('#servers').innerHTML = `<h3 class="ft" style="font-size:22px;margin:32px 0 12px">Servers <small style="color:var(--dim);font-size:13px;font-weight:400">${l.length} aktif</small> <a style="font-size:12px;font-weight:400;color:#6fa8ff" onclick="loadServers('${id}')">Refresh</a></h3>
+    <div class="card">${l.length ? l.map(row).join('') : '<div class="empty">Belum ada server aktif. Klik Play untuk memulai server baru.</div>'}
+      <div class="srv last"><small style="color:var(--dim)">Mau main di server sendiri?</small><button class="btn sm alt" onclick="play('${id}','new')">+ Buat server baru</button></div></div>`;
+}
 
 /* ---------- Reviews ---------- */
 let rvSort = 'recent', rvUp = true, rvDraft = null;
@@ -497,7 +516,7 @@ async function devPage() {
         <canvas id="cv" width="720" height="440"></canvas><div id="selp"></div>
       </div>
       <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">3</i> Publish</h3>
-        <div class="hint">Setelah publish, game langsung muncul di Store dan bisa dimainkan lewat tombol Play.</div>
+        <div class="hint">Setelah publish, game langsung muncul di Store dan bisa dimainkan lewat tombol Play.<br>${session.user.google ? '✓ Kamu login dengan Google: game kamu <b>disimpan permanen</b> dan tidak hilang saat server di-update.' : '⚠ Kamu login sebagai guest: game hanya tersimpan sementara dan bisa hilang saat server di-update. Login dengan Google agar tersimpan permanen.'}</div>
         <div id="dErr" class="err"></div><button class="btn" onclick="publish()">${ed ? 'Simpan perubahan' : 'Publish game'}</button></div>
     </div>
     <div class="side"><div class="card"><h4>GAME SAYA</h4><div id="mine"></div></div></div></div>`;
@@ -691,5 +710,7 @@ $('#googleBtn').onclick = async () => {
 })();
 setInterval(refreshBadge, 10000);
 </script>
+</body>
+</html>
 </body>
 </html>
