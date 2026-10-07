@@ -145,6 +145,9 @@
   .avtiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px; }
   .tile { background:var(--panel3); border:2px solid var(--line); padding:6px; cursor:pointer; color:var(--text); font:inherit; } .tile.on { border-color:var(--blue); } .tile canvas { width:100%; display:block; } .tile small { display:block; margin-top:4px; color:var(--dim); }
   #uav { background:var(--panel3); border:1px solid var(--line); }
+  .stgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; } .stc { background:var(--panel); border:1px solid var(--line); padding:16px; } .stc b { display:block; font-size:26px; color:var(--strong); } .stc small { color:var(--dim); }
+  .chart { display:flex; align-items:flex-end; gap:6px; height:180px; margin-top:12px; } .cb { flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; font-size:11px; color:var(--dim); } .cb i { display:block; width:100%; background:var(--blue); min-height:2px; }
+  .mgh { display:flex; gap:20px; align-items:center; flex-wrap:wrap; } .mga { width:260px; height:146px; flex:none; position:relative; } .gc.dv .acts { margin-top:10px; } .sep2 { border-top:1px solid var(--line); margin:18px 0; }
   @media (max-width:860px) { .avgrid { grid-template-columns:1fr; } }
   @media (max-width:860px) { .cols, .gmain, .car { grid-template-columns:1fr; } .car { height:auto; } .car .l { height:200px; } .gmain .art { height:240px; } }
 </style>
@@ -255,7 +258,7 @@ function gamePage(id) {
   const g = games.find(x => x.id === id); if (!g) return (location.hash = '#/');
   $('#view').innerHTML = `<div class="crumb"><a href="#/">Games</a> &gt; ${E(g.title)}</div><div class="gtitle">${E(g.title)}</div>
     <div class="gmain">${art(g)}<div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
-      <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
+      <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>VISITS</dt><dd>${g.visits || 0}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
     <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
     <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Butuh Voxely Client di PC kamu. Belum punya? <a onclick="download()">Download Voxely Client</a>, install, lalu klik Play.</div><div id="servers"></div><div id="reviews"></div>`;
   rvDraft = null; loadServers(id); loadReviews(id);
@@ -607,6 +610,79 @@ function drawPeople() {
   $('#pp').innerHTML = l.length ? l.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline'}</small></div></a>`).join('') : '<div class="empty">Tidak ada pemain.</div>';
 }
 
+/* ---------- Developer Portal: dashboard, Studio launcher, game management ---------- */
+async function openStudio(id) {
+  const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
+  if (!ok) return logout();
+  show('Membuka Voxely Studio…', 'Jika browser bertanya, pilih "Open Voxely Client".', false);
+  location.href = `voxely://studio?game=${id || 'new'}&token=${session.token}&server=${encodeURIComponent(S)}`;
+  setTimeout(() => {
+    if (document.hasFocus() && document.visibilityState === 'visible') show('Client belum terpasang', 'Voxely Studio ada di dalam Voxely Client. Download dan install client versi terbaru dulu, lalu coba lagi.', true);
+    else $('#launch').classList.remove('on');
+  }, 2500);
+}
+async function devHome() {
+  await loadGames(); const mine = games.filter(g => g.mine);
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
+    <div class="card pad"><h3 class="ft">Buat game</h3>
+      <div class="hint"><b>Voxely Studio</b> ada di dalam Voxely Client: editor 3D dengan Explorer, Properties, dan <b>script</b> (JavaScript) supaya game kamu lebih bebas. Klik tombol di bawah untuk membukanya (client harus terpasang).<br>${session.user.google ? '✓ Kamu login dengan Google: game kamu disimpan permanen.' : '⚠ Login sebagai guest: game hanya tersimpan sementara. Login dengan Google agar tersimpan permanen.'}</div>
+      <div class="acts"><button class="btn" onclick="openStudio('new')">Buka Studio — game baru</button><a class="btn alt" href="#/dev/quick">Editor cepat (web)</a></div></div>
+    <h3 class="sec">GAME SAYA</h3>
+    ${mine.length ? `<div class="grid">${mine.map(g => `<div class="gc dv">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.visits || 0} visits · ${g.online} online</small>
+      <div class="acts"><a class="btn sm" href="#/manage/${g.id}">Kelola</a><button class="btn sm alt" onclick="openStudio('${g.id}')">Studio</button></div></div></div>`).join('')}</div>` : '<div class="card empty">Belum ada game. Buat yang pertama di Studio!</div>'}`;
+}
+let mgTab = 'stats';
+async function managePage(id) {
+  await loadGames(); const g = games.find(x => x.id === id && x.mine);
+  if (!g) { location.hash = '#/dev'; return; }
+  $('#view').innerHTML = `<div class="crumb"><a href="#/dev">Developer Portal</a> &gt; ${E(g.title)}</div>
+    <div class="mgh"><div class="mga">${art(g)}</div><div><h1 class="ftitle">${E(g.title)}</h1>
+      <div style="color:var(--dim);margin-bottom:12px">${tags(g)} ${g.visits || 0} visits · ${g.online} online</div>
+      <div class="acts"><button class="btn sm" onclick="play('${id}')">Main</button><button class="btn sm alt" onclick="openStudio('${id}')">Buka di Studio</button><a class="btn sm alt" href="#/game/${id}">Halaman game</a></div></div></div>
+    <div class="avtabs" style="margin-top:18px">${[['stats', 'Statistik'], ['reviews', 'Review'], ['settings', 'Pengaturan']].map(([k, n]) => `<button class="vb ${mgTab === k ? 'on' : ''}" onclick="mgTab='${k}';managePage('${id}')">${n}</button>`).join('')}</div>
+    <div id="mgbody"><div class="empty">Memuat…</div></div>`;
+  ({ stats: mgStats, reviews: mgReviews, settings: mgSettings })[mgTab](id);
+}
+async function mgStats(id) {
+  const d = await gj('/api/games/' + id + '/stats'); if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Statistik tidak tersedia.</div>');
+  const dur = s => s >= 3600 ? (s / 3600).toFixed(1) + ' jam' : s >= 60 ? Math.round(s / 60) + ' mnt' : s + ' dtk';
+  const mx = Math.max(1, ...d.daily.map(x => x.n)), card = (n, l) => `<div class="stc"><b>${n}</b><small>${l}</small></div>`;
+  $('#mgbody').innerHTML = `<div class="stgrid">${card(d.visits, 'Total kunjungan')}${card(d.unique, 'Pemain unik')}${card(d.online, 'Online sekarang')}${card(d.peak, 'Puncak online')}${card(dur(d.secs), 'Total waktu bermain')}${card(dur(d.avg), 'Rata-rata sesi')}${card(d.servers, 'Server aktif')}${card(d.reviews ? Math.round(d.up / d.reviews * 100) + '% (' + d.reviews + ')' : '-', 'Review positif')}</div>
+    <div class="card pad" style="margin-top:14px"><h3 class="ft">Kunjungan 14 hari terakhir</h3><div class="chart">${d.daily.map(x => `<div class="cb" title="${x.d}: ${x.n}"><span>${x.n || ''}</span><i style="height:${Math.round(x.n / mx * 100)}%"></i><small>${x.d.slice(8)}</small></div>`).join('')}</div></div>
+    <div class="acts"><button class="btn sm alt" onclick="managePage('${id}')">Refresh</button></div>`;
+}
+async function mgReviews(id) {
+  const d = await gj('/api/games/' + id + '/reviews?sort=recent');
+  $('#mgbody').innerHTML = !d || !d.reviews.length ? '<div class="card empty">Belum ada review untuk game ini.</div>'
+    : `<div class="hint">${d.total} review · ${Math.round(d.up / d.total * 100)}% merekomendasikan</div>` + d.reviews.map(x => `<div class="rv"><div><a href="#/user/${x.uid}">${avatar(x, 56)}</a></div><div class="rvr">
+      <div class="rvh"><a href="#/user/${x.uid}"><b>${E(x.name)}</b></a> <span>- ${dateStr(x.ts)}</span></div>
+      <div class="rec ${x.up ? '' : 'neg'}">${x.up ? IC.up : IC.down}<div><b>${x.up ? 'Recommended' : 'Not Recommended'}</b></div></div><p>${E(x.text)}</p>
+      <div class="rvf"><span>${x.yes} orang menilai review ini berguna</span></div></div></div>`).join('');
+}
+async function mgSettings(id) {
+  const d = await gj('/api/games/' + id + '/source'); if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Tidak bisa memuat pengaturan.</div>');
+  $('#mgbody').innerHTML = `<div class="card pad" style="max-width:720px"><h3 class="ft">Pengaturan game</h3>
+    <label>Nama game</label><input id="sTitle" maxlength="30" value="${E(d.title)}">
+    <label>Tagline</label><input id="sTag" maxlength="60" value="${E(d.tagline)}">
+    <label>Deskripsi</label><textarea id="sDesc" maxlength="400">${E(d.desc)}</textarea>
+    <label>Tag (pisahkan koma, maks 3)</label><input id="sTags" value="${E((d.tags || []).join(', '))}">
+    <label>Thumbnail</label><div class="trow"><div class="tprev" id="stprev">${d.hasThumb ? `<img src="${S}/api/thumb/${id}?v=${Date.now()}" alt="">` : '16:9'}</div><button class="btn alt" onclick="mgThumb('${id}')">Upload thumbnail baru</button></div>
+    <div id="sErr" class="err" style="margin-top:10px"></div><button class="btn" onclick="mgSave('${id}')">Simpan perubahan</button>
+    <div class="sep2"></div><button class="x" onclick="mgDelete('${id}')">Hapus game ini</button></div>`;
+}
+async function mgSave(id) {
+  const r = await rq('PUT', '/api/games/' + id, { title: $('#sTitle').value, tagline: $('#sTag').value, desc: $('#sDesc').value, tags: $('#sTags').value.split(',').map(t => t.trim()).filter(Boolean) });
+  if (!r.ok) { $('#sErr').textContent = r.data.error || 'Gagal menyimpan'; return; }
+  toast('Perubahan disimpan'); managePage(id);
+}
+function mgThumb(id) {
+  pickImage(640, 360, async img => {
+    const r = await rq('POST', '/api/games/' + id + '/thumb', { image: img });
+    if (!r.ok) return alert(r.data.error || 'Gagal upload'); toast('Thumbnail diperbarui'); managePage(id);
+  });
+}
+async function mgDelete(id) { if (!confirm('Hapus game ini selamanya? Review dan statistiknya ikut hilang.')) return; await rq('DELETE', '/api/games/' + id); location.hash = '#/dev'; }
+
 /* ---------- Developer Portal (visual editor) ---------- */
 let dev = null;
 const AH = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.token });
@@ -630,7 +706,7 @@ function devNew() { dev = fresh(); localStorage.removeItem('voxelyDraft'); devPa
 async function devPage() {
   await loadGames(); dev = dev || newDev();
   const ed = !!dev.id;
-  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
+  $('#view').innerHTML = `<span class="label">EDITOR CEPAT</span> <a href="#/dev" style="color:var(--link);margin-left:10px">← Developer Portal</a>
     <div class="cols"><div>
       <div class="card pad step"><h3 class="ft"><i class="sn">1</i> Info game</h3>
         ${ed ? '<div class="hint">Kamu sedang mengedit game yang sudah dipublish. <a style="color:var(--link)" onclick="devNew()">Buat game baru</a></div>' : '<div class="hint">Isi nama dan deskripsi game kamu. Semua bisa diubah lagi nanti.</div>'}
@@ -803,7 +879,9 @@ async function route() {
   $('#nForum').classList.toggle('on', h.startsWith('#/forum'));
   $('#nAvatar').classList.toggle('on', h.startsWith('#/avatar'));
   $('#nPeople').classList.toggle('on', h.startsWith('#/people'));
-  if (h.startsWith('#/dev')) return devPage();
+  if (h.startsWith('#/dev/quick')) return devPage();
+  if (h.startsWith('#/dev')) return devHome();
+  if (h.startsWith('#/manage/')) return managePage(h.slice(9));
   if (h.startsWith('#/profile')) return profilePage();
   if (h.startsWith('#/forum')) return forumRoute(h);
   if (h.startsWith('#/avatar')) return avatarPage();
@@ -819,7 +897,7 @@ async function route() {
 $('#guestBtn').onclick = guestLogin;
 $('#nick').onkeydown = e => e.key === 'Enter' && guestLogin();
 window.onhashchange = route;
-setInterval(() => session && !/^#\/(dev|profile|forum|avatar|settings)/.test(location.hash) && ![...document.querySelectorAll('textarea')].some(t => t.value) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
+setInterval(() => session && !/^#\/(dev|profile|forum|avatar|settings|manage)/.test(location.hash) && ![...document.querySelectorAll('textarea')].some(t => t.value) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
 async function refreshMe() { // validate the saved session and pick up uid/avatar
   if (!session) return;
   const r = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).catch(() => null);
