@@ -139,7 +139,7 @@ app.post('/api/profile', (req, res) => {
 });
 
 const bearer = req => (req.headers.authorization || '').replace('Bearer ', '');
-const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, thumb: g.thumb ? g.thumbV : 0, mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: online(id) });
+const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, visits: g.stats?.visits || 0, thumb: g.thumb ? g.thumbV : 0, mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: online(id) });
 app.get('/api/games', (req, res) => res.json(Object.entries(GAMES).map(([id, g]) => pub(id, g, bearer(req)))));
 
 app.get('/api/people', (_req, res) => {
@@ -152,22 +152,31 @@ app.get('/api/people', (_req, res) => {
 const HEX = /^#[0-9a-f]{6}$/i;
 const num = (v, lo, hi, d) => { v = parseFloat(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
 const txt = (v, n) => String(v || '').replace(/[<>]/g, '').trim().slice(0, n);
-const buildGame = b => {
-  const title = txt(b.title, 30);
+const MAX_PARTS = 300, MAX_SCRIPTS = 8, MAX_CODE = 30000;
+const cleanPart = x => ({
+  x: num(x?.x, -2000, 2000, 0), y: num(x?.y, -100, 1000, 0), z: num(x?.z, -2000, 2000, 0),
+  w: num(x?.w, 0.2, 2000, 4), h: num(x?.h, 0.2, 500, 1), d: num(x?.d, 0.2, 2000, 4),
+  c: HEX.test(x?.c) ? x.c : '#888888', l: x?.l ? 1 : 0,
+  n: txt(x?.n, 30), r: num(x?.r, -360, 360, 0), t: num(x?.t, 0, 0.95, 0),
+  cc: x?.cc === 0 || x?.cc === false ? 0 : 1, k: x?.k ? 1 : 0, sp: x?.sp ? 1 : 0
+});
+// ex = existing game: fields that are missing from the request keep their old value (partial update)
+const buildGame = (b, ex) => {
+  const has = k => b[k] !== undefined;
+  const title = has('title') || !ex ? txt(b.title, 30) : ex.title;
   if (title.length < 3) return { error: 'Judul minimal 3 huruf' };
-  const boxes = (Array.isArray(b.boxes) ? b.boxes : []).slice(0, 40).map(x => ({
-    x: num(x?.x, -500, 500, 0), y: num(x?.y, -20, 200, 0), z: num(x?.z, -500, 500, 0),
-    w: num(x?.w, 0.5, 200, 4), h: num(x?.h, 0.5, 100, 1), d: num(x?.d, 0.5, 200, 4),
-    c: HEX.test(x?.c) ? x.c : '#888888', l: x?.l ? 1 : 0
-  }));
+  const boxes = Array.isArray(b.boxes) ? b.boxes.slice(0, MAX_PARTS).map(cleanPart) : ex ? ex.boxes : [];
   if (!boxes.length) return { error: 'Tambahkan minimal 1 platform' };
-  const f = boxes[0];
-  const tags = (Array.isArray(b.tags) ? b.tags : []).map(t => txt(t, 14)).filter(Boolean).slice(0, 3);
+  const f = boxes.find(x => x.sp) || boxes[0];
+  const tags = Array.isArray(b.tags) ? b.tags.map(t => txt(t, 14)).filter(Boolean).slice(0, 3) : ex ? ex.tags : [];
   return { game: {
-    title, tagline: txt(b.tagline, 60) || 'Game buatan komunitas.', desc: txt(b.desc, 400) || 'Belum ada deskripsi.',
-    tags: tags.length ? tags : ['Community'], sky: HEX.test(b.sky) ? b.sky : '#7ec8ff',
-    art: [HEX.test(b.art?.[0]) ? b.art[0] : '#1463ff', HEX.test(b.art?.[1]) ? b.art[1] : '#0a0f1a'],
-    spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes
+    title, tagline: has('tagline') ? txt(b.tagline, 60) || 'Game buatan komunitas.' : ex?.tagline || 'Game buatan komunitas.',
+    desc: has('desc') ? txt(b.desc, 400) || 'Belum ada deskripsi.' : ex?.desc || 'Belum ada deskripsi.',
+    tags: tags && tags.length ? tags : ['Community'],
+    sky: HEX.test(b.sky) ? b.sky : ex?.sky || '#7ec8ff',
+    art: [HEX.test(b.art?.[0]) ? b.art[0] : ex?.art?.[0] || '#1463ff', HEX.test(b.art?.[1]) ? b.art[1] : ex?.art?.[1] || '#0a0f1a'],
+    spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes,
+    scripts: Array.isArray(b.scripts) ? b.scripts.slice(0, MAX_SCRIPTS).map(s => ({ name: txt(s?.name, 30) || 'Script', code: String(s?.code || '').slice(0, MAX_CODE) })) : ex?.scripts || []
   } };
 };
 app.post('/api/games', (req, res) => {
@@ -189,11 +198,11 @@ app.post('/api/games', (req, res) => {
 const mineGame = req => { const g = GAMES[req.params.id]; return g && g.ownerUid && g.ownerUid === sessions.get(bearer(req))?.uid ? g : null; };
 app.get('/api/games/:id/source', (req, res) => {
   const g = mineGame(req); if (!g) return res.sendStatus(403);
-  res.json({ title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, boxes: g.boxes, hasThumb: !!g.thumb });
+  res.json({ title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, boxes: g.boxes, scripts: g.scripts || [], hasThumb: !!g.thumb });
 });
 app.put('/api/games/:id', (req, res) => {
   const g = mineGame(req); if (!g) return res.sendStatus(403);
-  const b = req.body || {}, built = buildGame(b);
+  const b = req.body || {}, built = buildGame(b, g);
   if (built.error) return res.status(400).json({ error: built.error });
   const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
   if (b.thumb && !thumb) return res.status(400).json({ error: 'Thumbnail tidak valid atau terlalu besar' });
@@ -433,6 +442,28 @@ const cleanOutfit = o => {
 app.get('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); res.json({ outfit: me.outfit || null }); });
 app.post('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); me.outfit = cleanOutfit(req.body); res.json({ outfit: me.outfit }); });
 
+// ---------- Game stats (owner dashboard) ----------
+const dayKey = t => new Date(t || Date.now()).toISOString().slice(0, 10);
+const statsOf = g => (g.stats = g.stats || { visits: 0, uniq: [], peak: 0, secs: 0, sessions: 0, daily: {} });
+const dirtyGames = new Set();
+function touchGame(id) { if (!dirtyGames.size) setTimeout(() => { dirtyGames.forEach(saveGame); dirtyGames.clear(); }, 30000); dirtyGames.add(id); }
+function trackJoin(gid, user) {
+  const g = GAMES[gid]; if (!g || !g.ownerUid) return;
+  const s = statsOf(g); s.visits++; s.sessions++;
+  if (s.uniq.length < 5000 && !s.uniq.includes(user.uid)) s.uniq.push(user.uid);
+  const d = dayKey(); s.daily[d] = (s.daily[d] || 0) + 1;
+  Object.keys(s.daily).sort().slice(0, -30).forEach(k => delete s.daily[k]);
+  s.peak = Math.max(s.peak, online(gid)); touchGame(gid);
+}
+function trackLeave(gid, secs) { const g = GAMES[gid]; if (!g || !g.ownerUid) return; statsOf(g).secs += Math.max(0, secs); touchGame(gid); }
+app.get('/api/games/:id/stats', (req, res) => {
+  const g = mineGame(req); if (!g) return res.sendStatus(403);
+  const s = statsOf(g), id = req.params.id, rv = (g.reviews || []).filter(r => r.reports.size < 3), daily = [];
+  for (let i = 13; i >= 0; i--) { const d = dayKey(Date.now() - i * 864e5); daily.push({ d, n: s.daily[d] || 0 }); }
+  res.json({ visits: s.visits, unique: s.uniq.length, online: online(id), peak: s.peak, secs: Math.round(s.secs), avg: s.sessions ? Math.round(s.secs / s.sessions) : 0,
+    servers: instOf(id).length, reviews: rv.length, up: rv.filter(r => r.up).length, daily });
+});
+
 // ---------- Server list ----------
 app.get('/api/games/:id/servers', (req, res) => {
   if (!GAMES[req.params.id]) return res.sendStatus(404);
@@ -452,7 +483,7 @@ async function db(path, opts = {}) {
 }
 const rowOf = (id, g) => ({
   id, owner_uid: g.ownerUid, owner_name: g.owner || null,
-  data: { title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, spawn: g.spawn, boxes: g.boxes },
+  data: { title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, spawn: g.spawn, boxes: g.boxes, scripts: g.scripts || [], stats: g.stats || null },
   thumb_type: g.thumb ? g.thumb.type : null, thumb_b64: g.thumb ? g.thumb.buf.toString('base64') : null, thumb_v: g.thumbV || 0, updated_at: new Date().toISOString()
 });
 function saveGame(id) {
@@ -487,7 +518,7 @@ io.use((socket, next) => {
   socket.user = user; next();
 });
 io.on('connection', socket => {
-  let inst = null, lastChat = 0;
+  let inst = null, lastChat = 0, lastEv = 0, joinedAt = 0;
   socket.on('join', arg => {
     const gid = typeof arg === 'string' ? arg : arg?.game;
     if (!GAMES[gid] || inst) return;
@@ -496,7 +527,8 @@ io.on('connection', socket => {
     socket.join(inst.id); socket.user.game = gid;
     const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0, outfit: socket.user.outfit || null };
     inst.players.set(socket.id, me);
-    socket.emit('init', { me, room: inst.id, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes }, players: [...inst.players.values()] });
+    trackJoin(gid, socket.user); joinedAt = Date.now();
+    socket.emit('init', { me, room: inst.id, now: Date.now(), start: inst.ts, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes, scripts: g.scripts || [] }, players: [...inst.players.values()] });
     socket.to(inst.id).emit('join', me);
     io.to(inst.id).emit('count', inst.players.size);
   });
@@ -510,8 +542,16 @@ io.on('connection', socket => {
     lastChat = Date.now();
     io.to(inst.id).emit('chat', { id: socket.id, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
   });
+  socket.on('ev', (n, d) => { // custom events from game scripts, relayed to everyone else on the same server
+    if (!inst || typeof n !== 'string' || n.length > 32 || Date.now() - lastEv < 40) return;
+    lastEv = Date.now();
+    let j; try { j = JSON.stringify(d); } catch (e) { return; }
+    if (j && j.length > 1024) return;
+    socket.to(inst.id).emit('ev', { from: socket.user.name, n, d });
+  });
   socket.on('disconnect', () => {
     if (!inst) return;
+    trackLeave(inst.game, (Date.now() - joinedAt) / 1000);
     socket.user.game = null;
     inst.players.delete(socket.id);
     io.to(inst.id).emit('leave', socket.id);
