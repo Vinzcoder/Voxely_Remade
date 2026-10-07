@@ -371,7 +371,7 @@ function makeFriends(me, o) {
 app.get('/api/users/:uid', (req, res) => {
   const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
   const me = sessions.get(bearer(req));
-  res.json({ ...userCard(u), friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', friends: u.friends.size,
+  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', friends: u.friends.size,
     games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))) });
 });
 app.get('/api/friends', (req, res) => {
@@ -420,6 +420,18 @@ app.post('/api/notifications/read', (req, res) => {
   const me = needMe(req, res); if (!me) return;
   me.notes.forEach(n => (n.read = true)); res.json({ ok: true });
 });
+
+// ---------- Avatar outfit (colors, face, hat) ----------
+const OUT_PARTS = ['head', 'torso', 'armL', 'armR', 'legL', 'legR'];
+const OUT_FACES = ['smile', 'cool', 'wink', 'surprised', 'sad', 'angry'];
+const OUT_HATS = ['none', 'cap', 'tophat', 'crown', 'headphones', 'horns'];
+const cleanOutfit = o => {
+  const out = { skin: {}, face: OUT_FACES.includes(o?.face) ? o.face : 'smile', hat: OUT_HATS.includes(o?.hat) ? o.hat : 'none', hatColor: HEX.test(o?.hatColor) ? o.hatColor : '#e63946' };
+  for (const k of OUT_PARTS) out.skin[k] = HEX.test(o?.skin?.[k]) ? o.skin[k] : '#e6eaf2';
+  return out;
+};
+app.get('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); res.json({ outfit: me.outfit || null }); });
+app.post('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); me.outfit = cleanOutfit(req.body); res.json({ outfit: me.outfit }); });
 
 // ---------- Server list ----------
 app.get('/api/games/:id/servers', (req, res) => {
@@ -482,7 +494,7 @@ io.on('connection', socket => {
     const g = GAMES[gid];
     inst = pickInstance(gid, arg?.room);
     socket.join(inst.id); socket.user.game = gid;
-    const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0 };
+    const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0, outfit: socket.user.outfit || null };
     inst.players.set(socket.id, me);
     socket.emit('init', { me, room: inst.id, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes }, players: [...inst.players.values()] });
     socket.to(inst.id).emit('join', me);
