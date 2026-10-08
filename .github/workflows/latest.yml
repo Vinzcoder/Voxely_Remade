@@ -1,0 +1,8 @@
+version: 0.1.0
+files:
+  - url: Voxely-Client-Setup.exe
+    sha512: SW4/cEB4T/KBjqpnLjNiVpMxhhcar2YMDlWo57byKjU14hfo2Xv0ByfRE+Xwte6DaCbgDY/+ggZzRvRH2og5VA==
+    size: 83083141
+path: Voxely-Client-Setup.exe
+sha512: SW4/cEB4T/KBjqpnLjNiVpMxhhcar2YMDlWo57byKjU14hfo2Xv0ByfRE+Xwte6DaCbgDY/+ggZzRvRH2og5VA==
+releaseDate: '2026-10-08T06:57:47.324Z'
