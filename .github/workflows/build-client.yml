@@ -1,0 +1,37 @@
+name: Build client
+
+on:
+  push:
+    tags: ['v*']          # e.g. git tag v0.1.1 && git push --tags
+  workflow_dispatch:       # or run it by hand from the Actions tab
+
+permissions:
+  contents: write          # needed to attach files to a Release
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            command: npx electron-builder --win nsis --publish never
+            file: dist/Voxely-Client-Setup.exe
+          - os: ubuntu-latest
+            command: npx electron-builder --linux deb --publish never
+            file: dist/Voxely-Client.deb
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: ${{ matrix.command }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voxely-client-${{ matrix.os }}
+          path: ${{ matrix.file }}
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ matrix.file }}
