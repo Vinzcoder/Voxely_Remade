@@ -518,7 +518,7 @@ io.use((socket, next) => {
   socket.user = user; next();
 });
 io.on('connection', socket => {
-  let inst = null, lastChat = 0, lastEv = 0, joinedAt = 0;
+  let inst = null, lastChat = 0, lastEv = 0, lastEmote = 0, joinedAt = 0;
   socket.on('join', arg => {
     const gid = typeof arg === 'string' ? arg : arg?.game;
     if (!GAMES[gid] || inst) return;
@@ -541,6 +541,10 @@ io.on('connection', socket => {
     if (!inst || Date.now() - lastChat < 400) return;
     lastChat = Date.now();
     io.to(inst.id).emit('chat', { id: socket.id, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
+  });
+  socket.on('emote', e => { // /e wave, /e dance (and 'stop' when the player moves)
+    if (!inst || !['wave', 'dance', 'stop'].includes(e) || Date.now() - lastEmote < 200) return;
+    lastEmote = Date.now(); socket.to(inst.id).emit('emote', { id: socket.id, e });
   });
   socket.on('ev', (n, d) => { // custom events from game scripts, relayed to everyone else on the same server
     if (!inst || typeof n !== 'string' || n.length > 32 || Date.now() - lastEv < 40) return;

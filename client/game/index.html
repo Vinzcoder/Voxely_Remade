@@ -4,145 +4,646 @@
 <meta charset="utf-8">
 <title>Voxely</title>
 <style>
-  html, body { margin:0; height:100%; overflow:hidden; background:#000; font:14px Arial, sans-serif; color:#fff; }
+  :root { --bg:#04060b; --panel:rgba(5,10,20,.82); --line:#15233f; --blue:#1463ff; --blue2:#0a3fb8; --text:#e6edf7; --dim:#8a97b0; }
+  * { box-sizing:border-box; margin:0; border-radius:0; }
+  html, body { height:100%; overflow:hidden; background:#000; color:var(--text); font:14px "Segoe UI",Arial,sans-serif; user-select:none; }
   #c { width:100%; height:100%; display:block; outline:none; }
-  #hud { position:fixed; top:10px; left:12px; text-shadow:0 1px 3px #000; pointer-events:none; }
-  #leave { position:fixed; top:10px; right:12px; background:#c0392b; color:#fff; border:0; padding:8px 16px; border-radius:3px; cursor:pointer; }
-  #chat { position:fixed; left:12px; bottom:12px; width:340px; }
-  #log { max-height:160px; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; text-shadow:0 1px 3px #000; margin-bottom:6px; }
-  #log div { background:rgba(0,0,0,.35); padding:2px 6px; margin-top:2px; border-radius:3px; }
-  #msg { width:100%; box-sizing:border-box; background:rgba(0,0,0,.55); border:1px solid #555; color:#fff; padding:7px; border-radius:3px; }
-  #help { position:fixed; bottom:12px; right:12px; color:#ddd; text-shadow:0 1px 3px #000; text-align:right; }
-  #status { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; font-size:20px; }
+  .hidden { display:none !important; }
+  button { font:inherit; cursor:pointer; }
+
+  /* ---------- HUD ---------- */
+  .bar { position:fixed; top:12px; left:12px; display:flex; gap:8px; z-index:5; }
+  .hb { position:relative; display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--panel); border:1px solid var(--line); color:#fff; font-weight:600; backdrop-filter:blur(6px); }
+  .hb:hover, .hb.on { background:var(--blue); border-color:var(--blue); }
+  .ic { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; }
+  #unread { position:absolute; top:-7px; right:-7px; background:#ef4444; color:#fff; font:700 11px/1 "Segoe UI",Arial; min-width:18px; padding:4px 5px; text-align:center; font-style:normal; }
+  #unread:empty { display:none; }
+  #info { position:fixed; top:12px; left:50%; transform:translateX(-50%); background:var(--panel); border:1px solid var(--line); padding:8px 18px; display:flex; gap:14px; align-items:center; z-index:4; backdrop-filter:blur(6px); }
+  #info b { color:#fff; } #info span { color:var(--dim); display:flex; align-items:center; gap:6px; }
+  .dot { width:8px; height:8px; background:#22c55e; display:inline-block; }
+
+  /* player list */
+  #plist { position:fixed; top:12px; right:12px; width:230px; background:var(--panel); border:1px solid var(--line); z-index:4; backdrop-filter:blur(6px); }
+  #plist .ph { display:flex; justify-content:space-between; padding:8px 12px; background:var(--blue2); font-weight:700; letter-spacing:.06em; font-size:12px; }
+  #prows { max-height:300px; overflow-y:auto; }
+  .pr { display:flex; align-items:center; gap:10px; padding:7px 12px; border-top:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pr i { width:12px; height:12px; flex:none; } .pr.me { background:rgba(20,99,255,.18); font-weight:600; }
+  #hudtext { position:fixed; top:60px; left:50%; transform:translateX(-50%); color:#fff; font:700 20px 'Segoe UI',Arial; text-shadow:0 2px 6px #000; z-index:4; pointer-events:none; }
+  /* chat */
+  #chat { position:fixed; left:12px; bottom:12px; width:380px; background:var(--panel); border:1px solid var(--line); z-index:6; backdrop-filter:blur(6px); }
+  #chat .ch { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:var(--blue2); font-weight:700; letter-spacing:.04em; }
+  #chat .ch button { background:none; border:0; color:#fff; font-size:16px; }
+  #log { height:200px; overflow-y:auto; padding:8px 12px; display:flex; flex-direction:column; gap:3px; user-select:text; }
+  #log div, #feed div { word-break:break-word; line-height:1.35; }
+  #log b, #feed b { font-weight:700; }
+  #msg { width:100%; background:#050913; border:0; border-top:1px solid var(--line); color:#fff; padding:11px 12px; font:inherit; outline:none; }
+  #msg:focus { border-top-color:var(--blue); }
+  #feed { position:fixed; left:12px; bottom:12px; width:380px; display:flex; flex-direction:column; gap:3px; pointer-events:none; z-index:4; }
+  #feed div { background:rgba(4,8,16,.6); padding:4px 10px; text-shadow:0 1px 2px #000; animation:fadeout 7s forwards; }
+  @keyframes fadeout { 0%,80% { opacity:1; } 100% { opacity:0; } }
+
+  /* menu / overlays */
+  .veil { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center; justify-content:center; z-index:20; backdrop-filter:blur(3px); }
+  .card { width:340px; background:#070d1b; border:1px solid var(--blue); padding:22px; }
+  .card h2 { font-size:20px; letter-spacing:.1em; margin-bottom:16px; color:#fff; }
+  .mb { display:block; width:100%; padding:13px; margin-bottom:8px; background:#0e1a33; border:1px solid var(--line); color:#fff; font-weight:600; text-align:left; }
+  .mb:hover { background:var(--blue); border-color:var(--blue); }
+  .mb.danger { background:#3a0f16; border-color:#6b1c28; } .mb.danger:hover { background:#c0392b; border-color:#c0392b; }
+  .keys { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); color:var(--dim); font-size:12px; line-height:1.7; }
+  .keys b { color:#cfe0ff; }
+  #toast { position:fixed; bottom:70px; left:50%; transform:translateX(-50%); background:var(--blue); color:#fff; padding:9px 18px; z-index:30; opacity:0; transition:opacity .25s; pointer-events:none; }
+  #toast.on { opacity:1; }
+
+  /* ---------- loading screen ---------- */
+  #loader { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 35%, #0c2250 0%, #04060b 70%); transition:opacity .55s; }
+  #loader.done { opacity:0; pointer-events:none; }
+  .logo { font-size:44px; font-weight:800; letter-spacing:12px; color:#fff; margin-bottom:6px; padding-left:12px; }
+  .cubes { display:flex; gap:6px; margin-bottom:26px; } .cubes i { width:12px; height:12px; background:var(--blue); animation:pulse 1s infinite ease-in-out; } .cubes i:nth-child(2) { animation-delay:.15s; } .cubes i:nth-child(3) { animation-delay:.3s; }
+  @keyframes pulse { 0%,100% { transform:translateY(0); opacity:.4; } 50% { transform:translateY(-8px); opacity:1; } }
+  #ltitle { font-size:20px; color:#cfe0ff; margin-bottom:22px; min-height:26px; }
+  #barwrap { width:440px; max-width:80vw; height:10px; background:#0b1428; border:1px solid var(--line); overflow:hidden; position:relative; }
+  #bar { height:100%; width:0; background:linear-gradient(90deg,var(--blue2),#3a82ff); transition:width .35s ease-out; position:relative; }
+  #bar::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent); animation:shine 1.2s infinite; }
+  @keyframes shine { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+  #barwrap.err #bar { background:#c0392b; }
+  #lrow { width:440px; max-width:80vw; display:flex; justify-content:space-between; margin-top:10px; color:var(--dim); }
+  #stat.err { color:#ff6b6b; }
+  #tip { position:absolute; bottom:28px; color:var(--dim); font-size:13px; }
+  #lclose { display:none; margin-top:20px; padding:10px 28px; background:var(--blue); border:0; color:#fff; font-weight:600; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="hud"><b id="title"></b><br>Players: <span id="count">1</span></div>
-<button id="leave">Leave game</button>
-<div id="chat"><div id="log"></div><input id="msg" maxlength="140" placeholder="Press Enter to chat"></div>
-<div id="help">WASD move · Space jump · Drag mouse to look · Scroll to zoom</div>
-<div id="status">Connecting…</div>
+
+<div id="hud" class="hidden">
+  <div class="bar">
+    <button class="hb" id="menuBtn" title="Menu (Esc)"><svg class="ic" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <button class="hb" id="chatBtn" title="Chat (Enter)"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><i id="unread"></i></button>
+    <button class="hb on" id="plBtn" title="Player list (Tab)"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+  </div>
+  <div id="info"><b id="title"></b><span id="srv"></span><span><i class="dot"></i><span id="count">1</span> players</span></div>
+  <div id="plist"><div class="ph"><span>PLAYERS</span><b id="pcount">1</b></div><div id="prows"></div></div>
+  <div id="hudtext"></div>
+  <div id="feed"></div>
+  <div id="chat" class="hidden">
+    <div class="ch"><span>CHAT</span><button id="chatX" title="Tutup (Esc)">✕</button></div>
+    <div id="log"></div>
+    <input id="msg" maxlength="140" placeholder="Ketik pesan lalu tekan Enter…" autocomplete="off">
+  </div>
+</div>
+
+<div id="menu" class="veil hidden"><div class="card">
+  <h2>MENU</h2>
+  <button class="mb" id="resume">▶ &nbsp;Lanjutkan</button>
+  <button class="mb" id="reset">↺ &nbsp;Reset Character</button>
+  <button class="mb danger" id="leave">Leave Game</button>
+  <div class="keys"><b>W A S D</b> bergerak · <b>Space</b> lompat<br><b>Drag mouse</b> putar kamera · <b>Scroll</b> zoom<br><b>Enter</b> chat · <b>Esc</b> menu · <b>Tab</b> daftar pemain<br><b>/e wave</b> · <b>/e dance</b> emote<br><b>W</b> di depan tangga = memanjat</div>
+</div></div>
+
+<div id="dc" class="veil hidden"><div class="card">
+  <h2>TERPUTUS</h2><p style="color:var(--dim);margin-bottom:16px">Koneksi ke server terputus.</p>
+  <button class="mb danger" onclick="window.close()">Keluar</button>
+</div></div>
+
+<div id="toast"></div>
+
+<div id="loader">
+  <div class="logo">VOXELY</div>
+  <div class="cubes"><i></i><i></i><i></i></div>
+  <div id="ltitle"></div>
+  <div id="barwrap"><div id="bar"></div></div>
+  <div id="lrow"><span id="stat">Menyiapkan…</span><span id="pct">0%</span></div>
+  <button id="lclose">Tutup</button>
+  <div id="tip"></div>
+</div>
 
 <script src="vendor/babylon.js"></script>
 <script src="vendor/socket.io.min.js"></script>
 <script>
 const q = new URLSearchParams(location.search);
 const $ = id => document.getElementById(id);
-const socket = io(q.get('server'), { auth: { token: q.get('token') } });
-$('leave').onclick = () => window.close();
-socket.on('connect_error', e => { $('status').textContent = 'Cannot connect: ' + e.message + ' (login again on the website)'; });
-socket.on('connect', () => socket.emit('join', q.get('game')));
+const t0 = performance.now();
+let started = false, menuOpen = false, chatOpen = false, unread = 0;
 
-const engine = new BABYLON.Engine($('c'), true);
-const scene = new BABYLON.Scene(engine);
+/* ---------- loading screen ---------- */
+const TIPS = ['Tekan Enter untuk membuka chat.', 'Tekan Esc untuk membuka menu.', 'Drag mouse untuk memutar kamera.', 'Jatuh? Pakai Reset Character di menu.', 'Scroll untuk zoom in dan zoom out.'];
+$('tip').textContent = 'Tips: ' + TIPS[Math.floor(Math.random() * TIPS.length)];
+$('ltitle').textContent = 'Memuat game…';
+let prog = 0;
+function setProg(p, text) {
+  prog = Math.max(prog, p); $('bar').style.width = prog + '%'; $('pct').textContent = Math.floor(prog) + '%';
+  if (text) $('stat').textContent = text;
+}
+function loadError(msg) {
+  $('stat').textContent = msg; $('stat').classList.add('err'); $('barwrap').classList.add('err'); $('lclose').style.display = 'block';
+}
+$('lclose').onclick = () => window.close();
+setProg(8, 'Menyiapkan engine…');
+
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 1800); }
+
+/* ---------- network ---------- */
+const TEST = q.get('test') === '1'; // opened inside Voxely Studio: no network, the world comes from the editor
+function fakeSocket() {
+  const h = {}, k = { id: 'local', on(e, f) { (h[e] = h[e] || []).push(f); }, fire(e, d) { (h[e] || []).forEach(f => f(d)); }, volatile: { emit() {} },
+    emit(e, a) { if (e === 'chat') k.fire('chat', { id: 'local', name: me ? me.name : 'You', color: '#1463ff', text: a }); } };
+  return k;
+}
+const socket = TEST ? fakeSocket() : io(q.get('server'), { auth: { token: q.get('token') }, reconnection: false });
+socket.on('connect_error', e => loadError('Tidak bisa terhubung: ' + e.message + ' (login ulang di website)'));
+socket.on('connect', () => { setProg(25, 'Terhubung ke server…'); socket.emit('join', { game: q.get('game'), room: q.get('room') || '' }); });
+socket.on('disconnect', () => { if (started) $('dc').classList.remove('hidden'); else loadError('Koneksi terputus'); });
+if (TEST) {
+  addEventListener('message', e => {
+    const m = e.data;
+    if (m && m.type === 'load') socket.fire('init', { me: { id: 'local', name: m.name || 'Player', color: '#1463ff', outfit: m.outfit || null }, room: 'TEST', game: m.game, players: [], now: Date.now(), start: Date.now() });
+  });
+  parent.postMessage({ type: 'ready' }, '*');
+}
+
+/* ---------- engine ---------- */
+let engine, scene, cam, camTarget;
+try {
+  engine = new BABYLON.Engine($('c'), true);
+  scene = new BABYLON.Scene(engine);
+} catch (e) { loadError('Gagal memulai grafis: ' + e.message); throw e; }
 const c3 = h => BABYLON.Color3.FromHexString(h);
 const mat = hex => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = c3(hex); m.specularColor = BABYLON.Color3.Black(); return m; };
 
-new BABYLON.HemisphericLight('h', new BABYLON.Vector3(0.3, 1, 0.2), scene).intensity = 0.95;
-const camTarget = BABYLON.MeshBuilder.CreateBox('ct', { size: 0.01 }, scene); camTarget.isVisible = false;
-const cam = new BABYLON.ArcRotateCamera('cam', -Math.PI / 2, 1.1, 12, camTarget, scene);
+new BABYLON.HemisphericLight('h', new BABYLON.Vector3(0.3, 1, 0.2), scene).intensity = 0.75;
+new BABYLON.DirectionalLight('d', new BABYLON.Vector3(-0.4, -1, -0.3), scene).intensity = 0.45;
+camTarget = BABYLON.MeshBuilder.CreateBox('ct', { size: 0.01 }, scene); camTarget.isVisible = false;
+cam = new BABYLON.ArcRotateCamera('cam', -Math.PI / 2, 1.1, 12, camTarget, scene);
 cam.lockedTarget = camTarget; cam.lowerRadiusLimit = 4; cam.upperRadiusLimit = 25;
 cam.lowerBetaLimit = 0.2; cam.upperBetaLimit = 1.5; cam.panningSensibility = 0;
 cam.inputs.removeByType('ArcRotateCameraKeyboardMoveInput');
 cam.attachControl($('c'), true);
+setProg(15, 'Menunggu server…');
 
-// ---------- Blocky character ----------
+/* ---------- R6-style character (customizable outfit) ---------- */
+const S = 0.34; // one "stud"
+const OUT0 = { skin: { head: '#e6eaf2', torso: '#e6eaf2', armL: '#e6eaf2', armR: '#e6eaf2', legL: '#e6eaf2', legR: '#e6eaf2' }, face: 'smile', hat: 'none', hatColor: '#e63946' };
+const matCache = {}, headCache = {};
+const mat2 = hex => matCache[hex] || (matCache[hex] = mat(hex));
+// face drawn relative to the head centre (cx, cy); h = head height in px
+function drawFace(g, face, cx, cy, h) {
+  g.fillStyle = g.strokeStyle = '#111'; g.lineCap = 'round';
+  const eye = (x, y, rx, ry) => { g.beginPath(); g.ellipse(cx + x * h, cy + y * h, rx * h, ry * h, 0, 0, Math.PI * 2); g.fill(); };
+  const arc = (x, y, r, a, b, w) => { g.lineWidth = w * h; g.beginPath(); g.arc(cx + x * h, cy + y * h, r * h, a * Math.PI, b * Math.PI); g.stroke(); };
+  const line = (x1, y1, x2, y2, w) => { g.lineWidth = w * h; g.beginPath(); g.moveTo(cx + x1 * h, cy + y1 * h); g.lineTo(cx + x2 * h, cy + y2 * h); g.stroke(); };
+  if (face === 'cool') { g.fillRect(cx - 0.27 * h, cy - 0.15 * h, 0.54 * h, 0.11 * h); line(-0.27, -0.12, -0.34, -0.15, 0.03); line(0.27, -0.12, 0.34, -0.15, 0.03); arc(0, -0.055, 0.19, 0.17, 0.83, 0.031); }
+  else if (face === 'wink') { eye(-0.137, -0.083, 0.031, 0.058); line(0.09, -0.08, 0.185, -0.08, 0.03); arc(0, -0.055, 0.19, 0.17, 0.83, 0.031); }
+  else if (face === 'surprised') { eye(-0.137, -0.083, 0.04, 0.07); eye(0.137, -0.083, 0.04, 0.07); g.beginPath(); g.ellipse(cx, cy + 0.14 * h, 0.05 * h, 0.07 * h, 0, 0, Math.PI * 2); g.fill(); }
+  else if (face === 'sad') { eye(-0.137, -0.083, 0.031, 0.058); eye(0.137, -0.083, 0.031, 0.058); arc(0, 0.24, 0.17, 1.17, 1.83, 0.031); }
+  else if (face === 'angry') { eye(-0.137, -0.06, 0.028, 0.045); eye(0.137, -0.06, 0.028, 0.045); line(-0.21, -0.17, -0.07, -0.11, 0.035); line(0.07, -0.11, 0.21, -0.17, 0.035); arc(0, 0.2, 0.12, 1.2, 1.8, 0.03); }
+  else { eye(-0.137, -0.083, 0.031, 0.058); eye(0.137, -0.083, 0.031, 0.058); arc(0, -0.055, 0.19, 0.17, 0.83, 0.031); }
+}
+function headMat(color, face) {
+  const key = color + '|' + face; if (headCache[key]) return headCache[key];
+  const W = 1024, H = 292, dt = new BABYLON.DynamicTexture('face', { width: W, height: H }, scene, true); // front of the cylinder = u 0.75
+  const g = dt.getContext(); g.fillStyle = color; g.fillRect(0, 0, W, H); drawFace(g, face, W * 0.75, H / 2, H); dt.update();
+  const m = new BABYLON.StandardMaterial('head', scene); m.diffuseTexture = dt; m.specularColor = BABYLON.Color3.Black();
+  return (headCache[key] = m);
+}
+function addHat(body, o) {
+  if (!o.hat || o.hat === 'none') return;
+  const m = mat2(o.hatColor || '#e63946'), T = 5.3; // head top, in studs
+  const add = mesh => { mesh.parent = body; mesh.material = m; return mesh; };
+  const cyl = (d, h, x, y, z, dTop) => { const c = add(BABYLON.MeshBuilder.CreateCylinder('hat', { diameter: d * S, diameterTop: dTop === undefined ? undefined : dTop * S, height: h * S, tessellation: 24 }, scene)); c.position.set(x * S, y * S, z * S); return c; };
+  const bx = (w, h, d, x, y, z) => { const c = add(BABYLON.MeshBuilder.CreateBox('hat', { width: w * S, height: h * S, depth: d * S }, scene)); c.position.set(x * S, y * S, z * S); return c; };
+  if (o.hat === 'cap') { cyl(1.6, 0.5, 0, T + 0.1, 0); bx(1.2, 0.1, 0.8, 0, T - 0.1, 0.95); }
+  else if (o.hat === 'tophat') { cyl(2.1, 0.12, 0, T + 0.04, 0); cyl(1.35, 1.5, 0, T + 0.8, 0); }
+  else if (o.hat === 'crown') { cyl(1.5, 0.45, 0, T + 0.18, 0); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; cyl(0.34, 0.45, Math.cos(a) * 0.6, T + 0.63, Math.sin(a) * 0.6, 0); } }
+  else if (o.hat === 'headphones') { bx(1.85, 0.14, 0.3, 0, T + 0.1, 0); [-1, 1].forEach(s => { bx(0.14, 1.2, 0.3, s * 0.88, 4.75, 0); cyl(0.62, 0.32, s * 0.98, 4.65, 0).rotation.z = Math.PI / 2; }); }
+  else if (o.hat === 'horns') { [-1, 1].forEach(s => { cyl(0.4, 0.9, s * 0.45, T + 0.35, 0, 0).rotation.z = -s * 0.45; }); }
+}
 function makeChar(p) {
-  const root = new BABYLON.TransformNode('p', scene), body = new BABYLON.TransformNode('b', scene);
-  body.parent = root;
-  const part = (w, h, d, x, y, hex) => { const m = BABYLON.MeshBuilder.CreateBox('part', { width: w, height: h, depth: d }, scene); m.parent = body; m.position.set(x, y, 0); m.material = mat(hex); return m; };
-  const legL = part(0.4, 0.7, 0.4, -0.2, 0.35, '#2d3a8c'), legR = part(0.4, 0.7, 0.4, 0.2, 0.35, '#2d3a8c');
-  part(0.8, 0.7, 0.4, 0, 1.05, p.color); part(0.4, 0.4, 0.4, 0, 1.6, '#f5cd9a');
-  const armL = part(0.2, 0.7, 0.2, -0.5, 1.05, p.color), armR = part(0.2, 0.7, 0.2, 0.5, 1.05, p.color);
-  [legL, legR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, 0.35, 0)));
-  [armL, armR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, 0.35, 0)));
+  const o = p.outfit || OUT0, sk = o.skin || OUT0.skin;
+  const root = new BABYLON.TransformNode('p', scene), body = new BABYLON.TransformNode('b', scene); body.parent = root;
+  const box = (w, h, d, x, y, hex) => { const m = BABYLON.MeshBuilder.CreateBox('part', { width: w * S, height: h * S, depth: d * S }, scene); m.parent = body; m.position.set(x * S, y * S, 0); m.material = mat2(hex); return m; };
+  const legL = box(1, 2, 1, -0.5, 1, sk.legL), legR = box(1, 2, 1, 0.5, 1, sk.legR);
+  box(2, 2, 1, 0, 3, sk.torso);
+  const armL = box(1, 2, 1, -1.5, 3, sk.armL), armR = box(1, 2, 1, 1.5, 3, sk.armR);
+  [legL, legR, armL, armR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, S, 0))); // rotate from hip / shoulder
+  const head = BABYLON.MeshBuilder.CreateCylinder('head', { diameter: 1.45 * S, height: 1.3 * S, tessellation: 40,
+    faceUV: [new BABYLON.Vector4(0, 0, 0.04, 0.04), new BABYLON.Vector4(0, 0, 1, 1), new BABYLON.Vector4(0, 0, 0.04, 0.04)] }, scene);
+  head.parent = body; head.position.y = 4.65 * S; head.material = headMat(sk.head, o.face || 'smile');
+  addHat(body, o);
+  const tagY = o.hat === 'tophat' ? 2.7 : o.hat && o.hat !== 'none' ? 2.45 : 2.3;
   const tag = BABYLON.MeshBuilder.CreatePlane('tag', { width: 2.4, height: 0.6 }, scene);
-  tag.parent = root; tag.position.y = 2.3; tag.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+  tag.parent = root; tag.position.y = tagY; tag.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
   const dt = new BABYLON.DynamicTexture('t', { width: 512, height: 128 }, scene, true); dt.hasAlpha = true;
   dt.drawText(p.name, null, 85, 'bold 56px Arial', '#fff', 'transparent', true);
   const tm = new BABYLON.StandardMaterial('tm', scene);
   tm.diffuseTexture = dt; tm.useAlphaFromDiffuseTexture = true; tm.emissiveColor = BABYLON.Color3.White(); tm.disableLighting = true; tm.backFaceCulling = false;
   tag.material = tm;
-  return { root, body, legL, legR, armL, armR };
+  return { root, body, legL, legR, armL, armR, tagY, ph: 0, r: { aL: 0, aR: 0, lL: 0, lR: 0, zL: 0.1, zR: 0.1 }, et: 0, bub: null };
 }
-function swing(ch, moving, t) {
-  const a = moving ? Math.sin(t * 10) * 0.8 : 0;
-  ch.legL.rotation.x = a; ch.legR.rotation.x = -a; ch.armL.rotation.x = -a; ch.armR.rotation.x = a;
+// states: 0 idle, 1 walk, 2 jump, 3 fall, 4 climb
+function pose(ch, st, dt, active, em) {
+  if (st === 1 || (st === 4 && active)) ch.ph += dt * (st === 1 ? 10 : 8);
+  ch.et = em ? ch.et + dt : 0;
+  const s = Math.sin(ch.ph), e = ch.et;
+  let aL = 0, aR = 0, lL = 0, lR = 0, zL = 0.1, zR = 0.1, bob = 0, twist = 0;
+  if (st === 1) { aL = s; aR = -s; lL = -s * 0.9; lR = s * 0.9; }
+  else if (st === 2) { aL = aR = -2.8; lL = -0.12; lR = 0.12; zL = zR = 0.35; }
+  else if (st === 3) { const w = Math.sin(performance.now() / 90) * 0.2; aL = -2.1 + w; aR = -2.1 - w; lL = -0.35; lR = 0.25; zL = zR = 0.5; }
+  else if (st === 4) { aL = -2.7 + s * 0.6; aR = -2.7 - s * 0.6; lL = -s * 0.8; lR = s * 0.8; }
+  else if (em === 'wave') { zR = 2.75 + Math.sin(e * 9) * 0.3; }                                   // right arm up, waving
+  else if (em === 'dance') {
+    const w = Math.sin(e * 8); zL = 1.9 + w * 0.8; zR = 1.9 - w * 0.8; lL = w * 0.4; lR = -w * 0.4;
+    bob = Math.abs(w) * 0.1; twist = Math.sin(e * 4) * 0.6;
+  }
+  const k = Math.min(1, dt * 16), r = ch.r;
+  r.aL += (aL - r.aL) * k; r.aR += (aR - r.aR) * k; r.lL += (lL - r.lL) * k; r.lR += (lR - r.lR) * k; r.zL += (zL - r.zL) * k; r.zR += (zR - r.zR) * k;
+  ch.armL.rotation.x = r.aL; ch.armR.rotation.x = r.aR; ch.legL.rotation.x = r.lL; ch.legR.rotation.x = r.lR;
+  ch.armL.rotation.z = -r.zL; ch.armR.rotation.z = r.zR;
+  ch.body.position.y = bob; ch.body.rotation.y += twist;
 }
 
-// ---------- World + physics (simple AABB) ----------
-let boxes = [], spawn = [0, 2, 0], me = null, myChar = null;
+/* ---------- chat bubbles ---------- */
+function showBubble(ch, text) {
+  if (ch.bub) ch.bub.m.dispose(false, true);
+  const pad = 20, font = '600 34px "Segoe UI",Arial', lh = 44, maxW = 512 - pad * 2;
+  const mc = document.createElement('canvas').getContext('2d'); mc.font = font;
+  const words = text.split(/\s+/).flatMap(w => w.match(/.{1,16}/g) || []);
+  let lines = [], cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (mc.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur);
+  if (lines.length > 6) { lines = lines.slice(0, 6); lines[5] = lines[5].slice(0, -1) + '…'; }
+  const W = Math.ceil(Math.min(512, Math.max(140, Math.max(...lines.map(l => mc.measureText(l).width)) + pad * 2)));
+  const bh = lines.length * lh + pad * 2, H = bh + 22;
+  const dt = new BABYLON.DynamicTexture('bub', { width: W, height: H }, scene, false); dt.hasAlpha = true;
+  const g = dt.getContext(); g.clearRect(0, 0, W, H);
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, bh); g.strokeStyle = '#0a3fb8'; g.lineWidth = 5; g.strokeRect(2.5, 2.5, W - 5, bh - 5);
+  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(W / 2 - 16, bh - 2); g.lineTo(W / 2 + 16, bh - 2); g.lineTo(W / 2, H); g.fill();
+  g.font = font; g.fillStyle = '#111'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  lines.forEach((l, i) => g.fillText(l, W / 2, pad + lh * (i + 0.5)));
+  dt.update();
+  const pw = 4 * W / 512, ph = pw * H / W;
+  const m = BABYLON.MeshBuilder.CreatePlane('bubble', { width: pw, height: ph }, scene);
+  m.parent = ch.root; m.position.y = ch.tagY + 0.35 + ph / 2; m.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL; m.isPickable = false;
+  const bm = new BABYLON.StandardMaterial('bm', scene);
+  bm.diffuseTexture = dt; bm.useAlphaFromDiffuseTexture = true; bm.emissiveColor = BABYLON.Color3.White(); bm.disableLighting = true; bm.backFaceCulling = false;
+  m.material = bm; ch.bub = { m, t: 0 };
+}
+function bubbleTick(ch, dt) {
+  const b = ch.bub; if (!b) return;
+  b.t += dt;
+  if (b.t > 6.5) { b.m.dispose(false, true); ch.bub = null; } else b.m.visibility = b.t > 6 ? Math.max(0, (6.5 - b.t) / 0.5) : 1;
+}
+function killChar(ch) { if (ch.bub) ch.bub.m.dispose(false, true); ch.root.dispose(); }
+
+/* ---------- player list ---------- */
+const plist = new Map();
+function renderPlayers() {
+  const rows = [...plist.values()].sort((a, b) => (b.id === me?.id) - (a.id === me?.id) || a.name.localeCompare(b.name));
+  const box = $('prows'); box.textContent = '';
+  rows.forEach(p => {
+    const d = document.createElement('div'), sw = document.createElement('i'); d.className = 'pr' + (p.id === me?.id ? ' me' : ''); sw.style.background = p.color;
+    d.append(sw, p.name + (p.id === me?.id ? ' (You)' : '')); box.append(d);
+  });
+  $('pcount').textContent = plist.size;
+}
+function togglePlayers() { $('plist').classList.toggle('hidden'); $('plBtn').classList.toggle('on', !$('plist').classList.contains('hidden')); }
+$('plBtn').onclick = togglePlayers;
+
+/* ---------- world + physics (simple AABB) ---------- */
+let boxes = [], parts = [], solids = [], ladders = [], spawns = [], spawn = [0, 2, 0], me = null, myChar = null;
+let standOn = null, walkSpeed = 8, jumpPower = 12; const moved = [], touchWatch = new Set(), touching = new Set();
 const pos = { x: 0, y: 2, z: 0 }; let vy = 0, grounded = false, ry = 0;
 const others = new Map();
 const HALF = { x: [-0.4, 0.4], y: [0, 1.8], z: [-0.4, 0.4] };
-const hit = b => pos.x + 0.4 > b.x - b.w / 2 && pos.x - 0.4 < b.x + b.w / 2 && pos.y + 1.8 > b.y - b.h / 2 && pos.y < b.y + b.h / 2 && pos.z + 0.4 > b.z - b.d / 2 && pos.z - 0.4 < b.z + b.d / 2;
-const size = { x: 'w', y: 'h', z: 'd' };
+const overlap = (b, pad) => pos.x + 0.4 + pad > b.x - b.cw / 2 && pos.x - 0.4 - pad < b.x + b.cw / 2 && pos.y + 1.8 > b.y - b.h / 2 && pos.y < b.y + b.h / 2 && pos.z + 0.4 + pad > b.z - b.cd / 2 && pos.z - 0.4 - pad < b.z + b.cd / 2;
+const size = { x: 'cw', y: 'h', z: 'cd' };
 function moveAxis(axis, delta) {
   pos[axis] += delta;
-  for (const b of boxes) {
-    if (!hit(b)) continue;
+  for (const b of solids) {
+    if (!overlap(b, 0)) continue;
     if (delta > 0) pos[axis] = b[axis] - b[size[axis]] / 2 - HALF[axis][1];
     else pos[axis] = b[axis] + b[size[axis]] / 2 - HALF[axis][0];
-    if (axis === 'y') { if (delta < 0) grounded = true; vy = 0; }
+    if (axis === 'y') { if (delta < 0) { grounded = true; standOn = b; } vy = 0; }
   }
 }
+function respawn(resetCam) {
+  const sp = spawns.length ? spawns[Math.floor(Math.random() * spawns.length)] : null;
+  if (sp) Object.assign(pos, { x: sp.x, y: sp.y + sp.h / 2 + 1.5, z: sp.z }); else Object.assign(pos, { x: spawn[0], y: spawn[1], z: spawn[2] });
+  vy = 0; climbing = false; standOn = null;
+  if (resetCam) { cam.alpha = -Math.PI / 2; cam.beta = 1.1; }
+}
+function ladderMat(b) {
+  const col = b.c || '#c8903c', dt = new BABYLON.DynamicTexture('lad', { width: 128, height: 128 }, scene, true); dt.hasAlpha = true;
+  const g = dt.getContext(); g.clearRect(0, 0, 128, 128); g.fillStyle = col;
+  g.fillRect(8, 0, 14, 128); g.fillRect(106, 0, 14, 128);                    // rails
+  for (let y = 10; y < 128; y += 64) g.fillRect(8, y, 112, 12);              // rungs (every 0.5 unit)
+  dt.update(); dt.vScale = Math.max(1, b.h);
+  const m = new BABYLON.StandardMaterial('lad', scene); m.diffuseTexture = dt; m.useAlphaFromDiffuseTexture = true;
+  m.emissiveColor = c3(col).scale(0.5); m.specularColor = BABYLON.Color3.Black(); m.backFaceCulling = false;
+  return m;
+}
+const colSize = p => { const a = (p.r || 0) * Math.PI / 180, c = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a)); p.cw = c * p.w + sn * p.d; p.cd = sn * p.w + c * p.d; };
+function addPart(b, i) {
+  const m = BABYLON.MeshBuilder.CreateBox('part' + i, { size: 1 }, scene); // unit cube, scaled to the part size
+  const p = Object.assign({ id: i, n: '', r: 0, t: 0, cc: 1, l: 0, k: 0, sp: 0 }, b, { mesh: m, ddx: 0, ddy: 0, ddz: 0, mv: false, removed: false });
+  m.scaling.set(p.w, p.h, p.d); m.position.set(p.x, p.y, p.z); m.rotation.y = (p.r || 0) * Math.PI / 180; m.visibility = 1 - (p.t || 0);
+  m.material = p.l ? ladderMat(p) : mat2(p.c);
+  colSize(p); return p;
+}
+function rebuildLists() { solids = parts.filter(p => p.cc && !p.l && !p.removed); ladders = parts.filter(p => p.l && !p.removed); spawns = parts.filter(p => p.sp && !p.removed); }
+
+/* ---------- scripting: user scripts run in a Worker without DOM / network / tokens; every message it sends is validated here ---------- */
+let worker = null, pendingTicks = 0, tickAcc = 0, lastNet = 0;
+function slog(level, msg) { if (TEST) parent.postMessage({ type: 'log', level, msg: String(msg).slice(0, 400) }, '*'); else if (level === 'error') console.warn('[script]', msg); }
+function workerMain() {
+  ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'importScripts', 'indexedDB', 'caches', 'BroadcastChannel', 'Worker', 'SharedWorker'].forEach(k => { try { self[k] = undefined; } catch (e) {} });
+  const post = self.postMessage.bind(self), pending = new Map();
+  let seq = 0, startSec = 0, offset = 0, errs = 0;
+  const op = o => { if (pending.size < 800) pending.set(o.o + ':' + (o.id !== undefined ? o.id : seq++), o); };
+  const flush = () => { if (pending.size) { post({ t: 'ops', ops: [...pending.values()] }); pending.clear(); } };
+  const num = (v, d) => (Number.isFinite(+v) ? +v : d);
+  const report = e => { if (errs++ < 20) post({ t: 'err', msg: String((e && e.message) || e).slice(0, 300) }); };
+  const safe = (f, ...a) => { try { const r = f(...a); if (r && r.catch) r.catch(report); } catch (e) { report(e); } };
+  const fire = (arr, ...a) => (arr || []).forEach(f => safe(f, ...a));
+  const H = { start: [], tick: [], touch: {}, net: {} }, list = [];
+  class Part {
+    constructor(d) { this._ = d; this.id = d.id; this.name = d.n || 'Part'; }
+    get position() { return { x: this._.x, y: this._.y, z: this._.z }; }
+    set position(v) { this.setPosition(v.x, v.y, v.z); }
+    setPosition(x, y, z) { const d = this._; d.x = num(x, d.x); d.y = num(y, d.y); d.z = num(z, d.z); op({ o: 'pos', id: d.id, x: d.x, y: d.y, z: d.z }); }
+    get size() { return { x: this._.w, y: this._.h, z: this._.d }; }
+    setSize(w, h, dd) { const d = this._; d.w = num(w, d.w); d.h = num(h, d.h); d.d = num(dd, d.d); op({ o: 'size', id: d.id, w: d.w, h: d.h, d: d.d }); }
+    get rotation() { return this._.r; }
+    set rotation(v) { this._.r = num(v, 0); op({ o: 'rot', id: this._.id, r: this._.r }); }
+    get color() { return this._.c; }
+    set color(v) { this._.c = String(v); op({ o: 'col', id: this._.id, c: this._.c }); }
+    get transparency() { return this._.t; }
+    set transparency(v) { this._.t = num(v, 0); op({ o: 'tr', id: this._.id, t: this._.t }); }
+    get canCollide() { return !!this._.cc; }
+    set canCollide(v) { this._.cc = v ? 1 : 0; op({ o: 'cc', id: this._.id, v: !!v }); }
+    onTouch(fn) { (H.touch[this.id] = H.touch[this.id] || []).push(fn); op({ o: 'watch', id: this.id }); return this; }
+    destroy() { op({ o: 'rm', id: this.id }); }
+  }
+  const player = { name: '', position: { x: 0, y: 0, z: 0 },
+    teleport(x, y, z) { op({ o: 'tp', x: num(x, 0), y: num(y, 0), z: num(z, 0) }); }, setSpeed(v) { op({ o: 'speed', v: num(v, 8) }); },
+    setJumpPower(v) { op({ o: 'jump', v: num(v, 12) }); }, kill() { op({ o: 'kill' }); }, say(t) { op({ o: 'say', t: String(t) }); } };
+  const game = { name: '', time: () => (Date.now() + offset) / 1000 - startSec, onStart: f => { H.start.push(f); }, onTick: f => { H.tick.push(f); } };
+  const ui = { notify: t => op({ o: 'notify', t: String(t) }), hud: t => op({ o: 'hud', t: String(t) }) };
+  const net = { broadcast(n, d) { n = String(n).slice(0, 32); op({ o: 'net', n, d }); fire(H.net[n], d, player.name); }, on(n, f) { (H.net[String(n)] = H.net[String(n)] || []).push(f); } };
+  const wait = s => new Promise(r => setTimeout(r, Math.max(0, num(s, 0)) * 1000));
+  const part = name => list.find(p => p.name === name) || null;
+  const parts = prefix => (prefix == null ? list.slice() : list.filter(p => p.name.startsWith(String(prefix))));
+  const lg = (...a) => post({ t: 'log', msg: a.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' ').slice(0, 300) });
+  const con = { log: lg, info: lg, warn: lg, error: lg };
+  self.onmessage = e => {
+    const m = e.data;
+    if (m.t === 'init') {
+      player.name = m.name; game.name = m.title; offset = m.offset; startSec = m.start;
+      m.parts.forEach(d => list.push(new Part(d)));
+      const names = ['part', 'parts', 'player', 'game', 'ui', 'net', 'wait', 'console'], vals = [part, parts, player, game, ui, net, wait, con];
+      m.scripts.forEach(sc => {
+        try { const r = new Function(...names, '"use strict";return (async()=>{' + sc.code + '\n})()')(...vals); if (r && r.catch) r.catch(er => report('[' + sc.name + '] ' + ((er && er.message) || er))); }
+        catch (er) { report('[' + sc.name + '] ' + ((er && er.message) || er)); }
+      });
+      fire(H.start);
+    } else if (m.t === 'tick') { player.position = m.p; fire(H.tick, m.dt); post({ t: 'ack' }); }
+    else if (m.t === 'touch') fire(H.touch[m.id], player);
+    else if (m.t === 'net') fire(H.net[m.n], m.d, m.from);
+  };
+  setInterval(flush, 33);
+}
+/* ---------- end worker ---------- */
+function startScripts(d) {
+  const scripts = d.game.scripts || []; if (!scripts.length) return;
+  const offset = (d.now || Date.now()) - Date.now(), src = '(' + workerMain.toString() + ')()';
+  try { worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' }))); }
+  catch (e) { try { worker = new Worker('data:text/javascript;base64,' + btoa(unescape(encodeURIComponent(src)))); } catch (e2) { slog('error', 'Script tidak bisa dijalankan: ' + e2.message); return; } }
+  worker.onmessage = e => onWorker(e.data);
+  worker.onerror = e => slog('error', 'Worker error: ' + e.message);
+  worker.postMessage({ t: 'init', title: d.game.title, name: me.name, scripts, offset, start: (d.start || Date.now()) / 1000,
+    parts: parts.map(p => ({ id: p.id, n: p.n || '', x: p.x, y: p.y, z: p.z, w: p.w, h: p.h, d: p.d, r: p.r || 0, c: p.c, t: p.t || 0, cc: p.cc, l: p.l ? 1 : 0, k: p.k ? 1 : 0, sp: p.sp ? 1 : 0 })) });
+}
+function onWorker(m) {
+  if (!m) return;
+  if (m.t === 'ack') pendingTicks = Math.max(0, pendingTicks - 1);
+  else if (m.t === 'ops') applyOps(m.ops);
+  else if (m.t === 'log') slog('log', m.msg);
+  else if (m.t === 'err') slog('error', m.msg);
+}
+const fin = (v, d) => (Number.isFinite(+v) ? +v : d), clampN = (v, a, b) => Math.min(b, Math.max(a, v));
+function applyOps(ops) {
+  if (!Array.isArray(ops)) return;
+  let lists = false;
+  for (const o of ops.slice(0, 600)) {
+    if (!o || typeof o.o !== 'string') continue;
+    const p = Number.isInteger(o.id) ? parts[o.id] : null;
+    if (p && p.removed) continue;
+    switch (o.o) {
+      case 'pos': if (p) {
+        const x = clampN(fin(o.x, p.x), -5000, 5000), y = clampN(fin(o.y, p.y), -500, 5000), z = clampN(fin(o.z, p.z), -5000, 5000);
+        p.ddx += x - p.x; p.ddy += y - p.y; p.ddz += z - p.z; if (!p.mv) { p.mv = true; moved.push(p); }
+        p.x = x; p.y = y; p.z = z; p.mesh.position.set(x, y, z);
+      } break;
+      case 'size': if (p) { p.w = clampN(fin(o.w, p.w), 0.2, 2000); p.h = clampN(fin(o.h, p.h), 0.2, 500); p.d = clampN(fin(o.d, p.d), 0.2, 2000); p.mesh.scaling.set(p.w, p.h, p.d); colSize(p); } break;
+      case 'rot': if (p) { p.r = clampN(fin(o.r, 0), -3600, 3600); p.mesh.rotation.y = p.r * Math.PI / 180; colSize(p); } break;
+      case 'col': if (p && /^#[0-9a-f]{6}$/i.test(o.c)) { p.c = o.c; if (!p.l) p.mesh.material = mat2(o.c); } break;
+      case 'tr': if (p) { p.t = clampN(fin(o.t, 0), 0, 1); p.mesh.visibility = 1 - p.t; } break;
+      case 'cc': if (p) { p.cc = o.v ? 1 : 0; lists = true; } break;
+      case 'rm': if (p) { p.removed = true; p.mesh.setEnabled(false); touching.delete(p.id); touchWatch.delete(p.id); lists = true; } break;
+      case 'watch': if (p) touchWatch.add(p.id); break;
+      case 'tp': pos.x = clampN(fin(o.x, pos.x), -5000, 5000); pos.y = clampN(fin(o.y, pos.y), -500, 5000); pos.z = clampN(fin(o.z, pos.z), -5000, 5000); vy = 0; climbing = false; standOn = null; break;
+      case 'speed': walkSpeed = clampN(fin(o.v, 8), 0, 60); break;
+      case 'jump': jumpPower = clampN(fin(o.v, 12), 0, 60); break;
+      case 'kill': respawn(false); break;
+      case 'say': if (myChar) showBubble(myChar, String(o.t).slice(0, 140)); break;
+      case 'notify': toast(String(o.t).slice(0, 120)); break;
+      case 'hud': $('hudtext').textContent = String(o.t).slice(0, 80); break;
+      case 'net': if (!TEST && performance.now() - lastNet > 50) { let j; try { j = JSON.stringify(o.d); } catch (e) { break; } if (!j || j.length <= 1000) { lastNet = performance.now(); socket.emit('ev', String(o.n).slice(0, 32), o.d); } } break;
+    }
+  }
+  if (lists) rebuildLists();
+}
+function checkParts(dt) { // kill bricks, touch events and the script tick
+  for (const p of parts) if (p.k && !p.removed && overlap(p, 0.05)) { respawn(false); break; }
+  touchWatch.forEach(id => {
+    const p = parts[id], hit = p && !p.removed && overlap(p, 0.12);
+    if (hit && !touching.has(id)) { touching.add(id); if (worker) worker.postMessage({ t: 'touch', id }); } else if (!hit) touching.delete(id);
+  });
+  if (!worker) return;
+  tickAcc += dt; if (tickAcc < 1 / 30) return;
+  if (pendingTicks > 60) { worker.terminate(); worker = null; slog('error', 'Script dihentikan: terlalu lambat atau looping tanpa akhir'); return; }
+  pendingTicks++; worker.postMessage({ t: 'tick', dt: tickAcc, p: { x: pos.x, y: pos.y, z: pos.z } }); tickAcc = 0;
+}
+socket.on('ev', m => { if (worker) worker.postMessage({ t: 'net', n: m.n, d: m.d, from: m.from }); });
 
 socket.on('init', d => {
-  me = d.me; boxes = d.game.boxes; spawn = d.game.spawn;
+  setProg(40, 'Membangun dunia…');
+  me = d.me; boxes = d.game.boxes || []; spawn = d.game.spawn;
+  d.players.forEach(p => plist.set(p.id, p)); plist.set(me.id, me); renderPlayers();
   scene.clearColor = c3(d.game.sky).toColor4(); scene.fogMode = BABYLON.Scene.FOGMODE_EXP2; scene.fogColor = c3(d.game.sky); scene.fogDensity = 0.004;
-  $('title').textContent = d.game.title; $('count').textContent = d.players.length;
-  boxes.forEach(b => { const m = BABYLON.MeshBuilder.CreateBox('w', { width: b.w, height: b.h, depth: b.d }, scene); m.position.set(b.x, b.y, b.z); m.material = mat(b.c); });
-  Object.assign(pos, { x: spawn[0], y: spawn[1], z: spawn[2] });
-  myChar = makeChar(me);
-  d.players.filter(p => p.id !== me.id).forEach(addOther);
-  $('status').style.display = 'none';
+  $('srv').textContent = 'Server ' + String(d.room).slice(0, 4).toUpperCase(); $('title').textContent = d.game.title; $('ltitle').textContent = d.game.title; $('count').textContent = d.players.length;
+  let i = 0;
+  const step = () => { // build in small batches so the bar moves smoothly
+    const end = Math.min(i + 5, boxes.length);
+    for (; i < end; i++) parts.push(addPart(boxes[i], i));
+    setProg(40 + 45 * (i / Math.max(1, boxes.length)), 'Membangun dunia…');
+    if (i < boxes.length) return requestAnimationFrame(step);
+    finishLoading(d);
+  };
+  step();
 });
-function addOther(p) { others.set(p.id, { ch: makeChar(p), t: p, last: { x: p.x, z: p.z } }); }
-socket.on('join', addOther);
-socket.on('leave', id => { const o = others.get(id); if (o) { o.ch.root.dispose(); others.delete(id); } });
+function finishLoading(d) {
+  setProg(90, 'Menempatkan pemain…');
+  rebuildLists(); respawn(true); myChar = makeChar(me); startScripts(d);
+  d.players.filter(p => p.id !== me.id).forEach(addOther);
+  setProg(96, 'Hampir siap…');
+  scene.executeWhenReady(() => {
+    setProg(100, 'Siap!');
+    setTimeout(startGame, Math.max(400, 1600 - (performance.now() - t0))); // show the loader at least ~1.6s
+  });
+}
+function startGame() {
+  started = true; $('loader').classList.add('done'); $('hud').classList.remove('hidden');
+  setTimeout(() => $('loader').remove(), 700); setTimeout(() => toast('Tekan Esc untuk menu · Enter untuk chat'), 900);
+}
+function addOther(p) { others.set(p.id, { ch: makeChar(p), t: p }); }
+socket.on('join', p => { addOther(p); plist.set(p.id, p); renderPlayers(); addSystem(p.name + ' bergabung'); });
+socket.on('leave', id => { const o = others.get(id); if (o) { killChar(o.ch); others.delete(id); } plist.delete(id); renderPlayers(); });
 socket.on('move', p => { const o = others.get(p.id); if (o) o.t = p; });
 socket.on('count', n => ($('count').textContent = n));
-socket.on('chat', m => {
-  const d = document.createElement('div'), n = document.createElement('b');
-  n.textContent = m.name + ': '; n.style.color = m.color; d.append(n, m.text);
-  $('log').append(d); while ($('log').children.length > 8) $('log').firstChild.remove();
-});
 
-// ---------- Input ----------
-const keys = {};
+/* ---------- menu ---------- */
+let leaveArm = false;
+function resetLeave() { leaveArm = false; $('leave').textContent = 'Leave Game'; }
+function setMenu(v) {
+  menuOpen = v; $('menu').classList.toggle('hidden', !v); $('menuBtn').classList.toggle('on', v);
+  if (v) { setChat(false); resetLeave(); Object.keys(keys).forEach(k => (keys[k] = false)); }
+}
+$('menuBtn').onclick = () => setMenu(!menuOpen);
+$('resume').onclick = () => setMenu(false);
+$('reset').onclick = () => { respawn(true); setMenu(false); toast('Karakter di-reset'); };
+$('leave').onclick = () => {
+  if (!leaveArm) { leaveArm = true; $('leave').textContent = 'Yakin? Klik lagi untuk keluar'; return; }
+  if (TEST) { parent.postMessage({ type: 'stop' }, '*'); return; }
+  window.close();
+};
+$('menu').onclick = e => { if (e.target === $('menu')) setMenu(false); };
+
+/* ---------- chat ---------- */
 const typing = () => document.activeElement === $('msg');
+function updUnread() { $('unread').textContent = unread > 0 ? (unread > 9 ? '9+' : unread) : ''; }
+function setChat(v) {
+  chatOpen = v; $('chat').classList.toggle('hidden', !v); $('feed').classList.toggle('hidden', v); $('chatBtn').classList.toggle('on', v);
+  if (v) { unread = 0; updUnread(); $('log').scrollTop = 1e9; $('msg').focus(); } else $('msg').blur();
+}
+$('chatBtn').onclick = () => { if (menuOpen) setMenu(false); setChat(!chatOpen); };
+$('chatX').onclick = () => setChat(false);
+function line(name, color, text) {
+  const d = document.createElement('div');
+  if (name) { const b = document.createElement('b'); b.textContent = name + ': '; b.style.color = color; d.append(b); }
+  d.append(text); return d;
+}
+function pushMsg(name, color, text, system) {
+  const el = line(name, color, text); if (system) el.style.color = '#8a97b0';
+  const log = $('log'); log.append(el); while (log.children.length > 60) log.firstChild.remove();
+  log.scrollTop = 1e9;
+  if (!chatOpen) {
+    const f = line(name, color, text); if (system) f.style.color = '#b6c2d9';
+    $('feed').append(f); while ($('feed').children.length > 4) $('feed').firstChild.remove();
+    setTimeout(() => f.remove(), 7000);
+    if (!system) { unread++; updUnread(); }
+  }
+}
+const addSystem = t => pushMsg('', '', t, true);
+let emote = null; // { e: 'wave' | 'dance', t: seconds }
+function doEmote(n) {
+  n = String(n).trim().toLowerCase();
+  if (n === 'wave' || n === 'dance') { emote = { e: n, t: 0 }; socket.emit('emote', n); toast('/e ' + n + ' — gerak untuk berhenti'); }
+  else addSystem('Emote tidak dikenal. Coba: /e wave atau /e dance');
+}
+socket.on('emote', m => { const o = others.get(m.id); if (o) o.emote = m.e === 'stop' ? null : { e: m.e, t: 0 }; });
+socket.on('chat', m => {
+  pushMsg(m.name, m.color, m.text, false);
+  const ch = m.id === socket.id ? myChar : others.get(m.id)?.ch; if (ch) showBubble(ch, m.text);
+});
+function sendMsg() {
+  const t = $('msg').value.trim();
+  if (!t) return setChat(false);
+  const m = /^\/(?:e|emote)\b\s*(.*)$/i.exec(t);
+  if (m) { $('msg').value = ''; setChat(false); doEmote(m[1]); return; }
+  socket.emit('chat', t); $('msg').value = '';
+}
+
+/* ---------- input ---------- */
+const keys = {};
 addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !typing()) { e.preventDefault(); $('msg').focus(); return; }
-  if (typing()) { if (e.key === 'Enter') { const t = $('msg').value.trim(); if (t) socket.emit('chat', t); $('msg').value = ''; $('msg').blur(); } if (e.key === 'Escape') $('msg').blur(); return; }
+  if (!started) return;
+  if (e.key === 'Tab') { e.preventDefault(); togglePlayers(); return; }
+  if (e.key === 'Escape') { chatOpen ? setChat(false) : setMenu(!menuOpen); return; }
+  if (typing()) { if (e.key === 'Enter') sendMsg(); return; }
+  if (menuOpen) return;
+  if (e.key === 'Enter') { e.preventDefault(); setChat(true); return; }
   keys[e.code] = true;
 });
 addEventListener('keyup', e => (keys[e.code] = false));
 addEventListener('blur', () => Object.keys(keys).forEach(k => (keys[k] = false)));
+$('c').addEventListener('pointerdown', () => { if (typing()) $('msg').blur(); });
 
-// ---------- Game loop ----------
-let t = 0, sendAcc = 0;
+/* ---------- game loop ---------- */
+let t = 0, sendAcc = 0, air = 0, climbing = false, ladderRef = null, climbCool = 0;
+const push = { t: 0, x: 0, z: 0 };
 scene.onBeforeRenderObservable.add(() => {
   if (!myChar) return;
   const dt = Math.min(engine.getDeltaTime() / 1000, 0.05); t += dt;
+  const on = started && !menuOpen && !typing();
   const fx = -Math.cos(cam.alpha), fz = -Math.sin(cam.alpha), rx = fz, rz = -fx;
-  let ix = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0), iz = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0);
+  const ix = on ? (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) : 0, iz = on ? (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) : 0;
   let dx = fx * iz + rx * ix, dz = fz * iz + rz * ix; const len = Math.hypot(dx, dz);
-  const moving = len > 0;
-  if (moving) { dx /= len; dz /= len; ry = Math.atan2(dx, dz); }
-  if (grounded && keys.Space) vy = 12;
-  vy -= 30 * dt; grounded = false;
-  moveAxis('x', dx * 8 * dt); moveAxis('z', dz * 8 * dt); moveAxis('y', vy * dt);
-  if (pos.y < -30) { Object.assign(pos, { x: spawn[0], y: spawn[1], z: spawn[2] }); vy = 0; }
-  myChar.root.position.set(pos.x, pos.y, pos.z); myChar.body.rotation.y = ry; swing(myChar, moving, t);
+  if (len > 0) { dx /= len; dz /= len; }
+  if (standOn && grounded) { pos.x += standOn.ddx; pos.y += standOn.ddy; pos.z += standOn.ddz; } // ride moving platforms
+  for (const p of moved) { p.ddx = p.ddy = p.ddz = 0; p.mv = false; } moved.length = 0;
+
+  // grab a ladder: walk into it and hold W / S
+  climbCool = Math.max(0, climbCool - dt);
+  if (!climbing && climbCool === 0 && on && (keys.KeyW || keys.KeyS)) {
+    const l = ladders.find(b => overlap(b, 0.25)); if (l) { climbing = true; ladderRef = l; }
+  }
+  let climbDir = 0;
+  if (climbing) {
+    const l = ladderRef, top = l.y + l.h / 2, bottom = l.y - l.h / 2, lx = l.x - pos.x, lz = l.z - pos.z, ln = Math.hypot(lx, lz) || 1;
+    climbDir = on ? (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) : 0;
+    vy = 0; dx = dz = 0; grounded = false; ry = Math.atan2(lx, lz);
+    moveAxis('y', climbDir * 5 * dt);
+    if (on && keys.Space) { climbing = false; climbCool = 0.4; vy = 9; push.t = 0.3; push.x = -lx / ln * 4; push.z = -lz / ln * 4; }      // jump off
+    else if (!overlap(l, 0.4)) climbing = false;                                                                                           // slipped off
+    else if (climbDir > 0 && pos.y >= top - 0.6) { climbing = false; climbCool = 0.5; vy = 7.5; push.t = 0.5; push.x = lx / ln * 4; push.z = lz / ln * 4; } // hop over the top
+    else if (climbDir < 0 && pos.y <= bottom + 0.05) { climbing = false; climbCool = 0.2; }                                                // step off at the bottom
+  } else {
+    if (grounded && on && keys.Space) vy = jumpPower;
+    vy -= 30 * dt; grounded = false;
+    let vx = dx * walkSpeed, vz = dz * walkSpeed;
+    if (push.t > 0) { push.t -= dt; vx += push.x; vz += push.z; }
+    moveAxis('x', vx * dt); moveAxis('z', vz * dt); moveAxis('y', vy * dt);
+    if (len > 0) ry = Math.atan2(dx, dz);
+  }
+  if (pos.y < -30) respawn(false);
+  if (!grounded) standOn = null;
+  checkParts(dt);
+
+  if (grounded) air = 0; else air += dt;
+  const moving = len > 0 && !climbing;
+  const st = climbing ? 4 : air > 0.12 ? (vy > 1 ? 2 : 3) : moving ? 1 : 0;
+  let em = null;
+  if (emote) { emote.t += dt; if (st !== 0 || (emote.e === 'wave' ? emote.t > 2.4 : emote.t > 30)) { emote = null; socket.emit('emote', 'stop'); } else em = emote.e; }
+  myChar.root.position.set(pos.x, pos.y, pos.z); myChar.body.rotation.y = ry; pose(myChar, st, dt, climbDir !== 0, em); bubbleTick(myChar, dt);
   camTarget.position.set(pos.x, pos.y + 1.4, pos.z);
 
-  sendAcc += dt; if (sendAcc > 0.066) { sendAcc = 0; socket.volatile.emit('move', { x: pos.x, y: pos.y, z: pos.z, ry }); }
+  sendAcc += dt; if (sendAcc > 0.066) { sendAcc = 0; socket.volatile.emit('move', { x: pos.x, y: pos.y, z: pos.z, ry, st }); }
   others.forEach(o => {
-    const r = o.ch.root.position, k = Math.min(1, dt * 12);
-    const px = r.x, pz = r.z;
+    const r = o.ch.root.position, k = Math.min(1, dt * 12), py = r.y;
     r.x += (o.t.x - r.x) * k; r.y += (o.t.y - r.y) * k; r.z += (o.t.z - r.z) * k;
-    o.ch.body.rotation.y = o.t.ry; swing(o.ch, Math.hypot(r.x - px, r.z - pz) > 0.002, t);
+    const sts = o.t.st || 0; let em = null;
+    if (o.emote) { o.emote.t += dt; if (sts !== 0 || (o.emote.e === 'wave' ? o.emote.t > 2.4 : o.emote.t > 30)) o.emote = null; else em = o.emote.e; }
+    o.ch.body.rotation.y = o.t.ry; pose(o.ch, sts, dt, Math.abs(r.y - py) > 0.003, em); bubbleTick(o.ch, dt);
   });
 });
 engine.runRenderLoop(() => scene.render());

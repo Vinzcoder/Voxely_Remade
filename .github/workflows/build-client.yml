@@ -2,7 +2,7 @@ name: Build client
 
 on:
   push:
-    tags: ['v*']          # e.g. git tag v0.1.1 && git push --tags
+    tags: ['v*']          # e.g. git tag v0.2.0 && git push --tags  (the tag number becomes the app version)
   workflow_dispatch:       # or run it by hand from the Actions tab
 
 permissions:
@@ -15,23 +15,31 @@ jobs:
         include:
           - os: windows-latest
             command: npx electron-builder --win nsis --publish never
-            file: dist/Voxely-Client-Setup.exe
+            files: |
+              dist/Voxely-Client-Setup.exe
+              dist/Voxely-Client-Setup.exe.blockmap
+              dist/latest.yml
           - os: ubuntu-latest
             command: npx electron-builder --linux deb --publish never
-            file: dist/Voxely-Client.deb
+            files: |
+              dist/Voxely-Client.deb
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
       - run: npm install
       - run: ${{ matrix.command }}
       - uses: actions/upload-artifact@v4
         with:
           name: voxely-client-${{ matrix.os }}
-          path: ${{ matrix.file }}
+          path: ${{ matrix.files }}
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ${{ matrix.file }}
+          files: ${{ matrix.files }}
