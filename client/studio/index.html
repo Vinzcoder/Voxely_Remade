@@ -1,0 +1,371 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Voxely Studio</title>
+<style>
+  :root { --bg:#1b1d21; --panel:#202328; --line:#2f3238; --text:#e8e8e8; --dim:#9aa0aa; --sel:#2c5aa8; --acc:#3b82f6; }
+  * { box-sizing:border-box; margin:0; }
+  html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font:15px "Segoe UI",Arial,sans-serif; user-select:none; }
+  body { display:grid; grid-template-rows:36px 118px 1fr auto; }
+  .hidden { display:none !important; }
+  button { font:inherit; color:inherit; cursor:pointer; }
+  svg { width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  /* title bar */
+  #titlebar { display:flex; align-items:center; gap:12px; padding:0 14px; background:#16181b; border-bottom:1px solid var(--line); font-weight:600; }
+  #titlebar .lg { width:26px; height:18px; background:var(--acc); } #gname { color:var(--dim); font-weight:400; } #status { margin-left:auto; font-weight:400; color:var(--dim); } #status.err { color:#ff6b6b; }
+  /* ribbon */
+  #ribbon { display:flex; background:#1d1f23; border-bottom:1px solid var(--line); padding:6px 6px 0; overflow-x:auto; }
+  .grp { display:flex; flex-direction:column; align-items:center; padding:0 12px; border-right:1px solid var(--line); min-width:max-content; }
+  .grp .row { display:flex; gap:2px; flex:1; align-items:center; } .grp .gl { font-size:17px; padding:6px 0 4px; }
+  .tb { width:70px; height:72px; border:0; background:none; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; border-radius:6px; font-size:13px; }
+  .tb svg { width:30px; height:30px; flex:none; } .tb:hover { background:#2a2d33; } .tb.on { background:var(--sel); } .tb.dis { opacity:.35; pointer-events:none; }
+  #play svg { stroke:#22c55e; fill:#22c55e; } #stop svg { stroke:#ef4444; fill:#ef4444; } #spawnb svg { stroke:#a78bfa; }
+  .snap { display:flex; flex-direction:column; justify-content:center; gap:14px; padding:0 8px; } .snap label { display:flex; align-items:center; gap:8px; }
+  .snap input[type=number] { width:64px; background:#15171a; border:1px solid var(--line); color:var(--text); padding:5px 8px; font:inherit; } .snap svg { width:18px; height:18px; color:var(--dim); }
+  /* main */
+  #main { display:grid; grid-template-columns:1fr 300px; min-height:0; }
+  #vp { position:relative; min-height:0; } #c { width:100%; height:100%; display:block; outline:none; }
+  #test { position:absolute; inset:0; width:100%; height:100%; border:0; background:#000; }
+  #hint { position:absolute; left:10px; bottom:8px; color:rgba(255,255,255,.75); font-size:12px; text-shadow:0 1px 2px #000; pointer-events:none; }
+  #side { display:grid; grid-template-rows:minmax(120px,45%) 1fr; gap:8px; padding:6px; background:var(--bg); min-height:0; }
+  .panel { background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; min-height:0; } .panel h2 { font-size:22px; font-weight:400; padding:8px 10px 6px; border-bottom:1px solid var(--line); }
+  #exlist, #pbody { overflow-y:auto; padding:6px 4px; flex:1; min-height:0; }
+  .ex { display:flex; align-items:center; gap:10px; padding:5px 12px 5px 22px; font-size:17px; cursor:pointer; white-space:nowrap; } .ex svg { width:17px; height:17px; flex:none; color:#cfd3da; } .ex:hover { background:#2a2d33; } .ex.on { background:var(--sel); } .ex small { color:var(--dim); }
+  .exh { display:flex; justify-content:space-between; align-items:center; padding:10px 12px 4px; color:var(--dim); font-size:13px; letter-spacing:.06em; text-transform:uppercase; } .exh button { background:#2a2d33; border:0; padding:2px 10px; }
+  .pr2 { display:grid; grid-template-columns:96px 1fr; align-items:center; gap:6px; padding:3px 8px; } .pr2 label { color:var(--dim); font-size:14px; } .pr2 div { display:flex; gap:4px; }
+  #pbody input[type=text], #pbody input[type=number], .fld input, .fld textarea { width:100%; min-width:0; background:#15171a; border:1px solid var(--line); color:var(--text); padding:5px 7px; font:inherit; }
+  #pbody input[type=color] { width:100%; height:28px; background:#15171a; border:1px solid var(--line); padding:1px; }
+  .chk { display:flex; align-items:center; gap:8px; padding:3px 8px 3px 106px; font-size:14px; } .dim { color:var(--dim); padding:8px 12px; font-size:16px; } .sep { border-top:1px solid var(--line); margin:8px 0; }
+  /* drawer */
+  #drawer { height:300px; background:var(--panel); border-top:1px solid var(--line); display:flex; flex-direction:column; }
+  #dtabs { display:flex; gap:2px; background:#16181b; padding:4px 6px 0; align-items:center; } .dt { background:none; border:0; padding:7px 16px; } .dt.on { background:var(--panel); border-top:2px solid var(--acc); } #dclose { margin-left:auto; background:none; border:0; font-size:18px; padding:4px 10px; }
+  #dbody { flex:1; min-height:0; display:flex; } #dbody > div { flex:1; min-width:0; display:flex; flex-direction:column; }
+  #shead { display:flex; gap:8px; padding:6px; background:#1a1c20; align-items:center; } #shead input { background:#15171a; border:1px solid var(--line); color:var(--text); padding:5px 8px; font:inherit; width:200px; } #shead select, #shead button { background:#2a2d33; color:var(--text); border:0; padding:6px 12px; font:inherit; }
+  #code { flex:1; width:100%; resize:none; background:#14161a; color:#d4d8e0; border:0; padding:10px 12px; font:14px/1.5 "JetBrains Mono",Consolas,monospace; outline:none; white-space:pre; tab-size:2; user-select:text; }
+  #out, #help { flex:1; overflow:auto; padding:8px 12px; font:13px/1.55 Consolas,monospace; user-select:text; } #out .e { color:#ff7b7b; } #out .l { color:#cfd3da; } #out .i { color:var(--dim); }
+  #help { font:14px/1.6 "Segoe UI",Arial; } #help code { background:#14161a; padding:1px 6px; color:#ffb454; } #help h4 { margin:10px 0 4px; color:#fff; }
+  /* modal */
+  .veil { position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; z-index:50; }
+  .card { width:440px; background:var(--panel); border:1px solid var(--acc); padding:22px; } .card h3 { font-size:20px; margin-bottom:12px; } .fld { margin-bottom:10px; } .fld label { display:block; color:var(--dim); font-size:13px; margin-bottom:3px; }
+  .card .acts { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; } .card .acts button { background:#2a2d33; border:0; padding:9px 20px; } .card .acts .go { background:var(--acc); color:#fff; }
+  #toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:var(--acc); color:#fff; padding:9px 18px; z-index:60; display:none; }
+</style>
+</head>
+<body>
+<div id="titlebar"><div class="lg"></div><span>Voxely Studio - v0.2.0</span><span id="gname"></span><span id="status"></span></div>
+<div id="ribbon"></div>
+<div id="main">
+  <div id="vp"><canvas id="c"></canvas><iframe id="test" class="hidden"></iframe><div id="hint">Klik kanan + geser: putar kamera · W A S D / Q E: terbang · Scroll: zoom · Del: hapus · Ctrl+S: publish</div></div>
+  <div id="side">
+    <div class="panel"><h2>Explorer</h2><div id="exlist"></div></div>
+    <div class="panel"><h2>Properties</h2><div id="pbody"></div></div>
+  </div>
+</div>
+<div id="drawer" class="hidden">
+  <div id="dtabs"><button class="dt on" data-t="script">Script</button><button class="dt" data-t="out">Output</button><button class="dt" data-t="help">Panduan API</button><button id="dclose">✕</button></div>
+  <div id="dbody">
+    <div id="p-script"><div id="shead"><input id="sname" maxlength="30"><select id="sex"><option value="">Contoh script…</option></select><button id="sdel">Hapus script</button></div><textarea id="code" spellcheck="false"></textarea></div>
+    <div id="p-out" class="hidden"><div id="out"></div></div>
+    <div id="p-help" class="hidden"><div id="help"></div></div>
+  </div>
+</div>
+<div id="modal" class="veil hidden"><div class="card" id="mcard"></div></div>
+<div id="toast"></div>
+
+<script src="../game/vendor/babylon.js"></script>
+<script>
+const q = new URLSearchParams(location.search), SERVER = q.get('server'), TOKEN = q.get('token'), GID = q.get('game');
+const $ = id => document.getElementById(id), AUTH = { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const svg = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
+const P = {
+  select: '<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/>',
+  move: '<polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>',
+  rotate: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  scale: '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>',
+  cube: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  spawn: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="6"/>',
+  ladder: '<line x1="7" y1="3" x2="7" y2="21"/><line x1="17" y1="3" x2="17" y2="21"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="18" x2="17" y2="18"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  paste: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
+  dup: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V4a2 2 0 0 1 2-2h10"/><line x1="14.5" y1="11" x2="14.5" y2="18"/><line x1="11" y1="14.5" x2="18" y2="14.5"/>',
+  del: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/>',
+  code: '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>', term: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
+  play: '<polygon points="5 3 19 12 5 21 5 3"/>', stop: '<rect x="4" y="4" width="16" height="16"/>',
+  cam: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  up: '<polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>'
+};
+const RIB = [
+  ['Tools', [['tool:select', 'Select', P.select], ['tool:move', 'Move', P.move], ['tool:rotate', 'Rotate', P.rotate], ['tool:scale', 'Scale', P.scale]]],
+  ['Snap', 'snap'],
+  ['Insert', [['ins:part', 'Part', P.cube], ['ins:spawn', 'Spawn', P.spawn, 'spawnb'], ['ins:ladder', 'Ladder', P.ladder]]],
+  ['Edit', [['copy', 'Copy', P.copy], ['paste', 'Paste', P.paste], ['dup', 'Duplicate', P.dup], ['del', 'Delete', P.del]]],
+  ['Script', [['script', 'Script', P.code], ['output', 'Output', P.term]]],
+  ['Test', [['play', 'Play', P.play, 'play'], ['stop', 'Stop', P.stop, 'stop']]],
+  ['Game', [['thumb', 'Thumbnail', P.cam], ['publish', 'Publish', P.up]]]
+];
+$('ribbon').innerHTML = RIB.map(([name, items]) => `<div class="grp"><div class="row">${items === 'snap'
+  ? `<div class="snap"><label><input type="checkbox" id="mOn" checked><input type="number" id="mVal" value="1" min="0.05" step="0.5">${svg(P.move)}</label><label><input type="checkbox" id="rOn" checked><input type="number" id="rVal" value="15" min="1" step="5">${svg(P.rotate)}</label></div>`
+  : items.map(([k, l, ic, id]) => `<button class="tb" data-a="${k}" ${id ? `id="${id}"` : ''}>${svg(ic)}<span>${l}</span></button>`).join('')}</div><div class="gl">${name}</div></div>`).join('');
+
+/* ---------------- state ---------------- */
+let meta = { id: GID === 'new' ? null : GID, title: '', tagline: '', desc: '', tags: '', sky: '#7ec8ff', a1: '#1463ff', a2: '#0a0f1a', thumbNew: null };
+let parts = [], scripts = [], sel = null, tool = 'move', clip = null, dirty = false, testing = false, outfit = null, openScript = -1, drawerTab = 'script', dragging = false;
+const COLORS = {}, matOf = hex => COLORS[hex] || (COLORS[hex] = (() => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = BABYLON.Color3.FromHexString(hex); m.specularColor = BABYLON.Color3.Black(); return m; })());
+const toast = m => { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 1800); };
+const setStatus = (m, err) => { $('status').textContent = m; $('status').className = err ? 'err' : ''; };
+const mark = () => { dirty = true; $('gname').textContent = (meta.title || 'Game baru') + ' *'; };
+
+/* ---------------- 3D scene ---------------- */
+const engine = new BABYLON.Engine($('c'), true, { preserveDrawingBuffer: true });
+const scene = new BABYLON.Scene(engine); scene.clearColor = BABYLON.Color3.FromHexString('#7ec8ff').toColor4();
+new BABYLON.HemisphericLight('h', new BABYLON.Vector3(0.3, 1, 0.2), scene).intensity = 0.8;
+new BABYLON.DirectionalLight('d', new BABYLON.Vector3(-0.4, -1, -0.3), scene).intensity = 0.45;
+const cam = new BABYLON.UniversalCamera('cam', new BABYLON.Vector3(0, 14, -28), scene);
+cam.setTarget(BABYLON.Vector3.Zero()); cam.minZ = 0.1; cam.maxZ = 5000; cam.speed = 0.6; cam.angularSensibility = 1800;
+cam.keysUp = [87]; cam.keysDown = [83]; cam.keysLeft = [65]; cam.keysRight = [68]; cam.keysUpward = [69]; cam.keysDownward = [81];
+cam.attachControl($('c'), true); if (cam.inputs.attached.mouse) cam.inputs.attached.mouse.buttons = [2];
+$('c').oncontextmenu = e => e.preventDefault();
+$('c').addEventListener('wheel', e => { e.preventDefault(); cam.position.addInPlace(cam.getDirection(BABYLON.Axis.Z).scale(-e.deltaY * 0.03)); }, { passive: false });
+const gm = new BABYLON.GizmoManager(scene); gm.usePointerToAttachGizmos = false;
+engine.runRenderLoop(() => { if (!testing) { if (dragging && sel) syncFromMesh(false); scene.render(); } });
+addEventListener('resize', () => engine.resize());
+
+function ladderMat(p) {
+  const dt = new BABYLON.DynamicTexture('lad', { width: 128, height: 128 }, scene, true); dt.hasAlpha = true;
+  const g = dt.getContext(); g.clearRect(0, 0, 128, 128); g.fillStyle = p.c || '#c8903c'; g.fillRect(8, 0, 14, 128); g.fillRect(106, 0, 14, 128);
+  for (let y = 10; y < 128; y += 64) g.fillRect(8, y, 112, 12); dt.update(); dt.vScale = Math.max(1, p.h);
+  const m = new BABYLON.StandardMaterial('lad', scene); m.diffuseTexture = dt; m.useAlphaFromDiffuseTexture = true; m.emissiveColor = BABYLON.Color3.FromHexString(p.c || '#c8903c').scale(0.5); m.specularColor = BABYLON.Color3.Black(); m.backFaceCulling = false; return m;
+}
+function paint(p) {
+  const m = p.mesh; m.rotationQuaternion = null;
+  m.position.set(p.x, p.y, p.z); m.scaling.set(p.w, p.h, p.d); m.rotation.set(0, p.r * Math.PI / 180, 0);
+  m.material = p.l ? ladderMat(p) : matOf(p.c); m.visibility = 1 - p.t;
+}
+function mkPart(d) {
+  const p = Object.assign({ n: 'Part', x: 0, y: 0.5, z: 0, w: 4, h: 1, d: 2, c: '#a3a3a3', r: 0, t: 0, cc: 1, l: 0, k: 0, sp: 0 }, d);
+  const m = BABYLON.MeshBuilder.CreateBox('p', { size: 1 }, scene); m.metadata = { part: p }; p.mesh = m; paint(p); return p;
+}
+const ser = p => ({ n: p.n, x: p.x, y: p.y, z: p.z, w: p.w, h: p.h, d: p.d, c: p.c, r: p.r, t: p.t, cc: p.cc, l: p.l, k: p.k, sp: p.sp });
+const snapV = () => ($('mOn').checked ? Math.max(0.05, +$('mVal').value || 1) : 0), sn = v => { const s = snapV(); return s ? Math.round(v / s) * s : Math.round(v * 100) / 100; };
+
+/* ---------------- selection + gizmos ---------------- */
+function select(p) {
+  if (sel) sel.mesh.renderOutline = false;
+  sel = p; if (p) { p.mesh.renderOutline = true; p.mesh.outlineWidth = 0.06; p.mesh.outlineColor = new BABYLON.Color3(0.25, 0.65, 1); }
+  gm.attachToMesh(p && tool !== 'select' ? p.mesh : null); renderExplorer(); renderProps();
+}
+let hooked = {};
+function setTool(t) {
+  tool = t; document.querySelectorAll('[data-a^="tool:"]').forEach(b => b.classList.toggle('on', b.dataset.a === 'tool:' + t));
+  gm.positionGizmoEnabled = t === 'move'; gm.rotationGizmoEnabled = t === 'rotate'; gm.scaleGizmoEnabled = t === 'scale';
+  [['positionGizmo'], ['rotationGizmo'], ['scaleGizmo']].forEach(([k]) => {
+    const gz = gm.gizmos[k]; if (!gz || hooked[k]) return; hooked[k] = true;
+    gz.onDragStartObservable.add(() => (dragging = true)); gz.onDragEndObservable.add(() => { dragging = false; syncFromMesh(true); });
+    if (k === 'positionGizmo') gz.updateGizmoRotationToMatchAttachedMesh = false;
+    if (k === 'rotationGizmo') { gz.xGizmo.isEnabled = false; gz.zGizmo.isEnabled = false; }
+  });
+  applySnap(); gm.attachToMesh(sel && t !== 'select' ? sel.mesh : null);
+}
+function applySnap() {
+  const mv = snapV(), rt = $('rOn').checked ? Math.max(1, +$('rVal').value || 15) : 0, g = gm.gizmos;
+  if (g.positionGizmo) g.positionGizmo.snapDistance = mv; if (g.scaleGizmo) g.scaleGizmo.snapDistance = mv; if (g.rotationGizmo) g.rotationGizmo.snapDistance = rt * Math.PI / 180;
+}
+function syncFromMesh(final) {
+  const m = sel.mesh, r3 = n => Math.round(n * 1000) / 1000;
+  sel.x = r3(m.position.x); sel.y = r3(m.position.y); sel.z = r3(m.position.z);
+  sel.w = Math.max(0.2, r3(m.scaling.x)); sel.h = Math.max(0.2, r3(m.scaling.y)); sel.d = Math.max(0.2, r3(m.scaling.z));
+  const yaw = m.rotationQuaternion ? m.rotationQuaternion.toEulerAngles().y : m.rotation.y;
+  sel.r = r3(((yaw * 180 / Math.PI + 540) % 360) - 180);
+  if (final) { m.scaling.set(sel.w, sel.h, sel.d); m.rotationQuaternion = null; m.rotation.set(0, sel.r * Math.PI / 180, 0); }
+  mark(); refreshProps();
+}
+engine.getRenderingCanvas().addEventListener('pointerdown', e => {
+  if (e.button !== 0 || testing || gm.isHovered) return;
+  const pk = scene.pick(scene.pointerX, scene.pointerY, m => m.metadata && m.metadata.part && m.isVisible && m.visibility > 0.05);
+  setTimeout(() => { if (!gm.isHovered) select(pk && pk.hit ? pk.pickedMesh.metadata.part : null); }, 0);
+});
+
+/* ---------------- explorer + properties ---------------- */
+const IC = (p) => svg(p);
+function renderExplorer() {
+  $('exlist').innerHTML = parts.map((p, i) => `<div class="ex ${p === sel ? 'on' : ''}" data-i="${i}">${IC(p.l ? P.ladder : p.sp ? P.spawn : P.cube)}${esc(p.n || 'Part')}${p.sp ? ' <small>Spawn</small>' : ''}</div>`).join('')
+    + `<div class="exh"><span>Scripts</span><button id="addScript">+ Script</button></div>`
+    + scripts.map((s, i) => `<div class="ex ${i === openScript && !$('drawer').classList.contains('hidden') && drawerTab === 'script' ? 'on' : ''}" data-s="${i}">${IC(P.code)}${esc(s.name)}</div>`).join('');
+}
+$('exlist').onclick = e => {
+  if (e.target.id === 'addScript') return newScript();
+  const r = e.target.closest('.ex'); if (!r) return;
+  if (r.dataset.i !== undefined) { select(parts[+r.dataset.i]); const p = parts[+r.dataset.i]; if (p) cam.setTarget(p.mesh.position); } else openScriptAt(+r.dataset.s);
+};
+const NUMK = new Set(['x', 'y', 'z', 'w', 'h', 'd', 'r', 't']);
+function renderProps() {
+  const b = $('pbody');
+  if (!sel) {
+    b.innerHTML = `<div class="dim">Nothing selected</div><div class="sep"></div><div class="pr2"><label>Game</label><input type="text" id="gtitle" value="${esc(meta.title)}" placeholder="Judul game" maxlength="30"></div><div class="pr2"><label>Sky color</label><input type="color" id="gsky" value="${meta.sky}"></div>`;
+    $('gtitle').oninput = e => { meta.title = e.target.value; mark(); }; $('gsky').oninput = e => { meta.sky = e.target.value; scene.clearColor = BABYLON.Color3.FromHexString(meta.sky).toColor4(); mark(); };
+    return;
+  }
+  const n = (k, st) => `<input type="number" step="${st || 0.5}" data-k="${k}" value="${sel[k]}">`, row = (l, i) => `<div class="pr2"><label>${l}</label><div>${i}</div></div>`;
+  const ck = (k, l) => `<label class="chk"><input type="checkbox" data-k="${k}" ${sel[k] ? 'checked' : ''}> ${l}</label>`;
+  b.innerHTML = row('Name', `<input type="text" data-k="n" value="${esc(sel.n)}" maxlength="30">`) + row('Position', n('x') + n('y') + n('z')) + row('Size', n('w') + n('h') + n('d')) + row('Rotation Y', n('r', 5))
+    + row('Color', `<input type="color" data-k="c" value="${sel.c}">`) + row('Transparency', n('t', 0.1)) + ck('cc', 'CanCollide') + ck('l', 'Ladder (bisa dipanjat)') + ck('k', 'Kill (lava)') + ck('sp', 'Spawn point');
+  b.querySelectorAll('[data-k]').forEach(i => (i.oninput = () => setProp(i)));
+}
+function refreshProps() { $('pbody').querySelectorAll('[data-k]').forEach(i => { if (i.type !== 'checkbox' && document.activeElement !== i) i.value = sel[i.dataset.k]; }); }
+function setProp(i) {
+  const k = i.dataset.k; if (!sel) return;
+  if (i.type === 'checkbox') sel[k] = i.checked ? 1 : 0;
+  else if (NUMK.has(k)) { let v = parseFloat(i.value); if (!Number.isFinite(v)) return; if (['w', 'h', 'd'].includes(k)) v = Math.max(0.2, v); if (k === 't') v = Math.min(0.95, Math.max(0, v)); sel[k] = v; }
+  else sel[k] = i.value;
+  paint(sel); if (k === 'n' || k === 'sp' || k === 'l') renderExplorer(); mark();
+}
+
+/* ---------------- insert / edit ---------------- */
+function groundTop(x, z) {
+  const hit = scene.pickWithRay(new BABYLON.Ray(new BABYLON.Vector3(x, 900, z), new BABYLON.Vector3(0, -1, 0), 2000), m => m.metadata && m.metadata.part);
+  return hit && hit.hit ? hit.pickedPoint.y : 0;
+}
+function insert(kind) {
+  const f = cam.getDirection(BABYLON.Axis.Z), x = sn(cam.position.x + f.x * 14), z = sn(cam.position.z + f.z * 14);
+  const d = kind === 'spawn' ? { n: 'Spawn', w: 6, h: 0.4, d: 6, c: '#3b82f6', sp: 1 } : kind === 'ladder' ? { n: 'Ladder', w: 1.4, h: 6, d: 0.3, c: '#c8903c', l: 1 } : { n: 'Part', w: 4, h: 1, d: 2 };
+  const top = groundTop(x, z), p = mkPart({ ...d, x, z, y: Math.round((top + (d.h || 1) / 2) * 100) / 100 });
+  parts.push(p); select(p); mark();
+}
+function copy() { if (sel) { clip = ser(sel); toast('Disalin'); } }
+function paste() { if (!clip) return; const p = mkPart({ ...clip, x: clip.x + 2, z: clip.z + 2 }); parts.push(p); select(p); mark(); }
+function dup() { copy(); paste(); }
+function del() { if (!sel) return; const p = sel; select(null); p.mesh.dispose(); parts.splice(parts.indexOf(p), 1); renderExplorer(); mark(); }
+
+/* ---------------- scripts ---------------- */
+const EX = {
+  'Platform bergerak': "// Beri nama sebuah part: Mover\nconst p = part('Mover');\nconst start = p.position;\ngame.onTick(() => {\n  const t = game.time();            // waktu server (sinkron antar pemain)\n  p.setPosition(start.x + Math.sin(t) * 8, start.y, start.z);\n});\n",
+  'Koin': "// Semua part dengan nama berawalan \"Coin\" menghilang saat disentuh\nlet skor = 0;\nparts('Coin').forEach(c => c.onTouch(() => {\n  c.destroy();\n  skor++;\n  ui.hud('Koin: ' + skor);\n}));\n",
+  'Teleporter': "// Dua part bernama PortalA dan PortalB\nconst a = part('PortalA'), b = part('PortalB');\na.onTouch(() => player.teleport(b.position.x, b.position.y + 3, b.position.z));\nb.onTouch(() => player.teleport(a.position.x, a.position.y + 3, a.position.z));\n",
+  'Jump pad': "// Part bernama Boost: lompat super tinggi selama 2 detik\nconst pad = part('Boost');\npad.onTouch(async () => {\n  player.setJumpPower(32);\n  ui.notify('BOOST!');\n  await wait(2);\n  player.setJumpPower(12);\n});\n",
+  'Lantai hilang': "// Part bernama Fragile berubah merah lalu hilang setelah disentuh\nparts('Fragile').forEach(f => f.onTouch(async () => {\n  f.color = '#ef4444';\n  await wait(1);\n  f.canCollide = false;\n  f.transparency = 0.8;\n  await wait(3);\n  f.canCollide = true;\n  f.transparency = 0;\n  f.color = '#a3a3a3';\n}));\n",
+  'Event multiplayer': "// Pesan untuk semua pemain di server yang sama\nui.notify('Selamat datang di ' + game.name);\nconst flag = part('Flag');\nflag.onTouch(() => net.broadcast('menang', { siapa: player.name }));\nnet.on('menang', (data) => ui.notify(data.siapa + ' mencapai bendera!'));\n"
+};
+const HELP = `<h4>Dasar</h4>Script ditulis dengan JavaScript dan berjalan di komputer tiap pemain (terisolasi, tanpa akses internet). Kamu boleh memakai <code>await</code>, <code>setTimeout</code>, <code>Math</code>, dll.
+<h4>Part</h4><code>part('Nama')</code> ambil satu part · <code>parts('Awalan')</code> ambil semua part berawalan nama itu.<br>
+<code>p.position</code> / <code>p.setPosition(x,y,z)</code> · <code>p.setSize(w,h,d)</code> · <code>p.rotation = derajat</code> · <code>p.color = '#ff0000'</code> · <code>p.transparency = 0..1</code> · <code>p.canCollide = false</code> · <code>p.destroy()</code><br>
+<code>p.onTouch(fn)</code> dipanggil saat pemain menyentuh part.
+<h4>Pemain</h4><code>player.name</code> · <code>player.position</code> · <code>player.teleport(x,y,z)</code> · <code>player.setSpeed(n)</code> (normal 8) · <code>player.setJumpPower(n)</code> (normal 12) · <code>player.kill()</code> · <code>player.say('teks')</code>
+<h4>Game</h4><code>game.name</code> · <code>game.time()</code> detik sejak server dimulai · <code>game.onStart(fn)</code> · <code>game.onTick(fn(dt))</code> tiap frame (~30x/detik)
+<h4>UI & waktu</h4><code>ui.notify('teks')</code> pesan singkat · <code>ui.hud('teks')</code> teks di atas layar · <code>await wait(detik)</code>
+<h4>Multiplayer</h4><code>net.broadcast('nama', data)</code> kirim ke semua pemain di server · <code>net.on('nama', (data, dari) => ...)</code> terima
+<h4>Lainnya</h4>Part dengan centang <b>Kill</b> membuat pemain kembali ke spawn; part <b>Spawn point</b> menjadi tempat muncul; <b>Ladder</b> bisa dipanjat dengan W. Gunakan <code>console.log()</code> untuk melihat nilai di tab Output saat Play.`;
+$('help').innerHTML = HELP;
+$('sex').innerHTML += Object.keys(EX).map(k => `<option>${esc(k)}</option>`).join('');
+function showDrawer(tab) {
+  drawerTab = tab; $('drawer').classList.remove('hidden');
+  document.querySelectorAll('.dt').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
+  ['script', 'out', 'help'].forEach(t => $('p-' + t).classList.toggle('hidden', t !== tab)); engine.resize(); renderExplorer();
+}
+function hideDrawer() { $('drawer').classList.add('hidden'); engine.resize(); renderExplorer(); }
+document.querySelectorAll('.dt').forEach(b => (b.onclick = () => showDrawer(b.dataset.t))); $('dclose').onclick = hideDrawer;
+function openScriptAt(i) {
+  if (i < 0 || !scripts[i]) return; openScript = i; $('sname').value = scripts[i].name; $('code').value = scripts[i].code; showDrawer('script'); $('code').focus();
+}
+function newScript() { scripts.push({ name: 'Script' + (scripts.length + 1), code: "// Tulis script kamu di sini. Lihat tab \"Panduan API\".\nui.notify('Halo dari script!');\n" }); mark(); openScriptAt(scripts.length - 1); }
+$('sname').oninput = e => { if (scripts[openScript]) { scripts[openScript].name = e.target.value; mark(); renderExplorer(); } };
+$('code').oninput = e => { if (scripts[openScript]) { scripts[openScript].code = e.target.value; mark(); } };
+$('code').onkeydown = e => { if (e.key === 'Tab') { e.preventDefault(); const t = e.target, s = t.selectionStart; t.value = t.value.slice(0, s) + '  ' + t.value.slice(t.selectionEnd); t.selectionStart = t.selectionEnd = s + 2; t.oninput(); } };
+$('sex').onchange = e => { const k = e.target.value; if (k && scripts[openScript] && (!scripts[openScript].code.trim() || confirm('Ganti isi script dengan contoh ini?'))) { scripts[openScript].code = EX[k]; $('code').value = EX[k]; mark(); } e.target.value = ''; };
+$('sdel').onclick = () => { if (scripts[openScript] && confirm('Hapus script ini?')) { scripts.splice(openScript, 1); openScript = -1; mark(); hideDrawer(); } };
+function out(level, msg) {
+  const d = document.createElement('div'); d.className = level === 'error' ? 'e' : level === 'info' ? 'i' : 'l';
+  d.textContent = new Date().toLocaleTimeString() + '  ' + msg; $('out').append(d); $('out').scrollTop = 1e9; if (level === 'error' && drawerTab !== 'out') showDrawer('out');
+}
+
+/* ---------------- test (Play) ---------------- */
+function worldPayload() {
+  const f = parts.find(p => p.sp) || parts[0] || { x: 0, y: 0, z: 0, h: 1 };
+  return { title: meta.title || 'Test', sky: meta.sky, spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes: parts.map(ser), scripts };
+}
+function play() {
+  if (testing) return; testing = true; gm.attachToMesh(null);
+  $('test').classList.remove('hidden'); $('play').classList.add('dis'); $('stop').classList.remove('dis'); showDrawer('out'); $('out').innerHTML = ''; out('info', 'Test dimulai…');
+  $('test').src = '../game/index.html?test=1';
+}
+function stop() { if (!testing) return; testing = false; $('test').src = 'about:blank'; $('test').classList.add('hidden'); $('play').classList.remove('dis'); $('stop').classList.add('dis'); gm.attachToMesh(sel && tool !== 'select' ? sel.mesh : null); out('info', 'Test dihentikan.'); }
+addEventListener('message', e => {
+  const m = e.data; if (!m || e.source !== $('test').contentWindow) return;
+  if (m.type === 'ready' && testing) { e.source.postMessage({ type: 'load', name: 'Kamu', outfit, game: worldPayload() }, '*'); $('test').focus(); }
+  else if (m.type === 'stop') stop(); else if (m.type === 'log') out(m.level, m.msg);
+});
+
+/* ---------------- publish ---------------- */
+function modal(html) { $('mcard').innerHTML = html; $('modal').classList.remove('hidden'); }
+const closeModal = () => $('modal').classList.add('hidden');
+function askInfo() {
+  return new Promise(res => {
+    modal(`<h3>Info game</h3><div class="fld"><label>Judul game (min. 3 huruf)</label><input id="mt" maxlength="30" value="${esc(meta.title)}"></div><div class="fld"><label>Tagline</label><input id="mg" maxlength="60" value="${esc(meta.tagline)}"></div>
+      <div class="fld"><label>Deskripsi</label><textarea id="md" rows="3" maxlength="400">${esc(meta.desc)}</textarea></div><div class="fld"><label>Tag (pisah koma, maks 3)</label><input id="mk" value="${esc(meta.tags)}"></div>
+      <div class="acts"><button id="mc">Batal</button><button id="mo" class="go">Lanjut</button></div>`);
+    $('mc').onclick = () => { closeModal(); res(false); };
+    $('mo').onclick = () => { meta.title = $('mt').value.trim(); meta.tagline = $('mg').value; meta.desc = $('md').value; meta.tags = $('mk').value; closeModal(); renderProps(); res(meta.title.length >= 3); };
+  });
+}
+async function publish() {
+  if (testing) stop();
+  if (!meta.id && !(await askInfo())) return;
+  if (meta.title.trim().length < 3) { if (!(await askInfo())) return; }
+  setStatus('Menyimpan…');
+  const body = { title: meta.title, tagline: meta.tagline, desc: meta.desc, tags: meta.tags.split(',').map(s => s.trim()).filter(Boolean), sky: meta.sky, art: [meta.a1, meta.a2], boxes: parts.map(ser), scripts, thumb: meta.thumbNew || undefined };
+  try {
+    const r = await fetch(SERVER + (meta.id ? '/api/games/' + meta.id : '/api/games'), { method: meta.id ? 'PUT' : 'POST', headers: AUTH, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || (r.status === 401 || r.status === 403 ? 'sesi habis / bukan game kamu — login ulang di website' : 'HTTP ' + r.status));
+    if (!meta.id) meta.id = d.id; meta.thumbNew = null; dirty = false; $('gname').textContent = meta.title;
+    setStatus('Tersimpan ✓ ' + new Date().toLocaleTimeString()); toast('Game dipublish!');
+  } catch (e) { setStatus('Gagal: ' + e.message, true); out('error', 'Publish gagal: ' + e.message); showDrawer('out'); }
+}
+function thumb() {
+  const s = sel; select(null); scene.render();
+  const c = document.createElement('canvas'); c.width = 640; c.height = 360; const g = c.getContext('2d'), src = $('c'), k = Math.max(640 / src.width, 360 / src.height);
+  g.drawImage(src, (640 - src.width * k) / 2, (360 - src.height * k) / 2, src.width * k, src.height * k);
+  meta.thumbNew = c.toDataURL('image/jpeg', 0.85); select(s); mark(); toast('Thumbnail diambil dari tampilan kamera — klik Publish untuk menyimpan');
+}
+
+/* ---------------- ribbon actions + keys ---------------- */
+const ACT = { copy, paste, dup, del, play, stop, publish, thumb, script: () => (openScript >= 0 ? openScriptAt(openScript) : scripts.length ? openScriptAt(0) : newScript()), output: () => showDrawer('out') };
+$('ribbon').onclick = e => {
+  const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
+  if (a.startsWith('tool:')) setTool(a.slice(5)); else if (a.startsWith('ins:')) insert(a.slice(4)); else ACT[a]();
+};
+['mOn', 'mVal', 'rOn', 'rVal'].forEach(id => ($(id).onchange = applySnap));
+addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); publish(); return; }
+  if (typing || testing) return;
+  if (e.ctrlKey && e.key.toLowerCase() === 'c') copy(); else if (e.ctrlKey && e.key.toLowerCase() === 'v') paste(); else if (e.ctrlKey && e.key.toLowerCase() === 'd') { e.preventDefault(); dup(); }
+  else if (e.key === 'Delete') del(); else if (e.key === 'Escape') select(null);
+  else if (e.ctrlKey && '1234'.includes(e.key)) setTool(['select', 'move', 'rotate', 'scale'][+e.key - 1]);
+});
+engine.getRenderingCanvas().addEventListener('pointerdown', () => $('c').focus());
+
+/* ---------------- boot ---------------- */
+async function boot() {
+  $('stop').classList.add('dis');
+  if (meta.id) {
+    try {
+      const r = await fetch(SERVER + '/api/games/' + meta.id + '/source', { headers: AUTH }); if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      Object.assign(meta, { title: d.title, tagline: d.tagline, desc: d.desc, tags: (d.tags || []).join(', '), sky: d.sky, a1: d.art[0], a2: d.art[1] });
+      scene.clearColor = BABYLON.Color3.FromHexString(meta.sky).toColor4(); parts = d.boxes.map(mkPart); scripts = d.scripts || [];
+      if (parts[0]) { cam.position.set(parts[0].x, parts[0].y + 14, parts[0].z - 28); cam.setTarget(parts[0].mesh.position); }
+    } catch (e) { setStatus('Gagal memuat game: ' + e.message, true); alert('Tidak bisa membuka game ini (' + e.message + '). Pastikan kamu login sebagai pemilik game.'); }
+  } else {
+    parts = [mkPart({ n: 'Baseplate', x: 0, y: -0.5, z: 0, w: 200, h: 1, d: 200, c: '#8b8b8b' }), mkPart({ n: 'Spawn', x: 0, y: 0.2, z: 0, w: 6, h: 0.4, d: 6, c: '#3b82f6', sp: 1 })];
+  }
+  $('gname').textContent = meta.title || 'Game baru'; dirty = false;
+  try { const o = await (await fetch(SERVER + '/api/outfit', { headers: AUTH })).json(); outfit = o.outfit; } catch (e) {}
+  setTool('move'); select(null);
+  if (!meta.id) setStatus('Game baru — klik Publish untuk menyimpan');
+}
+boot();
+</script>
+</body>
+</html>
