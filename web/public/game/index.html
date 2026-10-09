@@ -77,8 +77,8 @@
   #joystick { left:max(18px, env(safe-area-inset-left)); bottom:max(24px, env(safe-area-inset-bottom)); width:132px; height:132px; border:2px solid rgba(255,255,255,.28); background:rgba(4,8,16,.38); border-radius:50%; }
   #joystick::after { content:""; position:absolute; inset:19px; border:1px solid rgba(255,255,255,.12); border-radius:50%; }
   #stick { position:absolute; left:42px; top:42px; width:46px; height:46px; border-radius:50%; background:rgba(20,99,255,.82); border:2px solid rgba(255,255,255,.65); box-shadow:0 3px 12px rgba(0,0,0,.35); pointer-events:none; }
-  #lookHint { right:18px; bottom:24px; color:rgba(255,255,255,.48); font-size:11px; letter-spacing:.04em; text-align:right; pointer-events:none; }
-  #jumpTouch { right:max(24px, env(safe-area-inset-right)); bottom:max(40px, env(safe-area-inset-bottom)); width:76px; height:76px; border:2px solid rgba(255,255,255,.6); border-radius:50%; background:rgba(20,99,255,.72); color:#fff; font-weight:800; font-size:12px; pointer-events:auto; touch-action:none; }
+  #lookHint { position:absolute; right:18px; bottom:24px; color:rgba(255,255,255,.48); font-size:11px; letter-spacing:.04em; text-align:right; pointer-events:none; }
+  #jumpTouch { position:absolute; right:max(24px, env(safe-area-inset-right)); bottom:max(40px, env(safe-area-inset-bottom)); width:76px; height:76px; border:2px solid rgba(255,255,255,.6); border-radius:50%; background:rgba(20,99,255,.72); color:#fff; font-weight:800; font-size:12px; pointer-events:auto; touch-action:none; }
   #jumpTouch:active { background:#3a82ff; transform:scale(.96); }
   body.mobile #plist { display:none; }
   body.mobile #info { top:max(8px, env(safe-area-inset-top)); max-width:58vw; overflow:hidden; white-space:nowrap; font-size:12px; padding:7px 10px; }
