@@ -175,6 +175,7 @@
 <script src="/config.js"></script>
 <script>
 const S = window.VOXELY.server.replace(/\/$/, '');
+const mobileGame = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const sb = window.supabase && VOXELY.supabaseUrl ? supabase.createClient(VOXELY.supabaseUrl, VOXELY.supabaseKey, { auth: { flowType: 'pkce' } }) : null;
 const $ = s => document.querySelector(s);
 let games = [], session = JSON.parse(localStorage.getItem('voxely') || 'null'), idx = 0, timer = null, hist = [0, 0, 0, 0, 0, 0];
@@ -260,7 +261,7 @@ function gamePage(id) {
     <div class="gmain">${art(g)}<div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
       <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>VISITS</dt><dd>${g.visits || 0}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
     <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
-    <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Butuh Voxely Client di PC kamu. Belum punya? <a onclick="download()">Download Voxely Client</a>, install, lalu klik Play.</div><div id="servers"></div><div id="reviews"></div>`;
+    <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Main langsung dari browser HP atau gunakan Voxely Client di PC. <a onclick="download()">Download Voxely Client</a> tersedia untuk desktop.</div><div id="servers"></div><div id="reviews"></div>`;
   rvDraft = null; loadServers(id); loadReviews(id);
 }
 
@@ -275,6 +276,11 @@ function show(title, text, dl) {
 async function play(id, room) {
   const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
   if (!ok) return logout();
+  if (mobileGame) {
+    show('Membuka Voxely…', 'Game berjalan langsung di browser HP.', false);
+    location.href = `/game/?game=${encodeURIComponent(id)}&room=${encodeURIComponent(room || '')}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`;
+    return;
+  }
   show('Membuka Voxely Client…', 'Jika browser bertanya, pilih "Open Voxely Client".', false);
   location.href = `voxely://play?game=${id}&room=${room || ''}&token=${session.token}&server=${encodeURIComponent(S)}`;
   setTimeout(() => {
