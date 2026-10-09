@@ -139,6 +139,13 @@
   .thmgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; margin-top:14px; }
   .thm { background:var(--panel3); border:2px solid var(--line); padding:14px; text-align:left; color:var(--text); cursor:pointer; font:inherit; } .thm.on { border-color:var(--blue); }
   .thm b { display:block; margin:10px 0 2px; color:var(--strong); } .thm small { color:var(--dim); } .sw3 { display:flex; } .sw3 i { width:36px; height:36px; border:1px solid var(--line); margin-right:-1px; }
+  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+  .badge-item { background:var(--panel3); border:1px solid var(--line); padding:10px; text-align:center; cursor:default; }
+  .badge-icon { font-size:24px; display:block; margin-bottom:4px; }
+  .badge-name { font-size:11px; color:var(--strong); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .badge-form { background:var(--panel); border:1px solid var(--line); padding:16px; margin-bottom:10px; }
+  .badge-form input, .badge-form textarea { width:100%; margin-bottom:10px; }
+  .badge-form textarea { height:60px; }
   .avgrid { display:grid; grid-template-columns:360px 1fr; gap:18px; } .avprev canvas { width:100%; display:block; background:var(--panel3); border:1px solid var(--line); margin-bottom:12px; }
   .avtabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; } .avpal { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px; }
   .avpal .swb { width:34px; height:34px; } .avpal input[type=color] { width:46px; height:34px; padding:2px; }
@@ -584,7 +591,24 @@ function profilePage() {
       <small style="display:block;color:var(--dim);margin-top:6px">PNG/JPG/WEBP, otomatis dipotong persegi</small></div></div>
       <label>Nama tampilan</label><input id="pName" maxlength="16" value="${E(u.name)}">
       <div id="pErr" style="color:#ff5c6c;margin-top:8px"></div>
-      <button class="btn" onclick="saveName()">Simpan nama</button></div>`;
+      <button class="btn" onclick="saveName()">Simpan nama</button></div>
+    <div class="card pad" style="max-width:520px;margin-top:18px"><h3 class="sec" style="margin:0 0 12px">MY BADGES</h3><div id="myBadges"></div><button class="btn alt" onclick="location.hash='#/badges'">Lihat semua badge</button></div>`;
+  loadMyBadges();
+}
+async function loadMyBadges() {
+  const d = await gj('/api/me/badges');
+  if (!d || !d.badges || !d.badges.length) {
+    $('#myBadges').innerHTML = '<div class="empty">Belum punya badge.</div>';
+    return;
+  }
+  $('#myBadges').innerHTML = `<div class="badge-grid">${d.badges.slice(0, 6).map(b => badgeItem(b)).join('')}</div>`;
+}
+function badgeItem(b) {
+  const color = b.color || '#ffd700';
+  return `<div class="badge-item" title="${E(b.name)}\n${E(b.description || '')}" style="background:${color}15;border-color:${color}">
+    <span class="badge-icon" style="color:${color}">${E(b.icon || '⭐')}</span>
+    <span class="badge-name">${E(b.name)}</span>
+  </div>`;
 }
 function changeAvatar() { pickImage(128, 128, async img => { const r = await saveProfile({ avatar: img }); r.ok ? profilePage() : alert(r.data.error || 'Gagal upload'); }); }
 async function removeAvatar() { await saveProfile({ avatar: null }); profilePage(); }
@@ -859,6 +883,7 @@ async function userPage(uid) {
   $('#view').innerHTML = `<div class="crumb"><a href="#/people">People</a> &gt; ${E(d.name)}</div>
     <div class="card pad prof">${avatar(d, 110)}${d.outfit ? '<canvas id="uav" width="140" height="175"></canvas>' : ''}<div><h1 class="ftitle" style="margin:0">${E(d.name)}</h1>
       <div style="color:var(--dim);margin:6px 0 14px">${status(d)} · ${d.friends} friends</div><div>${act}</div></div></div>
+    ${d.badges && d.badges.length ? `<div class="card pad" style="margin-top:18px"><h3 class="sec" style="margin:0 0 12px">BADGES</h3><div class="badge-grid">${d.badges.map(b => badgeItem(b)).join('')}</div></div>` : ''}
     <h3 class="sec">GAMES BY ${E(d.name).toUpperCase()}</h3>
     ${d.games.length ? `<div class="grid">${d.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.online} online</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum membuat game.</div>'}`;
   if (d.outfit && $('#uav')) drawAvatar($('#uav'), d.outfit);
@@ -875,6 +900,62 @@ async function notifPage() {
 async function friendsPage() {
   const d = await gj('/api/friends'); if (!d) return;
   $('#view').innerHTML = `<span class="label">FRIENDS</span>${d.friends.length ? `<div class="grid">${d.friends.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${status(p)}</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum punya teman. Buka <a href="#/people" style="color:var(--link)">People</a>, klik profil seseorang, lalu Add Friend.</div>'}`;
+}
+async function badgesPage() {
+  const allBadges = await gj('/api/badges');
+  const myBadges = await gj('/api/me/badges');
+  
+  let html = `<span class="label">BADGES</span>`;
+  
+  // My badges section
+  if (myBadges && myBadges.badges && myBadges.badges.length > 0) {
+    html += `<div class="card pad" style="margin-bottom:18px"><h3 class="sec" style="margin:0 0 12px">MY BADGES (${myBadges.total})</h3><div class="badge-grid">${myBadges.badges.map(b => badgeItem(b)).join('')}</div></div>`;
+  }
+  
+  // All available badges
+  if (allBadges && allBadges.badges && allBadges.badges.length > 0) {
+    html += `<div class="card pad"><h3 class="sec" style="margin:0 0 12px">ALL BADGES (${allBadges.total})</h3><div class="badge-grid">${allBadges.badges.map(b => {
+      const hasIt = myBadges && myBadges.badges && myBadges.badges.some(mb => mb.id === b.id);
+      return badgeItem({...b, earnedAt: hasIt ? 'Earned' : ''});
+    }).join('')}</div>`;
+  }
+  
+  // Create badge form (for developers)
+  if (session.user.gid) {
+    html += `<div class="card pad" style="margin-top:18px"><h3 class="sec" style="margin:0 0 12px">CREATE NEW BADGE</h3>
+      <div class="badge-form">
+        <input id="bName" placeholder="Badge name" maxlength="40">
+        <input id="bDesc" placeholder="Description" maxlength="200">
+        <input id="bIcon" placeholder="Icon (emoji)" maxlength="10" value="⭐">
+        <input id="bColor" placeholder="Color (hex)" maxlength="7" value="#ffd700">
+        <input id="bCategory" placeholder="Category" maxlength="30" value="general">
+        <button class="btn" onclick="createBadge()">Create Badge</button>
+      </div>
+    </div>`;
+  }
+  
+  $('#view').innerHTML = html;
+}
+async function createBadge() {
+  const name = $('#bName').value;
+  const desc = $('#bDesc').value;
+  const icon = $('#bIcon').value;
+  const color = $('#bColor').value;
+  const category = $('#bCategory').value;
+  
+  if (!name || name.trim().length < 2) {
+    return alert('Badge name must be at least 2 characters');
+  }
+  
+  const r = await rq('POST', '/api/badges', { name, description: desc, icon, color, category });
+  if (r.ok) {
+    toast('Badge created successfully!');
+    $('#bName').value = '';
+    $('#bDesc').value = '';
+    badgesPage();
+  } else {
+    alert(r.data?.error || 'Failed to create badge');
+  }
 }
 
 async function route() {
@@ -896,6 +977,7 @@ async function route() {
   if (h.startsWith('#/notifications')) return notifPage();
   if (h.startsWith('#/friends')) return friendsPage();
   if (h.startsWith('#/people')) return peoplePage();
+  if (h.startsWith('#/badges')) return badgesPage();
   await loadGames();
   const m = h.match(/^#\/game\/(\w+)/);
   m ? gamePage(m[1]) : home();

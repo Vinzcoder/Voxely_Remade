@@ -9,6 +9,62 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+// ---------- Badge System ----------
+const BADGES = new Map(); // badgeId -> badge definition
+const USER_BADGES = new Map(); // uid -> Set of badgeIds
+
+// Badge definition structure:
+// { id, name, description, icon (emoji or color), color, category, createdBy, createdAt, isHidden }
+
+// User badge structure:
+// { badgeId, earnedAt, expiresAt (optional) }
+
+function createBadge(definition, creator) {
+  const id = 'b' + crypto.randomBytes(4).toString('hex');
+  const badge = {
+    id,
+    name: String(definition.name || '').slice(0, 40),
+    description: String(definition.description || '').slice(0, 200),
+    icon: String(definition.icon || '⭐').slice(0, 10),
+    color: /^#[0-9a-f]{6}$/i.test(definition.color) ? definition.color : '#ffd700',
+    category: String(definition.category || 'general').slice(0, 30),
+    createdBy: creator.uid,
+    createdByName: creator.name,
+    createdAt: Date.now(),
+    isHidden: !!definition.isHidden
+  };
+  BADGES.set(id, badge);
+  return badge;
+}
+
+function awardBadge(uid, badgeId) {
+  if (!BADGES.has(badgeId)) return false;
+  if (!USER_BADGES.has(uid)) {
+    USER_BADGES.set(uid, new Map());
+  }
+  const userBadges = USER_BADGES.get(uid);
+  if (userBadges.has(badgeId)) return false; // Already has this badge
+  
+  userBadges.set(badgeId, { badgeId, earnedAt: Date.now() });
+  return true;
+}
+
+function getUserBadges(uid) {
+  const userBadges = USER_BADGES.get(uid) || new Map();
+  return [...userBadges.values()].map(ub => {
+    const badge = BADGES.get(ub.badgeId);
+    return badge ? { ...badge, earnedAt: ub.earnedAt } : null;
+  }).filter(Boolean);
+}
+
+function getBadgeDefinition(badgeId) {
+  return BADGES.get(badgeId);
+}
+
+function listAllBadges() {
+  return [...BADGES.values()];
+}
+
 // ---------- Games (each one is just a list of boxes) ----------
 const B = (x, y, z, w, h, d, c) => ({ x, y, z, w, h, d, c });
 const L = (x, y, z, w, h, d, c) => ({ x, y, z, w, h, d, c, l: 1 }); // climbable ladder
@@ -380,8 +436,10 @@ function makeFriends(me, o) {
 app.get('/api/users/:uid', (req, res) => {
   const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
   const me = sessions.get(bearer(req));
+  const userBadges = getUserBadges(u.uid);
   res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', friends: u.friends.size,
-    games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))) });
+    games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))),
+    badges: userBadges.slice(0, 10) }); // Show up to 10 badges in profile
 });
 app.get('/api/friends', (req, res) => {
   const me = needMe(req, res); if (!me) return;
@@ -441,6 +499,91 @@ const cleanOutfit = o => {
 };
 app.get('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); res.json({ outfit: me.outfit || null }); });
 app.post('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); me.outfit = cleanOutfit(req.body); res.json({ outfit: me.outfit }); });
+
+// ---------- Badge System API ----------
+// Get all badges (public list)
+app.get('/api/badges', (req, res) => {
+  const me = sessions.get(bearer(req));
+  const badges = listAllBadges().filter(b => !b.isHidden || (me && me.uid === b.createdBy));
+  res.json({ badges, total: badges.length });
+});
+
+// Get badge details
+app.get('/api/badges/:id', (req, res) => {
+  const badge = getBadgeDefinition(req.params.id);
+  if (!badge) return res.sendStatus(404);
+  res.json(badge);
+});
+
+// Create a new badge (developer only - Google authenticated users)
+app.post('/api/badges', (req, res) => {
+  const me = sessions.get(bearer(req));
+  if (!me) return res.sendStatus(401);
+  if (!me.gid) return res.status(403).json({ error: 'Hanya akun terverifikasi yang bisa membuat badge' });
+  
+  const b = req.body || {};
+  if (!b.name || String(b.name).trim().length < 2) {
+    return res.status(400).json({ error: 'Nama badge minimal 2 karakter' });
+  }
+  
+  const badge = createBadge(b, me);
+  res.json({ badge, ok: true });
+});
+
+// Award badge to a user (developer or self)
+app.post('/api/badges/:id/award', (req, res) => {
+  const me = sessions.get(bearer(req));
+  if (!me) return res.sendStatus(401);
+  
+  const badge = getBadgeDefinition(req.params.id);
+  if (!badge) return res.sendStatus(404);
+  
+  const targetUid = req.body?.uid;
+  const targetUser = uidMap().get(targetUid);
+  
+  if (!targetUser) return res.status(404).json({ error: 'User tidak ditemukan' });
+  
+  // Only creator can award to others, or user can award to themselves
+  if (targetUid !== me.uid && badge.createdBy !== me.uid) {
+    return res.status(403).json({ error: 'Tidak bisa memberikan badge ini' });
+  }
+  
+  const success = awardBadge(targetUid, req.params.id);
+  if (!success) return res.status(400).json({ error: 'User sudah memiliki badge ini' });
+  
+  res.json({ ok: true });
+});
+
+// Get user's badges
+app.get('/api/users/:uid/badges', (req, res) => {
+  const targetUser = uidMap().get(req.params.uid);
+  if (!targetUser) return res.sendStatus(404);
+  
+  const badges = getUserBadges(req.params.uid);
+  res.json({ badges, total: badges.length });
+});
+
+// Get my badges
+app.get('/api/me/badges', (req, res) => {
+  const me = sessions.get(bearer(req));
+  if (!me) return res.sendStatus(401);
+  
+  const badges = getUserBadges(me.uid);
+  res.json({ badges, total: badges.length });
+});
+
+// Delete a badge (creator only)
+app.delete('/api/badges/:id', (req, res) => {
+  const me = sessions.get(bearer(req));
+  if (!me) return res.sendStatus(401);
+  
+  const badge = getBadgeDefinition(req.params.id);
+  if (!badge) return res.sendStatus(404);
+  if (badge.createdBy !== me.uid) return res.sendStatus(403);
+  
+  BADGES.delete(req.params.id);
+  res.sendStatus(204);
+});
 
 // ---------- Game stats (owner dashboard) ----------
 const dayKey = t => new Date(t || Date.now()).toISOString().slice(0, 10);
