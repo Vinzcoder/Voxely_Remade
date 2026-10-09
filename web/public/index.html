@@ -605,9 +605,10 @@ async function loadMyBadges() {
 }
 function badgeItem(b) {
   const color = b.color || '#ffd700';
-  return `<div class="badge-item" title="${E(b.name)}\n${E(b.description || '')}" style="background:${color}15;border-color:${color}">
+  return `<div class="badge-item" title="${E(b.name)}${b.gameTitle ? ' · ' + E(b.gameTitle) : ''}\n${E(b.description || '')}" style="background:${color}15;border-color:${color}">
     <span class="badge-icon" style="color:${color}">${E(b.icon || '⭐')}</span>
     <span class="badge-name">${E(b.name)}</span>
+    ${b.gameTitle ? `<span class="badge-name" style="color:var(--dim);font-size:10px">${E(b.gameTitle)}</span>` : ''}
   </div>`;
 }
 function changeAvatar() { pickImage(128, 128, async img => { const r = await saveProfile({ avatar: img }); r.ok ? profilePage() : alert(r.data.error || 'Gagal upload'); }); }
@@ -669,9 +670,9 @@ async function managePage(id) {
     <div class="mgh"><div class="mga">${art(g)}</div><div><h1 class="ftitle">${E(g.title)}</h1>
       <div style="color:var(--dim);margin-bottom:12px">${tags(g)} ${g.visits || 0} visits · ${g.online} online</div>
       <div class="acts"><button class="btn sm" onclick="play('${id}')">Main</button><button class="btn sm alt" onclick="openStudio('${id}')">Buka di Studio</button><a class="btn sm alt" href="#/game/${id}">Halaman game</a></div></div></div>
-    <div class="avtabs" style="margin-top:18px">${[['stats', 'Statistik'], ['reviews', 'Review'], ['settings', 'Pengaturan']].map(([k, n]) => `<button class="vb ${mgTab === k ? 'on' : ''}" onclick="mgTab='${k}';managePage('${id}')">${n}</button>`).join('')}</div>
+    <div class="avtabs" style="margin-top:18px">${[['stats', 'Statistik'], ['reviews', 'Review'], ['badges', 'Badge'], ['settings', 'Pengaturan']].map(([k, n]) => `<button class="vb ${mgTab === k ? 'on' : ''}" onclick="mgTab='${k}';managePage('${id}')">${n}</button>`).join('')}</div>
     <div id="mgbody"><div class="empty">Memuat…</div></div>`;
-  ({ stats: mgStats, reviews: mgReviews, settings: mgSettings })[mgTab](id);
+  ({ stats: mgStats, reviews: mgReviews, badges: mgBadges, settings: mgSettings })[mgTab](id);
 }
 async function mgStats(id) {
   const d = await gj('/api/games/' + id + '/stats'); if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Statistik tidak tersedia.</div>');
@@ -712,6 +713,39 @@ function mgThumb(id) {
   });
 }
 async function mgDelete(id) { if (!confirm('Hapus game ini selamanya? Review dan statistiknya ikut hilang.')) return; await rq('DELETE', '/api/games/' + id); location.hash = '#/dev'; }
+
+/* ---------- Badges of a game (Kelola -> Badge) ---------- */
+const trigText = b => b.trigger === 'playtime' ? 'Bermain ' + b.value + ' menit' : b.trigger === 'touch' ? 'Sentuh part "' + b.value + '"' : 'Pertama kali bergabung';
+async function mgBadges(id) {
+  const d = await gj('/api/games/' + id + '/badges');
+  if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Tidak bisa memuat badge.</div>');
+  $('#mgbody').innerHTML = `<div class="hint">Pemain mendapatkan badge saat bermain game ini, lalu badge tampil di profil mereka.</div>
+    ${d.badges.length ? `<div class="badge-grid">${d.badges.map(b => `<div>${badgeItem(b)}<small style="display:block;color:var(--dim);margin:4px 0 6px">${E(trigText(b))} · ${b.earners} pemain</small><button class="x" onclick="mgDelBadge('${id}','${b.id}')">Hapus</button></div>`).join('')}</div>` : '<div class="card empty">Belum ada badge. Buat badge pertama di bawah.</div>'}
+    <div class="card pad" style="margin-top:14px;max-width:640px"><h3 class="ft">Buat badge baru</h3>
+      <label>Nama badge</label><input id="bName" maxlength="40" placeholder="contoh: Pendaki">
+      <label>Deskripsi</label><input id="bDesc" maxlength="200" placeholder="Cara mendapatkannya">
+      <div style="display:flex;gap:12px"><div style="flex:1"><label>Ikon (emoji)</label><input id="bIcon" maxlength="4" value="⭐"></div><div><label>Warna</label><input id="bColor" type="color" value="#ffd700"></div></div>
+      <label>Cara mendapatkan</label><select id="bTrig" onchange="mgTrigChange()"><option value="join">Pertama kali bergabung ke game</option><option value="playtime">Bermain selama beberapa menit</option><option value="touch">Menyentuh part tertentu</option></select>
+      <label id="bValLab">Tidak perlu isi apa-apa</label><input id="bVal" disabled>
+      <div id="bErr" class="err" style="margin-top:10px"></div>
+      <button class="btn" onclick="mgAddBadge('${id}')">Buat badge</button></div>`;
+}
+function mgTrigChange() {
+  const t = $('#bTrig').value, v = $('#bVal'), lab = $('#bValLab');
+  v.value = ''; v.disabled = t === 'join'; v.type = t === 'playtime' ? 'number' : 'text';
+  v.placeholder = t === 'playtime' ? 'contoh: 5' : t === 'touch' ? 'contoh: Puncak' : '';
+  lab.textContent = t === 'playtime' ? 'Berapa menit bermain?' : t === 'touch' ? 'Nama part (sama persis dengan "Nama part" di editor)' : 'Tidak perlu isi apa-apa';
+}
+async function mgAddBadge(id) {
+  const err = $('#bErr'); err.textContent = '';
+  const r = await rq('POST', '/api/games/' + id + '/badges', { name: $('#bName').value, description: $('#bDesc').value, icon: $('#bIcon').value, color: $('#bColor').value, trigger: $('#bTrig').value, value: $('#bVal').value });
+  if (!r.ok) { err.textContent = r.data.error || 'Gagal membuat badge'; return; }
+  toast('Badge dibuat'); mgBadges(id);
+}
+async function mgDelBadge(id, bid) {
+  if (!confirm('Hapus badge ini? Badge hilang dari pemain yang sudah mendapatkannya.')) return;
+  await rq('DELETE', '/api/games/' + id + '/badges/' + bid); mgBadges(id);
+}
 
 /* ---------- Developer Portal (visual editor) ---------- */
 let dev = null;
@@ -800,6 +834,7 @@ function drawSel() {
     <div class="row2">${sl('w', 'Lebar (kiri-kanan)', 1, 60, b.w)}${sl('d', 'Panjang (depan-belakang)', 1, 60, b.d)}${sl('h', 'Tebal', 0.5, 10, b.h)}${sl('top', 'Ketinggian dari dasar', 0, 40, topOf(b))}</div>
     <label>Warna</label><div class="sw">${PAL.map(c => `<button class="swb ${c === b.c ? 'on' : ''}" style="background:${c}" onclick="setProp('c','${c}');drawSel()"></button>`).join('')}<input type="color" value="${b.c}" oninput="setProp('c',this.value)"></div>
     <label class="chk"><input type="checkbox" ${b.l ? 'checked' : ''} onchange="setProp('l', this.checked ? 1 : 0)"> Bisa dipanjat (tangga, tahan W)</label>
+    <label>Nama part <small style="color:var(--dim)">(dipakai badge "sentuh part")</small></label><input value="${E(b.n || '')}" maxlength="30" placeholder="contoh: Puncak" oninput="setProp('n', this.value)">
     <div class="acts"><button class="btn sm alt" ${dev.sel === 0 ? 'disabled' : ''} onclick="makeStart()">Jadikan START</button><button class="btn sm alt" onclick="dupPlat()">Duplikat</button><button class="x" onclick="delPlat()">Hapus</button></div></div>`;
 }
 function draw() {
@@ -902,60 +937,15 @@ async function friendsPage() {
   $('#view').innerHTML = `<span class="label">FRIENDS</span>${d.friends.length ? `<div class="grid">${d.friends.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${status(p)}</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum punya teman. Buka <a href="#/people" style="color:var(--link)">People</a>, klik profil seseorang, lalu Add Friend.</div>'}`;
 }
 async function badgesPage() {
-  const allBadges = await gj('/api/badges');
-  const myBadges = await gj('/api/me/badges');
-  
-  let html = `<span class="label">BADGES</span>`;
-  
-  // My badges section
-  if (myBadges && myBadges.badges && myBadges.badges.length > 0) {
-    html += `<div class="card pad" style="margin-bottom:18px"><h3 class="sec" style="margin:0 0 12px">MY BADGES (${myBadges.total})</h3><div class="badge-grid">${myBadges.badges.map(b => badgeItem(b)).join('')}</div></div>`;
-  }
-  
-  // All available badges
-  if (allBadges && allBadges.badges && allBadges.badges.length > 0) {
-    html += `<div class="card pad"><h3 class="sec" style="margin:0 0 12px">ALL BADGES (${allBadges.total})</h3><div class="badge-grid">${allBadges.badges.map(b => {
-      const hasIt = myBadges && myBadges.badges && myBadges.badges.some(mb => mb.id === b.id);
-      return badgeItem({...b, earnedAt: hasIt ? 'Earned' : ''});
-    }).join('')}</div>`;
-  }
-  
-  // Create badge form (for developers)
-  if (session.user.gid) {
-    html += `<div class="card pad" style="margin-top:18px"><h3 class="sec" style="margin:0 0 12px">CREATE NEW BADGE</h3>
-      <div class="badge-form">
-        <input id="bName" placeholder="Badge name" maxlength="40">
-        <input id="bDesc" placeholder="Description" maxlength="200">
-        <input id="bIcon" placeholder="Icon (emoji)" maxlength="10" value="⭐">
-        <input id="bColor" placeholder="Color (hex)" maxlength="7" value="#ffd700">
-        <input id="bCategory" placeholder="Category" maxlength="30" value="general">
-        <button class="btn" onclick="createBadge()">Create Badge</button>
-      </div>
-    </div>`;
-  }
-  
+  const all = await gj('/api/badges');
+  const mine = await gj('/api/me/badges');
+  const mineIds = new Set(((mine && mine.badges) || []).map(b => b.id));
+  let html = `<span class="label">BADGES</span>
+    <div class="hint">Badge didapat dengan bermain game. Setiap badge milik satu game; developer membuatnya di Developer Portal → Kelola → Badge.</div>`;
+  if (mine && mine.badges.length) html += `<div class="card pad" style="margin-bottom:18px"><h3 class="sec" style="margin:0 0 12px">BADGE SAYA (${mine.total})</h3><div class="badge-grid">${mine.badges.map(b => badgeItem(b)).join('')}</div></div>`;
+  if (all && all.badges.length) html += `<div class="card pad"><h3 class="sec" style="margin:0 0 12px">SEMUA BADGE (${all.total})</h3><div class="badge-grid">${all.badges.map(b => badgeItem({ ...b, description: (mineIds.has(b.id) ? '✓ Sudah kamu dapatkan. ' : '') + (b.description || '') })).join('')}</div></div>`;
+  else html += '<div class="card empty">Belum ada badge di game mana pun.</div>';
   $('#view').innerHTML = html;
-}
-async function createBadge() {
-  const name = $('#bName').value;
-  const desc = $('#bDesc').value;
-  const icon = $('#bIcon').value;
-  const color = $('#bColor').value;
-  const category = $('#bCategory').value;
-  
-  if (!name || name.trim().length < 2) {
-    return alert('Badge name must be at least 2 characters');
-  }
-  
-  const r = await rq('POST', '/api/badges', { name, description: desc, icon, color, category });
-  if (r.ok) {
-    toast('Badge created successfully!');
-    $('#bName').value = '';
-    $('#bDesc').value = '';
-    badgesPage();
-  } else {
-    alert(r.data?.error || 'Failed to create badge');
-  }
 }
 
 async function route() {
