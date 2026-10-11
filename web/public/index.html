@@ -161,7 +161,9 @@
   .badge-form textarea { height:60px; }
   .avgrid { display:grid; grid-template-columns:360px 1fr; gap:18px; } .avprev canvas { width:100%; display:block; background:var(--panel3); border:1px solid var(--line); margin-bottom:12px; }
   .avtabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; } .avpal { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px; }
-  .avpal .swb { width:34px; height:34px; } .avpal input[type=color] { width:46px; height:34px; padding:2px; }
+  .avpal .swb { width:34px; height:34px; }
+  .verified { width:18px; height:18px; vertical-align:-3px; margin-left:4px; } .follow-stat { color:var(--dim); margin-top:6px; } .follow-stat b { color:var(--strong); }
+  .shirt-upload { margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; } .avpal input[type=color] { width:46px; height:34px; padding:2px; }
   .avtiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px; }
   .tile { background:var(--panel3); border:2px solid var(--line); padding:6px; cursor:pointer; color:var(--text); font:inherit; } .tile.on { border-color:var(--blue); } .tile canvas { width:100%; display:block; } .tile small { display:block; margin-top:4px; color:var(--dim); }
   #uav { background:var(--panel3); border:1px solid var(--line); }
@@ -209,6 +211,7 @@ const tags = g => g.tags.map(t => `<span class="tag">${E(t)}</span>`).join('');
 const total = () => games.reduce((n, g) => n + g.online, 0);
 function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1800); }
 function soon() { toast('Segera hadir'); }
+function verifiedBadge(u) { return Number(u?.followers || 0) >= 1000 ? '<img class="verified" src="/assets/images/checkmark.svg" alt="Verified" title="Verified creator · 1,000+ followers">' : ''; }
 function avatar(u, n) {
   const st = `width:${n}px;height:${n}px;flex:none`;
   return u.av ? `<img class="av" style="${st}" src="${S}/api/avatar/${u.uid}?v=${u.av}" alt="">` : `<span class="av" style="${st};background:${u.color}"></span>`;
@@ -238,7 +241,7 @@ async function guestLogin() {
 function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
 function renderMe() {
   if (!session) { $('#me').innerHTML = ''; return; }
-  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}<span class="bdg">${nCount || ''}</span> ▾</button>
+  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
     <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>Guest account</small></div>
     <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/settings">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
 }
@@ -381,12 +384,15 @@ function drawAvatar(cv, o) { // front view, drawn on a 320x400 grid
   rect(cx - st, gy - 2 * st, st, 2 * st, s.legL); rect(cx, gy - 2 * st, st, 2 * st, s.legR);
   rect(cx - st, gy - 4 * st, 2 * st, 2 * st, s.torso);
   rect(cx - 2 * st, gy - 4 * st, st, 2 * st, s.armL); rect(cx + st, gy - 4 * st, st, 2 * st, s.armR);
+  if (o.tshirt) { const shirt = new Image(); shirt.onload = () => { g.save(); g.globalAlpha = .92; g.drawImage(shirt, cx - st + 3, gy - 4 * st + 3, 2 * st - 6, 2 * st - 6); g.restore(); }; shirt.src = o.tshirt; }
   const hw = 1.45 * st, hh = 1.3 * st, hy = gy - 4 * st - hh;
   g.fillStyle = s.head; g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 2; g.beginPath();
   if (g.roundRect) g.roundRect(cx - hw / 2, hy, hw, hh, 14); else g.rect(cx - hw / 2, hy, hw, hh);
   g.fill(); g.stroke();
   drawFace(g, o.face, cx, hy + hh / 2, hh); drawHat(g, o.hat, o.hatColor, cx, hy);
 }
+function pickTshirt() { const i=document.createElement('input'); i.type='file'; i.accept='image/png,image/jpeg,image/webp'; i.onchange=()=>{const f=i.files[0]; if(!f||f.size>120*1024)return alert('File maksimal 120 KB'); const r=new FileReader(); r.onload=()=>{outfit.tshirt=r.result; saveOutfit(); avatarPage();}; r.readAsDataURL(f);}; i.click(); }
+function removeTshirt() { outfit.tshirt=null; saveOutfit(); avatarPage(); }
 function saveOutfit() {
   localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); drawAvatar($('#avc'), outfit);
   clearTimeout(avTimer);
@@ -405,7 +411,7 @@ function avatarPage() {
       <div class="acts" style="justify-content:center"><button class="btn sm alt" onclick="avRandom()">Acak</button><button class="btn sm alt" onclick="avPreset('Default')">Reset</button></div>
       <label>Preset</label><div class="tpl" style="margin:6px 0 0">${Object.keys(AV_PRESETS).map(n => `<button class="vb" onclick="avPreset('${n}')">${n}</button>`).join('')}</div></div>
     <div class="card pad"><div class="avtabs">${[['warna', 'Warna tubuh'], ['wajah', 'Wajah'], ['topi', 'Topi']].map(([k, n]) => `<button class="vb ${avTab === k ? 'on' : ''}" onclick="avTab='${k}';avatarPage()">${n}</button>`).join('')}</div>
-      <div id="avbody"></div><div class="hint" style="margin-top:16px">Avatar tersimpan otomatis dan dipakai saat kamu bermain. Pemain lain melihatnya saat kamu masuk ke server.</div></div></div>`;
+      <div id="avbody"></div><div class="shirt-upload"><button class="btn sm alt" onclick="pickTshirt()">Upload T-shirt</button><button class="x" onclick="removeTshirt()">Hapus T-shirt</button><small style="color:var(--dim)">PNG/JPG/WEBP, maksimal 120 KB</small></div><div class="hint" style="margin-top:16px">Avatar tersimpan otomatis dan dipakai saat kamu bermain. Pemain lain melihatnya saat kamu masuk ke server.</div></div></div>`;
   drawAvatar($('#avc'), outfit); drawAvBody();
 }
 function drawAvBody() {
@@ -958,16 +964,19 @@ async function friendAct(uid, a) {
 }
 async function unfriend(uid) { if (!confirm('Hapus dari daftar teman?')) return; await rq('DELETE', '/api/friends/' + uid); route(); refreshBadge(); }
 const status = p => p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline';
+async function toggleFollow(uid, following) { const r=following ? await rq('DELETE','/api/users/'+uid+'/follow',{}) : await rq('POST','/api/users/'+uid+'/follow',{}); if(!r.ok) return alert(r.data.error||'Gagal mengubah follow'); userPage(uid); }
 async function userPage(uid) {
   if (uid === session.user.uid) return (location.hash = '#/profile');
   const d = await gj('/api/users/' + uid);
   if (!d) return ($('#view').innerHTML = '<div class="card empty">Pengguna tidak ditemukan (mungkin server sempat restart).</div>');
   const A = (a, t, c) => `<button class="btn ${c || ''}" onclick="friendAct('${uid}','${a}')">${t}</button>`;
+  const follow = d.followed ? `<button class="btn alt" onclick="toggleFollow('${uid}',true)">Following</button>` : `<button class="btn" onclick="toggleFollow('${uid}',false)">Follow</button>`;
   const act = { none: A('request', '+ Add Friend'), sent: `<button class="btn alt" disabled>Request terkirim</button> ${A('cancel', 'Batalkan', 'alt')}`,
     received: `${A('accept', 'Terima pertemanan')} ${A('decline', 'Tolak', 'alt')}`, friends: `<span class="free">✓ Friends</span><button class="x" onclick="unfriend('${uid}')">Unfriend</button>` }[d.friend] || '';
+  const profileActions = `${follow} ${act}`;
   $('#view').innerHTML = `<div class="crumb"><a href="#/people">People</a> &gt; ${E(d.name)}</div>
-    <div class="card pad prof">${avatar(d, 110)}${d.outfit ? '<canvas id="uav" width="140" height="175"></canvas>' : ''}<div><h1 class="ftitle" style="margin:0">${E(d.name)}</h1>
-      <div style="color:var(--dim);margin:6px 0 14px">${status(d)} · ${d.friends} friends</div><div>${act}</div></div></div>
+    <div class="card pad prof">${avatar(d, 110)}${d.outfit ? '<canvas id="uav" width="140" height="175"></canvas>' : ''}<div><h1 class="ftitle" style="margin:0">${E(d.name)}${verifiedBadge(d)}</h1>
+      <div style="color:var(--dim);margin:6px 0 4px">${status(d)} · ${d.friends} friends</div><div class="follow-stat"><b>${d.followers || 0}</b> followers · <b>${d.following || 0}</b> following</div><div class="acts">${profileActions}</div></div></div>
     ${d.badges && d.badges.length ? `<div class="card pad" style="margin-top:18px"><h3 class="sec" style="margin:0 0 12px">BADGES</h3><div class="badge-grid">${d.badges.map(b => badgeItem(b)).join('')}</div></div>` : ''}
     <h3 class="sec">GAMES BY ${E(d.name).toUpperCase()}</h3>
     ${d.games.length ? `<div class="grid">${d.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.online} online</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum membuat game.</div>'}`;
@@ -1027,7 +1036,7 @@ async function route() {
 $('#guestBtn').onclick = guestLogin;
 $('#nick').onkeydown = e => e.key === 'Enter' && guestLogin();
 window.onhashchange = route;
-setInterval(() => session && !/^#\/(dev|profile|forum|avatar|settings|manage)/.test(location.hash) && ![...document.querySelectorAll('textarea')].some(t => t.value) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
+setInterval(() => session && !/^#\/(dev|profile|forum|avatar|marketplace|settings|manage)/.test(location.hash) && ![...document.querySelectorAll('textarea')].some(t => t.value) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
 async function refreshMe() { // validate the saved session and pick up uid/avatar
   if (!session) return;
   const r = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).catch(() => null);

@@ -103,7 +103,7 @@ const RIB = [
   ['Edit', [['copy', 'Copy', P.copy], ['paste', 'Paste', P.paste], ['dup', 'Duplicate', P.dup], ['del', 'Delete', P.del]]],
   ['Script', [['script', 'Script', P.code], ['output', 'Output', P.term]]],
   ['Test', [['play', 'Play', P.play, 'play'], ['stop', 'Stop', P.stop, 'stop']]],
-  ['Game', [['thumb', 'Thumbnail', P.cam], ['publish', 'Publish', P.up]]]
+  ['Game', [['thumb', 'Thumbnail', P.cam], ['import', 'Import Model', P.up], ['savefile', 'Save .vxly', P.up], ['publish', 'Publish', P.up]]]
 ];
 $('ribbon').innerHTML = RIB.map(([name, items]) => `<div class="grp"><div class="row">${items === 'snap'
   ? `<div class="snap"><label><input type="checkbox" id="mOn" checked><input type="number" id="mVal" value="1" min="0.05" step="0.5">${svg(P.move)}</label><label><input type="checkbox" id="rOn" checked><input type="number" id="rVal" value="15" min="1" step="5">${svg(P.rotate)}</label></div>`
@@ -330,7 +330,9 @@ function thumb() {
 }
 
 /* ---------------- ribbon actions + keys ---------------- */
-const ACT = { copy, paste, dup, del, play, stop, publish, thumb, script: () => (openScript >= 0 ? openScriptAt(openScript) : scripts.length ? openScriptAt(0) : newScript()), output: () => showDrawer('out') };
+function importModel() { const input=document.createElement('input'); input.type='file'; input.accept='.obj,.gltf,.glb,.babylon,.stl'; input.onchange=async()=>{ const f=input.files[0]; if(!f)return; const url=URL.createObjectURL(f); try { const ext='.'+f.name.split('.').pop().toLowerCase(); const r=await BABYLON.SceneLoader.ImportMeshAsync(null, '', url, scene, undefined, ext); r.meshes.forEach(m=>{m.position.y=1; m.isPickable=true;}); toast('Model '+f.name+' diimport'); mark(); } catch(e) { setStatus('Import gagal: '+e.message,true); } finally { setTimeout(()=>URL.revokeObjectURL(url),1000); } }; input.click(); }
+function saveFile() { const name=(meta.title||'game-baru').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-|-$/g,'')||'game-baru'; const payload={format:'vxly',version:1,name:meta.title||'Game baru',savedAt:new Date().toISOString(),world:worldPayload()}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})); a.download=name+'.vxly'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); toast('File '+name+'.vxly disimpan'); }
+const ACT = { import: importModel, savefile: saveFile, copy, paste, dup, del, play, stop, publish, thumb, script: () => (openScript >= 0 ? openScriptAt(openScript) : scripts.length ? openScriptAt(0) : newScript()), output: () => showDrawer('out') };
 $('ribbon').onclick = e => {
   const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
   if (a.startsWith('tool:')) setTool(a.slice(5)); else if (a.startsWith('ins:')) insert(a.slice(4)); else ACT[a]();

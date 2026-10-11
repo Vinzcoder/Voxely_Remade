@@ -118,7 +118,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
-const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid });
+const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid, followers: u.followers?.size || 0, following: u.following?.size || 0 });
 const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
 const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
@@ -137,7 +137,7 @@ app.post('/api/guest', (req, res) => {
     do { name = 'Guest' + Math.floor(1000 + Math.random() * 9000); } while (nameTaken(name));
   }
   const token = crypto.randomBytes(16).toString('hex');
-  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), notes: [] };
+  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [] };
   if (sessions.size > 5000) sessions.delete(sessions.keys().next().value);
   sessions.set(token, user);
   res.json({ token, user: pubUser(user) });
@@ -165,7 +165,7 @@ app.post('/api/login/google', async (req, res) => {
     let name = base;
     while (nameTaken(name)) name = base.slice(0, 12) + Math.floor(100 + Math.random() * 900);
     user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.createHash('sha256').update(info.id).digest('hex').slice(0, 8),
-      game: null, gid: info.id, friends: new Set(), reqIn: new Map(), reqOut: new Set(), notes: [] };
+      game: null, gid: info.id, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [] };
     byGoogle.set(info.id, user);
   }
   const token = crypto.randomBytes(16).toString('hex');
@@ -424,7 +424,7 @@ app.delete('/api/forum/thread/:id/post/:pid', (req, res) => {
 });
 
 // ---------- Friends & notifications ----------
-const userCard = u => ({ uid: u.uid, name: u.name, color: u.color, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null });
+const userCard = u => ({ uid: u.uid, name: u.name, color: u.color, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null, followers: u.followers?.size || 0, following: u.following?.size || 0 });
 const friendState = (me, o) => me.friends.has(o.uid) ? 'friends' : me.reqOut.has(o.uid) ? 'sent' : me.reqIn.has(o.uid) ? 'received' : 'none';
 const needMe = (req, res) => { const me = sessions.get(bearer(req)); if (!me) res.sendStatus(401); return me; };
 const other = (req, me) => { const o = uidMap().get(req.params.uid); return o && o.uid !== me.uid ? o : null; };
@@ -437,9 +437,22 @@ app.get('/api/users/:uid', (req, res) => {
   const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
   const me = sessions.get(bearer(req));
   const userBadges = getUserBadges(u.uid);
-  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', friends: u.friends.size,
+  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', followed: !!me?.following?.has(u.uid), friends: u.friends.size,
     games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))),
     badges: userBadges.slice(0, 10) }); // Show up to 10 badges in profile
+});
+app.post('/api/users/:uid/follow', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const o = other(req, me); if (!o) return res.sendStatus(404);
+  me.following ||= new Set(); o.followers ||= new Set();
+  me.following.add(o.uid); o.followers.add(me.uid);
+  res.json({ ok: true, followers: o.followers.size, following: me.following.size });
+});
+app.delete('/api/users/:uid/follow', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const o = other(req, me); if (!o) return res.sendStatus(404);
+  me.following?.delete(o.uid); o.followers?.delete(me.uid);
+  res.json({ ok: true, followers: o.followers?.size || 0, following: me.following?.size || 0 });
 });
 app.get('/api/friends', (req, res) => {
   const me = needMe(req, res); if (!me) return;
@@ -493,7 +506,8 @@ const OUT_PARTS = ['head', 'torso', 'armL', 'armR', 'legL', 'legR'];
 const OUT_FACES = ['smile', 'cool', 'wink', 'surprised', 'sad', 'angry'];
 const OUT_HATS = ['none', 'cap', 'tophat', 'crown', 'headphones', 'horns'];
 const cleanOutfit = o => {
-  const out = { skin: {}, face: OUT_FACES.includes(o?.face) ? o.face : 'smile', hat: OUT_HATS.includes(o?.hat) ? o.hat : 'none', hatColor: HEX.test(o?.hatColor) ? o.hatColor : '#e63946' };
+  const shirt = String(o?.tshirt || '');
+  const out = { skin: {}, face: OUT_FACES.includes(o?.face) ? o.face : 'smile', hat: OUT_HATS.includes(o?.hat) ? o.hat : 'none', hatColor: HEX.test(o?.hatColor) ? o.hatColor : '#e63946', tshirt: /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(shirt) && shirt.length <= 180000 ? shirt : null };
   for (const k of OUT_PARTS) out.skin[k] = HEX.test(o?.skin?.[k]) ? o.skin[k] : '#e6eaf2';
   return out;
 };
