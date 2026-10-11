@@ -206,6 +206,8 @@ setProg(15, 'Menunggu server…');
 
 /* ---------- R6-style character (customizable outfit) ---------- */
 const S = 0.34; // one "stud"
+const RIGGED_AVATAR_SOURCE = 'assets/avatar/Voxelyplayermodel.blend';
+const RIGGED_AVATAR_GLB = 'assets/avatar/Voxelyplayermodel.glb';
 const OUT0 = { skin: { head: '#e6eaf2', torso: '#e6eaf2', armL: '#e6eaf2', armR: '#e6eaf2', legL: '#e6eaf2', legR: '#e6eaf2' }, face: 'smile', hat: 'none', hatColor: '#e63946' };
 const matCache = {}, headCache = {};
 const mat2 = hex => matCache[hex] || (matCache[hex] = mat(hex));
@@ -240,6 +242,18 @@ function addHat(body, o) {
   else if (o.hat === 'crown') { cyl(1.5, 0.45, 0, T + 0.18, 0); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; cyl(0.34, 0.45, Math.cos(a) * 0.6, T + 0.63, Math.sin(a) * 0.6, 0); } }
   else if (o.hat === 'headphones') { bx(1.85, 0.14, 0.3, 0, T + 0.1, 0); [-1, 1].forEach(s => { bx(0.14, 1.2, 0.3, s * 0.88, 4.75, 0); cyl(0.62, 0.32, s * 0.98, 4.65, 0).rotation.z = Math.PI / 2; }); }
   else if (o.hat === 'horns') { [-1, 1].forEach(s => { cyl(0.4, 0.9, s * 0.45, T + 0.35, 0, 0).rotation.z = -s * 0.45; }); }
+}
+// The authored Blender rig is the canonical source. Babylon loads its GLB export when present;
+// the procedural rig remains a safe fallback for older builds and offline Studio previews.
+let riggedAvatarTemplate = null, riggedAvatarLoad = null;
+async function loadRiggedAvatarTemplate() {
+  if (riggedAvatarLoad) return riggedAvatarLoad;
+  riggedAvatarLoad = BABYLON.SceneLoader.ImportMeshAsync(null, '', RIGGED_AVATAR_GLB, scene).then(r => {
+    const root = new BABYLON.TransformNode('Voxelyplayermodel-rigged-template', scene);
+    r.meshes.forEach(m => { if (!m.parent) m.parent = root; m.setEnabled(false); });
+    riggedAvatarTemplate = { root, animations: r.animationGroups || [] }; return riggedAvatarTemplate;
+  }).catch(() => null);
+  return riggedAvatarLoad;
 }
 function makeChar(p) {
   const o = p.outfit || OUT0, sk = o.skin || OUT0.skin;
@@ -517,7 +531,7 @@ socket.on('init', d => {
 });
 function finishLoading(d) {
   setProg(90, 'Menempatkan pemain…');
-  rebuildLists(); respawn(true); myChar = makeChar(me); startScripts(d);
+  rebuildLists(); respawn(true); myChar = makeChar(me); startScripts(d); loadRiggedAvatarTemplate();
   d.players.filter(p => p.id !== me.id).forEach(addOther);
   setProg(96, 'Hampir siap…');
   scene.executeWhenReady(() => {

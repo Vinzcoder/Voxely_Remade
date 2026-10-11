@@ -130,6 +130,19 @@
   .sw { display:flex; gap:6px; flex-wrap:wrap; align-items:center; } .swb { width:26px; height:26px; border:2px solid transparent; cursor:pointer; } .swb.on { border-color:var(--strong); }
   .pad .chk { display:flex; gap:8px; align-items:center; margin-top:12px; color:var(--text); font-size:13px; } .pad .chk input[type=checkbox] { width:auto; padding:0; }
   .acts { display:flex; gap:8px; margin-top:12px; } .mrow { flex-wrap:wrap; }
+  .market-head { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+  .market-head p { color:var(--soft); max-width:620px; line-height:1.5; margin-top:6px; }
+  .market-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; }
+  .market-card { background:var(--panel); border:1px solid var(--line); padding:12px; transition:border-color .15s,transform .15s; }
+  .market-card:hover { border-color:var(--blue); transform:translateY(-2px); }
+  .market-card .market-art { height:150px; background:linear-gradient(135deg,var(--panel3),var(--row2)); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+  .market-art canvas { height:140px; width:112px; image-rendering:auto; }
+  .market-card h3 { color:var(--strong); margin:12px 0 4px; }
+  .market-card p { color:var(--dim); min-height:34px; font-size:12px; line-height:1.4; }
+  .market-meta { display:flex; justify-content:space-between; align-items:center; margin-top:12px; color:var(--link); font-size:12px; }
+  .owned { color:#22c55e; font-weight:700; }
+  .market-card .btn { width:100%; margin-top:10px; }
+  .market-filter { display:flex; gap:8px; flex-wrap:wrap; }
   .gbtn { background:#fff !important; color:#222 !important; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; } .gbtn:hover { background:#e8e8e8 !important; }
   .or { color:var(--dim); text-align:center; font-size:12px; margin:14px 0 10px; }
   .srv { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; border-bottom:1px solid var(--line); } .srv.last { border-bottom:0; }
@@ -161,7 +174,7 @@
 </head>
 <body>
 <div class="top"><div class="wrap"><a class="logo" href="#/">VOXELY</a><div class="user" id="me"></div></div></div>
-<div class="sub"><div class="wrap"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a></div></div>
+<div class="sub"><div class="wrap"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a></div></div>
 <main><div class="wrap" id="view"></div></main>
 
 <div class="veil" id="login"><div class="box">
@@ -416,6 +429,43 @@ function avFace(k) { outfit.face = k; saveOutfit(); drawAvBody(); }
 function avHat(k) { outfit.hat = k; saveOutfit(); drawAvBody(); }
 function avHatColor(c, keep) { outfit.hatColor = c; saveOutfit(); if (!keep) drawAvBody(); }
 function avPreset(n) { outfit = AV_PRESETS[n](); saveOutfit(); drawAvBody(); }
+
+/* ---------- Free Marketplace ---------- */
+const MARKET_ITEMS = [
+  { id:'hat-cap-blue', name:'Skyline Cap', type:'hat', value:'cap', color:'#1463ff', desc:'Topi biru klasik untuk avatar harian.' },
+  { id:'hat-crown-gold', name:'Starter Crown', type:'hat', value:'crown', color:'#ffd700', desc:'Mahkota emas gratis untuk tampil standout.' },
+  { id:'hat-headphones', name:'Pulse Headphones', type:'hat', value:'headphones', color:'#8b5cf6', desc:'Headphone neon untuk sesi bermain panjang.' },
+  { id:'face-cool', name:'Cool Face', type:'face', value:'cool', color:'#06b6d4', desc:'Ekspresi santai dengan kacamata hitam.' },
+  { id:'face-wink', name:'Wink Face', type:'face', value:'wink', color:'#ec4899', desc:'Ekspresi kedip yang playful.' },
+  { id:'skin-ocean', name:'Ocean Suit', type:'skin', value:'#0d69ac', color:'#0d69ac', desc:'Warna badan biru ocean untuk karakter.' },
+  { id:'skin-lime', name:'Lime Suit', type:'skin', value:'#a4bd47', color:'#a4bd47', desc:'Warna lime cerah untuk avatar.' },
+  { id:'bundle-noob', name:'Classic Noob Bundle', type:'preset', value:'Noob', color:'#f5cd2f', desc:'Bundle starter warna kuning, biru, dan hijau.' },
+  { id:'bundle-ninja', name:'Midnight Ninja Bundle', type:'preset', value:'Ninja', color:'#1f2530', desc:'Bundle gelap dengan wajah keren.' }
+];
+let marketFilter = 'all';
+function ownedMarket() { try { return new Set(JSON.parse(localStorage.getItem('voxelyMarketOwned') || '[]')); } catch (e) { return new Set(); } }
+function saveMarketOwned(set) { localStorage.setItem('voxelyMarketOwned', JSON.stringify([...set])); }
+function marketPreview(item) {
+  const id = 'market-canvas-' + item.id;
+  setTimeout(() => { const c = document.getElementById(id); if (!c) return; const g=c.getContext('2d'); g.fillStyle=item.color; g.fillRect(26,30,60,70); g.fillStyle=outfit.skin.head; g.beginPath(); g.arc(56,28,22,0,Math.PI*2); g.fill(); drawFace(g, item.type==='face' ? item.value : outfit.face, 56, 28, 38); if (item.type==='hat' || (item.type==='preset' && item.value==='Noob')) drawHat(g, item.type==='preset' ? 'none' : item.value, item.color, 56, 7); }, 0);
+}
+function buyMarket(id) {
+  const item=MARKET_ITEMS.find(x=>x.id===id); if(!item) return;
+  const owned=ownedMarket(); owned.add(id); saveMarketOwned(owned); equipMarket(item); toast(item.name + ' ditambahkan ke koleksi'); marketplacePage();
+}
+function equipMarket(item) {
+  if(item.type==='hat') { outfit.hat=item.value; outfit.hatColor=item.color; }
+  if(item.type==='face') outfit.face=item.value;
+  if(item.type==='skin') AVP.forEach(k => outfit.skin[k]=item.value);
+  if(item.type==='preset') outfit=AV_PRESETS[item.value]();
+  saveOutfit();
+}
+function marketplacePage() {
+  const owned=ownedMarket(), list=MARKET_ITEMS.filter(x=>marketFilter==='all'||x.type===marketFilter);
+  $('#view').innerHTML=`<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Free items, pilih gaya kamu.</h1><p>Semua item di sini gratis. Klaim sekali, lalu langsung equip untuk dipakai di avatar dan game.</p></div><div class="market-filter">${[['all','Semua'],['hat','Topi'],['face','Wajah'],['skin','Warna'],['preset','Bundle']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div><div class="hint">Koleksi kamu: <b>${owned.size}</b> / ${MARKET_ITEMS.length} item gratis · outfit tersimpan otomatis di browser dan disinkronkan saat login.</div><div class="market-grid">${list.map(item=>{const has=owned.has(item.id);return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="112" height="140"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc)}</p><div class="market-meta"><span>FREE</span><span class="${has?'owned':''}">${has?'✓ Dimiliki':'Gratis'}</span></div><button class="btn ${has?'alt':''}" onclick="${has?`equipMarket(MARKET_ITEMS.find(x=>x.id==='${item.id}'));toast('Avatar diperbarui')`:`buyMarket('${item.id}')`} ">${has?'Equip':'Klaim gratis'}</button></div>`}).join('')}</div>`;
+  list.forEach(marketPreview);
+}
+
 function avRandom() {
   const r = a => a[Math.floor(Math.random() * a.length)];
   AVP.forEach(k => (outfit.skin[k] = r(AV_PAL))); outfit.face = r(AV_FACES)[0]; outfit.hat = r(AV_HATS)[0]; outfit.hatColor = r(AV_PAL);
@@ -952,9 +1002,10 @@ async function route() {
   clearInterval(timer);
   if (!session) return $('#login').classList.add('on');
   const h = location.hash;
-  $('#nGames').classList.toggle('on', !/^#\/(people|forum|avatar|settings)/.test(h));
-  $('#nForum').classList.toggle('on', h.startsWith('#/forum'));
+    $('#nForum').classList.toggle('on', h.startsWith('#/forum'));
   $('#nAvatar').classList.toggle('on', h.startsWith('#/avatar'));
+  $('#nMarket').classList.toggle('on', h.startsWith('#/marketplace'));
+  $('#nGames').classList.toggle('on', !/^#\/(people|forum|avatar|marketplace|settings)/.test(h));
   $('#nPeople').classList.toggle('on', h.startsWith('#/people'));
   if (h.startsWith('#/dev/quick')) return devPage();
   if (h.startsWith('#/dev')) return devHome();
@@ -962,6 +1013,7 @@ async function route() {
   if (h.startsWith('#/profile')) return profilePage();
   if (h.startsWith('#/forum')) return forumRoute(h);
   if (h.startsWith('#/avatar')) return avatarPage();
+  if (h.startsWith('#/marketplace')) return marketplacePage();
   if (h.startsWith('#/settings')) return settingsPage();
   if (h.startsWith('#/user/')) return userPage(h.slice(7));
   if (h.startsWith('#/notifications')) return notifPage();
