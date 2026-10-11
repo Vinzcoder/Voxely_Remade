@@ -1,0 +1,66 @@
+{
+  "name": "voxely",
+  "version": "0.1.0",
+  "description": "Voxely - simple Roblox clone: Steam-style store + Electron client (socket.io + Babylon.js)",
+  "author": "Voxely <dev@voxely.app>",
+  "homepage": "https://playvoxely.vercel.app",
+  "main": "client/main.js",
+  "scripts": {
+    "postinstall": "node scripts/vendor.js",
+    "server": "node server/index.js",
+    "client": "electron .",
+    "dev": "concurrently -k \"npm:server\" \"npm:client\"",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win nsis",
+    "dist:mac": "electron-builder --mac dmg",
+    "dist:linux": "electron-builder --linux deb"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "babylonjs": "^7.0.0",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5"
+  },
+  "build": {
+    "appId": "dev.voxely.client",
+    "productName": "Voxely Client",
+    "files": [
+      "client/**/*",
+      "package.json"
+    ],
+    "protocols": [
+      {
+        "name": "Voxely",
+        "schemes": [
+          "voxely"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "Voxely-Client-Setup.exe"
+    },
+    "linux": {
+      "target": "deb",
+      "category": "Game",
+      "maintainer": "Voxely <dev@voxely.app>",
+      "artifactName": "Voxely-Client.${ext}"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Vinzcoder",
+        "repo": "Voxely_Remade"
+      }
+    ]
+  }
+}
