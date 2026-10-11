@@ -43,4 +43,4 @@ Workflow `.github/workflows/build-client.yml` dapat dijalankan dari GitHub Actio
 
 ## Format `.vxly`
 
-Voxely Studio menyediakan tombol **Save .vxly** untuk menyimpan metadata game, layout world, script, dan model yang di-import dalam satu file JSON ber-ekstensi `.vxly`.
+Voxely Studio menyediakan tombol **Save .vxly** dan **Open .vxly** untuk menyimpan dan memulihkan metadata game, layout world, script, dan model yang di-import dalam satu file JSON ber-ekstensi `.vxly`.

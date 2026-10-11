@@ -400,9 +400,12 @@ function saveOutfit() {
 }
 async function syncOutfit() { // local copy wins; otherwise pull the one saved on the server
   if (!session) return;
-  const saved = localStorage.getItem('voxelyOutfit');
-  if (saved) { rq('POST', '/api/outfit', JSON.parse(saved)).catch(() => {}); return; }
-  const d = await gj('/api/outfit'); if (d && d.outfit) { outfit = d.outfit; localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); }
+  const d = await gj('/api/outfit');
+  if (d && d.outfit) { outfit = d.outfit; localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); return; }
+  try {
+    const saved = JSON.parse(localStorage.getItem('voxelyOutfit'));
+    if (saved) await rq('POST', '/api/outfit', saved);
+  } catch (e) {}
 }
 const swatches = (cur, fn) => `<div class="avpal">${AV_PAL.map(c => `<button class="swb ${c.toLowerCase() === String(cur).toLowerCase() ? 'on' : ''}" style="background:${c}" onclick="${fn}('${c}')"></button>`).join('')}<input type="color" value="${cur}" oninput="${fn}(this.value,true)"></div>`;
 function avatarPage() {
@@ -434,7 +437,7 @@ function avColor(c, keep) { if (avPart === 'all') AVP.forEach(k => (outfit.skin[
 function avFace(k) { outfit.face = k; saveOutfit(); drawAvBody(); }
 function avHat(k) { outfit.hat = k; saveOutfit(); drawAvBody(); }
 function avHatColor(c, keep) { outfit.hatColor = c; saveOutfit(); if (!keep) drawAvBody(); }
-function avPreset(n) { outfit = AV_PRESETS[n](); saveOutfit(); drawAvBody(); }
+function avPreset(n) { outfit = { ...AV_PRESETS[n](), tshirt: outfit.tshirt || null }; saveOutfit(); drawAvBody(); }
 
 /* ---------- Free Marketplace ---------- */
 const MARKET_ITEMS = [

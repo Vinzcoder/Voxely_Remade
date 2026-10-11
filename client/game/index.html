@@ -261,7 +261,7 @@ function makeChar(p) {
   const box = (w, h, d, x, y, hex) => { const m = BABYLON.MeshBuilder.CreateBox('part', { width: w * S, height: h * S, depth: d * S }, scene); m.parent = body; m.position.set(x * S, y * S, 0); m.material = mat2(hex); return m; };
   const legL = box(1, 2, 1, -0.5, 1, sk.legL), legR = box(1, 2, 1, 0.5, 1, sk.legR);
   const torso = box(2, 2, 1, 0, 3, sk.torso);
-  if (o.tshirt) { const shirtMat = new BABYLON.StandardMaterial('shirt', scene); shirtMat.diffuseTexture = new BABYLON.Texture(o.tshirt, scene); shirtMat.specularColor = BABYLON.Color3.Black(); torso.material = shirtMat; }
+  if (o.tshirt) { const shirtMat = new BABYLON.StandardMaterial('shirt', scene); shirtMat.diffuseTexture = new BABYLON.Texture(o.tshirt, scene); shirtMat.useAlphaFromDiffuseTexture = true; shirtMat.specularColor = BABYLON.Color3.Black(); torso.material = shirtMat; }
   const armL = box(1, 2, 1, -1.5, 3, sk.armL), armR = box(1, 2, 1, 1.5, 3, sk.armR);
   [legL, legR, armL, armR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, S, 0))); // rotate from hip / shoulder
   const head = BABYLON.MeshBuilder.CreateCylinder('head', { diameter: 1.45 * S, height: 1.3 * S, tessellation: 40,

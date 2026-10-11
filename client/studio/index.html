@@ -103,7 +103,7 @@ const RIB = [
   ['Edit', [['copy', 'Copy', P.copy], ['paste', 'Paste', P.paste], ['dup', 'Duplicate', P.dup], ['del', 'Delete', P.del]]],
   ['Script', [['script', 'Script', P.code], ['output', 'Output', P.term]]],
   ['Test', [['play', 'Play', P.play, 'play'], ['stop', 'Stop', P.stop, 'stop']]],
-  ['Game', [['thumb', 'Thumbnail', P.cam], ['import', 'Import Model', P.up], ['savefile', 'Save .vxly', P.up], ['publish', 'Publish', P.up]]]
+  ['Game', [['thumb', 'Thumbnail', P.cam], ['import', 'Import Model', P.up], ['openfile', 'Open .vxly', P.up], ['savefile', 'Save .vxly', P.up], ['publish', 'Publish', P.up]]]
 ];
 $('ribbon').innerHTML = RIB.map(([name, items]) => `<div class="grp"><div class="row">${items === 'snap'
   ? `<div class="snap"><label><input type="checkbox" id="mOn" checked><input type="number" id="mVal" value="1" min="0.05" step="0.5">${svg(P.move)}</label><label><input type="checkbox" id="rOn" checked><input type="number" id="rVal" value="15" min="1" step="5">${svg(P.rotate)}</label></div>`
@@ -111,7 +111,7 @@ $('ribbon').innerHTML = RIB.map(([name, items]) => `<div class="grp"><div class=
 
 /* ---------------- state ---------------- */
 let meta = { id: GID === 'new' ? null : GID, title: '', tagline: '', desc: '', tags: '', sky: '#7ec8ff', a1: '#1463ff', a2: '#0a0f1a', thumbNew: null };
-let parts = [], scripts = [], importedModels = [], sel = null, tool = 'move', clip = null, dirty = false, testing = false, outfit = null, openScript = -1, drawerTab = 'script', dragging = false;
+let parts = [], scripts = [], importedModels = [], importedMeshes = [], sel = null, tool = 'move', clip = null, dirty = false, testing = false, outfit = null, openScript = -1, drawerTab = 'script', dragging = false;
 const COLORS = {}, matOf = hex => COLORS[hex] || (COLORS[hex] = (() => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = BABYLON.Color3.FromHexString(hex); m.specularColor = BABYLON.Color3.Black(); return m; })());
 const toast = m => { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 1800); };
 const setStatus = (m, err) => { $('status').textContent = m; $('status').className = err ? 'err' : ''; };
@@ -330,9 +330,60 @@ function thumb() {
 }
 
 /* ---------------- ribbon actions + keys ---------------- */
-function importModel() { const input=document.createElement('input'); input.type='file'; input.accept='.obj,.gltf,.glb,.babylon,.stl'; input.onchange=async()=>{ const f=input.files[0]; if(!f)return; const url=URL.createObjectURL(f); try { const ext='.'+f.name.split('.').pop().toLowerCase(); const r=await BABYLON.SceneLoader.ImportMeshAsync(null, '', url, scene, undefined, ext); r.meshes.forEach(m=>{m.position.y=1; m.isPickable=true;}); const fr=new FileReader(); fr.onload=()=>importedModels.push({name:f.name,type:f.type||'application/octet-stream',data:fr.result}); fr.readAsDataURL(f); toast('Model '+f.name+' diimport'); mark(); } catch(e) { setStatus('Import gagal: '+e.message,true); } finally { setTimeout(()=>URL.revokeObjectURL(url),1000); } }; input.click(); }
-function saveFile() { const name=(meta.title||'game-baru').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-|-$/g,'')||'game-baru'; const payload={format:'vxly',version:1,name:meta.title||'Game baru',savedAt:new Date().toISOString(),world:worldPayload(),models:importedModels}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})); a.download=name+'.vxly'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); toast('File '+name+'.vxly disimpan'); }
-const ACT = { import: importModel, savefile: saveFile, copy, paste, dup, del, play, stop, publish, thumb, script: () => (openScript >= 0 ? openScriptAt(openScript) : scripts.length ? openScriptAt(0) : newScript()), output: () => showDrawer('out') };
+function importModel() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.obj,.gltf,.glb,.babylon,.stl';
+  input.onchange = async () => {
+    const file = input.files[0]; if (!file) return;
+    let url;
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(reader.error || new Error('File tidak bisa dibaca'));
+        reader.readAsDataURL(file);
+      });
+      const ext = '.' + file.name.split('.').pop().toLowerCase(); url = URL.createObjectURL(file);
+      const result = await BABYLON.SceneLoader.ImportMeshAsync(null, '', url, scene, undefined, ext);
+      result.meshes.forEach(m => { m.position.y = 1; m.isPickable = true; }); importedMeshes.push(...result.meshes);
+      importedModels.push({ name: file.name, type: file.type || 'application/octet-stream', data });
+      toast('Model ' + file.name + ' diimport'); mark();
+    } catch (e) { setStatus('Import gagal: ' + e.message, true); }
+    finally { if (url) URL.revokeObjectURL(url); }
+  };
+  input.click();
+}
+function openFile() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.vxly,application/json';
+  input.onchange = async () => {
+    const file = input.files[0]; if (!file) return;
+    try {
+      const data = JSON.parse(await file.text()), world = data.world;
+      if (data.format !== 'vxly' || !world || !Array.isArray(world.boxes)) throw new Error('File .vxly tidak valid');
+      if (dirty && !confirm('Perubahan belum disimpan. Buka file lain?')) return;
+      if (testing) stop();
+      parts.forEach(p => p.mesh.dispose()); importedMeshes.forEach(m => m.dispose(false, true));
+      importedMeshes = []; parts = world.boxes.map(mkPart); scripts = Array.isArray(world.scripts) ? world.scripts : [];
+      importedModels = []; openScript = -1; hideDrawer(); select(null);
+      Object.assign(meta, data.meta || {}, { id: null, title: data.meta?.title || world.title || data.name || '', sky: data.meta?.sky || world.sky || '#7ec8ff', thumbNew: null });
+      scene.clearColor = BABYLON.Color3.FromHexString(meta.sky).toColor4();
+      for (const model of Array.isArray(data.models) ? data.models : []) {
+        if (!model || typeof model.data !== 'string' || !/^data:/.test(model.data)) continue;
+        const ext = '.' + String(model.name || '').split('.').pop().toLowerCase();
+        if (!['.obj', '.gltf', '.glb', '.babylon', '.stl'].includes(ext)) continue;
+        const blob = await (await fetch(model.data)).blob(), url = URL.createObjectURL(blob);
+        try {
+          const result = await BABYLON.SceneLoader.ImportMeshAsync(null, '', url, scene, undefined, ext);
+          result.meshes.forEach(m => { m.position.y = 1; m.isPickable = true; }); importedMeshes.push(...result.meshes);
+          importedModels.push(model);
+        } finally { URL.revokeObjectURL(url); }
+      }
+      if (parts[0]) { cam.position.set(parts[0].x, parts[0].y + 14, parts[0].z - 28); cam.setTarget(parts[0].mesh.position); }
+      $('gname').textContent = meta.title || 'Game baru'; renderExplorer(); renderProps(); mark();
+      setStatus('File .vxly dibuka'); toast('Project dimuat');
+    } catch (e) { setStatus('Gagal membuka .vxly: ' + e.message, true); }
+  };
+  input.click();
+}
+function saveFile() { const name=(meta.title||'game-baru').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-|-$/g,'')||'game-baru'; const payload={format:'vxly',version:1,name:meta.title||'Game baru',savedAt:new Date().toISOString(),meta:{title:meta.title,tagline:meta.tagline,desc:meta.desc,tags:meta.tags,sky:meta.sky,a1:meta.a1,a2:meta.a2},world:worldPayload(),models:importedModels}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'})); a.download=name+'.vxly'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); toast('File '+name+'.vxly disimpan'); }
+const ACT = { import: importModel, openfile: openFile, savefile: saveFile, copy, paste, dup, del, play, stop, publish, thumb, script: () => (openScript >= 0 ? openScriptAt(openScript) : scripts.length ? openScriptAt(0) : newScript()), output: () => showDrawer('out') };
 $('ribbon').onclick = e => {
   const b = e.target.closest('[data-a]'); if (!b) return; const a = b.dataset.a;
   if (a.startsWith('tool:')) setTool(a.slice(5)); else if (a.startsWith('ins:')) insert(a.slice(4)); else ACT[a]();
