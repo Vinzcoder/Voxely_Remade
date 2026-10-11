@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Voxely Client</title>
+<style>
+  :root { --bg:#04060b; --panel:#0a0f1a; --line:#15233f; --blue:#1463ff; --blue2:#0a3fb8; --text:#e6edf7; --dim:#7d8aa3; }
+  * { box-sizing:border-box; margin:0; border-radius:0; }
+  body { background:radial-gradient(circle at 50% 0%, #0c2250, var(--bg) 65%); color:var(--text); font:14px "Segoe UI",Arial,sans-serif; min-height:100vh; padding:28px 28px 20px; user-select:none; }
+  .logo { font-size:34px; font-weight:800; letter-spacing:10px; color:#fff; text-align:center; padding-left:10px; }
+  .ver { text-align:center; color:var(--dim); margin:4px 0 18px; }
+  .upd { border:1px solid var(--line); background:var(--panel); padding:10px 14px; margin-bottom:16px; font-size:13px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .upd.ok { color:#22c55e; } .upd.warn { border-color:var(--blue); } .upd .bar { flex-basis:100%; height:6px; background:#0b1428; } .upd .bar i { display:block; height:100%; background:var(--blue); width:0; transition:width .3s; }
+  .upd button { margin-left:auto; }
+  .card { background:var(--panel); border:1px solid var(--line); padding:20px; }
+  .who { display:flex; align-items:center; gap:16px; margin-bottom:18px; } .av { width:64px; height:64px; flex:none; border:1px solid rgba(255,255,255,.25); object-fit:cover; background:#101a2e; }
+  .who small { color:var(--dim); display:block; margin-bottom:2px; } .who b { font-size:22px; color:#fff; word-break:break-word; } .tag { display:inline-block; margin-top:4px; padding:1px 8px; border:1px solid var(--blue); color:#6fa8ff; font-size:12px; }
+  .note { color:var(--dim); line-height:1.5; margin-bottom:16px; } .err { color:#ff6b6b; margin-bottom:12px; }
+  button { font:inherit; cursor:pointer; border:0; padding:11px 16px; color:#fff; background:var(--blue); width:100%; margin-bottom:8px; font-weight:600; } button:hover { background:#3a82ff; }
+  button.alt { background:#1b2a4a; } button.alt:hover { background:#25396a; } button.danger { background:transparent; color:#ff7b7b; border:1px solid #4a1d25; } button.danger:hover { background:#3a0f16; }
+  .upd button { width:auto; margin:0; padding:6px 14px; } .foot { text-align:center; color:var(--dim); font-size:12px; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="logo">VOXELY</div>
+<div class="ver">Client <span id="ver">…</span></div>
+<div id="upd" class="upd"></div>
+<div id="card" class="card">Memeriksa login…</div>
+<div class="foot">Pilih game di website lalu klik Play, atau buka Studio untuk membuat game.</div>
+<script>
+const $ = id => document.getElementById(id);
+const E = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let server = '';
+function avatar(u) {
+  return u.av ? `<img class="av" src="${E(server)}/api/avatar/${E(u.uid)}?v=${E(u.av)}" alt="">` : `<div class="av" style="background:${/^#[0-9a-f]{6}$/i.test(u.color) ? u.color : '#1463ff'}"></div>`;
+}
+async function render(s, err) {
+  const c = $('card'); if (!s) s = await voxely.session();
+  if (s.loggedIn) {
+    server = s.server || ''; const u = s.user || {};
+    c.innerHTML = `<div class="who">${avatar(u)}<div><small>Login sebagai</small><b>${E(u.name || 'Pemain')}</b><br><span class="tag">${u.google ? 'Akun Google' : 'Akun Guest'}</span></div></div>
+      ${s.offline ? '<div class="err">Server tidak terjangkau — menampilkan data terakhir.</div>' : ''}
+      <button onclick="voxely.store()">Buka Voxely Store</button><button class="alt" onclick="voxely.studio()">Buka Voxely Studio</button><button class="danger" onclick="out()">Logout</button>`;
+  } else {
+    c.innerHTML = `<div class="who"><div class="av"></div><div><small>${s.expired ? 'Sesi sudah habis' : 'Belum login'}</small><b>Kamu belum masuk</b></div></div>
+      <div class="note">Login lewat website (Google atau Guest), lalu klik <b>Play</b> pada sebuah game — client akan mengingat akunmu. Atau langsung masuk sebagai guest.</div>
+      ${err || s.error ? `<div class="err">${E(err || s.error)}</div>` : ''}
+      <button onclick="voxely.store()">Login lewat Website</button><button class="alt" onclick="guest()">Masuk sebagai Guest</button>`;
+  }
+}
+async function guest() { $('card').innerHTML = 'Membuat akun guest…'; render(await voxely.guest()); }
+async function out() { await voxely.logout(); render({ loggedIn: false }); }
+function upd(s) {
+  const u = $('upd'); u.className = 'upd';
+  if (s.state === 'checking') u.textContent = 'Memeriksa pembaruan…';
+  else if (s.state === 'none') { u.className = 'upd ok'; u.textContent = '✓ Aplikasi sudah versi terbaru'; }
+  else if (s.state === 'progress') { u.className = 'upd warn'; u.innerHTML = `Mengunduh update v${E(s.version || '')}… ${s.percent || 0}%<div class="bar"><i style="width:${s.percent || 0}%"></i></div>`; }
+  else if (s.state === 'ready') { u.className = 'upd warn'; u.innerHTML = `Update v${E(s.version)} siap dipasang. <button onclick="voxely.install()">Restart & Update</button>`; }
+  else if (s.state === 'manual') { u.className = 'upd warn'; u.innerHTML = `Versi baru v${E(s.version)} tersedia. <button onclick="voxely.open('${E(s.url)}')">Download</button>`; }
+  else if (s.state === 'error') u.textContent = 'Tidak bisa memeriksa pembaruan' + (s.msg ? ' (' + s.msg + ')' : '');
+  else u.textContent = '';
+}
+voxely.info().then(i => ($('ver').textContent = 'v' + i.version));
+voxely.updateState().then(upd); voxely.onUpdate(upd); render();
+</script>
+</body>
+</html>
