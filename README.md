@@ -47,4 +47,4 @@ Voxely Studio menyediakan tombol **Save .vxly** untuk menyimpan metadata game, l
 
 ## Discord Rich Presence
 
-Electron client menggunakan Discord IPC dengan Application ID `1551887022652919828`. Saat bermain, Discord menampilkan judul game Voxely dan jumlah pemain; saat membuka Studio, Discord menampilkan status pembuatan game. Discord Desktop harus sedang berjalan. Rich Presence tidak memakai bot token, public key, atau kredensial rahasia.
+Electron client menggunakan Discord IPC. Saat bermain, Discord menampilkan judul game Voxely dan jumlah pemain; saat membuka Studio, Discord menampilkan status pembuatan game. Discord Desktop harus sedang berjalan. Rich Presence tidak memakai bot token, public key, atau kredensial rahasia.
