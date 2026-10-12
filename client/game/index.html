@@ -521,19 +521,27 @@ socket.on('init', d => {
 });
 function finishLoading(d) {
   setProg(90, 'Menempatkan pemain…');
-  rebuildLists(); respawn(true); myChar = makeChar(me); startScripts(d);
-  d.players.filter(p => p.id !== me.id).forEach(addOther);
+  try {
+    rebuildLists(); respawn(true); myChar = makeChar(me); startScripts(d);
+    d.players.filter(p => p.id !== me.id).forEach(addOther);
+  } catch (e) {
+    console.warn('World setup warning:', e);
+    $('stat').textContent = 'Menyiapkan dunia dengan mode aman…';
+  }
   setProg(96, 'Hampir siap…');
   let ready = false;
   const finish = timedOut => {
     if (ready) return;
-    ready = true; clearTimeout(readyTimer);
+    ready = true; clearTimeout(readyTimer); clearTimeout(forceTimer);
     if (timedOut) console.warn('Scene readiness timed out; starting with available assets.');
     setProg(100, 'Siap!');
     setTimeout(startGame, Math.max(400, 1600 - (performance.now() - t0))); // show the loader at least ~1.6s
   };
-  const readyTimer = setTimeout(() => finish(true), 10000);
-  scene.executeWhenReady(() => finish(false));
+  // Some Babylon versions keep executeWhenReady pending for an optional resource.
+  // The game world is usable without it, so never let that block the client forever.
+  const readyTimer = setTimeout(() => finish(true), 2500);
+  const forceTimer = setTimeout(() => finish(true), 3500);
+  try { scene.executeWhenReady(() => finish(false)); } catch (e) { finish(true); }
 }
 function startGame() {
   started = true; $('loader').classList.add('done'); $('hud').classList.remove('hidden');
