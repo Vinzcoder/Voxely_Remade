@@ -401,6 +401,8 @@ engine.getRenderingCanvas().addEventListener('pointerdown', () => $('c').focus()
 
 /* ---------------- boot ---------------- */
 async function boot() {
+  if (window.voxely?.setPresence) window.voxely.setPresence({ details: 'Using Voxely Studio', state: 'Building a game', startTimestamp: Date.now() });
+  addEventListener('beforeunload', () => window.voxely?.clearPresence?.(), { once: true });
   $('stop').classList.add('dis');
   if (meta.id) {
     try {

@@ -16,7 +16,8 @@
     "dist:linux": "electron-builder --linux deb"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "discord-rpc": "^4.0.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

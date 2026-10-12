@@ -43,4 +43,8 @@ Workflow `.github/workflows/build-client.yml` dapat dijalankan dari GitHub Actio
 
 ## Format `.vxly`
 
-Voxely Studio menyediakan tombol **Save .vxly** dan **Open .vxly** untuk menyimpan dan memulihkan metadata game, layout world, script, dan model yang di-import dalam satu file JSON ber-ekstensi `.vxly`.
+Voxely Studio menyediakan tombol **Save .vxly** untuk menyimpan metadata game, layout world, script, dan model yang di-import dalam satu file JSON ber-ekstensi `.vxly`.
+
+## Discord Rich Presence
+
+Electron client menggunakan Discord IPC dengan Application ID `1551887022652919828`. Saat bermain, Discord menampilkan judul game Voxely dan jumlah pemain; saat membuka Studio, Discord menampilkan status pembuatan game. Discord Desktop harus sedang berjalan. Rich Presence tidak memakai bot token, public key, atau kredensial rahasia.

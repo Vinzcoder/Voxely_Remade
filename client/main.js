@@ -5,6 +5,8 @@ const PROTOCOL = 'voxely';
 const REPO = 'Vinzcoder/Voxely_Remade'; // GitHub repo that holds the Releases
 const STORE_URL = process.env.VOXELY_STORE || 'https://playvoxely.vercel.app';
 const DEFAULT_SERVER = process.env.VOXELY_SERVER || 'https://dts5atk3kqga-production-908p4mxa.australia-southeast1.suga.run';
+const DISCORD_CLIENT_ID = '1551887022652919828';
+let discordRpc = null, discordReady = false, discordStart = Date.now();
 let gameWin = null, studioWin = null, launcherWin = null, pendingUrl = null, updater = null;
 const WEB = { contextIsolation: true, nodeIntegration: false, sandbox: true };
 
@@ -25,6 +27,24 @@ function loadSession() {
 }
 const clearSession = () => { try { fs.unlinkSync(sessFile()); } catch (e) {} };
 
+/* ---------- Discord Rich Presence ---------- */
+async function initDiscordRpc() {
+  try {
+    const RPC = require('discord-rpc');
+    discordRpc = new RPC.Client({ transport: 'ipc' });
+    discordRpc.on('ready', () => { discordReady = true; setDiscordPresence({ details: 'Di Voxely', state: 'Menjelajah dunia', startTimestamp: discordStart }); });
+    discordRpc.on('disconnected', () => { discordReady = false; });
+    await discordRpc.login({ clientId: DISCORD_CLIENT_ID });
+  } catch (e) { discordRpc = null; discordReady = false; console.log('Discord Rich Presence tidak tersedia:', e.message); }
+}
+function setDiscordPresence(activity = {}) {
+  if (!discordReady || !discordRpc) return false;
+  const details = String(activity.details || 'Di Voxely').slice(0, 128);
+  const state = String(activity.state || 'Menjelajah dunia').slice(0, 128);
+  try { discordRpc.setActivity({ details, state, startTimestamp: activity.startTimestamp || discordStart, instance: false }); return true; } catch (e) { return false; }
+}
+function clearDiscordPresence() { try { discordRpc?.clearActivity(); } catch (e) {} }
+
 /* ---------- launching the game / studio ---------- */
 function launch(raw) {
   try {
@@ -34,12 +54,12 @@ function launch(raw) {
     saveSession({ token, server });
     if (u.hostname === 'studio') { // Voxely Studio (game editor)
       if (studioWin) studioWin.close();
-      studioWin = new BrowserWindow({ width: 1500, height: 900, backgroundColor: '#1b1d21', autoHideMenuBar: true, title: 'Voxely Studio', webPreferences: WEB });
+      studioWin = new BrowserWindow({ width: 1500, height: 900, backgroundColor: '#1b1d21', autoHideMenuBar: true, title: 'Voxely Studio', webPreferences: { ...WEB, preload: path.join(__dirname, 'preload.js') } });
       studioWin.on('closed', () => (studioWin = null));
       studioWin.loadFile(path.join(__dirname, 'studio', 'index.html'), { query: { game, token, server } });
     } else {
       if (gameWin) gameWin.close();
-      gameWin = new BrowserWindow({ width: 1280, height: 720, backgroundColor: '#000000', autoHideMenuBar: true, title: 'Voxely', webPreferences: WEB });
+      gameWin = new BrowserWindow({ width: 1280, height: 720, backgroundColor: '#000000', autoHideMenuBar: true, title: 'Voxely', webPreferences: { ...WEB, preload: path.join(__dirname, 'preload.js') } });
       gameWin.on('closed', () => (gameWin = null));
       gameWin.loadFile(path.join(__dirname, 'game', 'index.html'), { query: { game, token, server, room } });
     }
@@ -121,6 +141,8 @@ ipcMain.handle('v:studio', () => {
 ipcMain.handle('v:update-state', () => updateState);
 ipcMain.handle('v:install', () => { if (updater) updater.quitAndInstall(); return true; });
 ipcMain.handle('v:open', (_e, url) => { if (typeof url === 'string' && url.startsWith('https://github.com/')) shell.openExternal(url); return true; });
+ipcMain.handle('v:presence', (_e, activity) => setDiscordPresence(activity || {}));
+ipcMain.handle('v:presence-clear', () => { clearDiscordPresence(); return true; });
 
 const findUrl = argv => argv.find(a => a.startsWith(PROTOCOL + '://'));
 
@@ -132,7 +154,8 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     const url = pendingUrl || findUrl(process.argv);
     if (url) launch(url); else showLauncher(); // opened by hand: show the login / update screen
-    checkForUpdates(); setInterval(checkForUpdates, 4 * 3600 * 1000);
+    checkForUpdates(); setInterval(checkForUpdates, 4 * 3600 * 1000); initDiscordRpc();
   });
+  app.on('before-quit', () => { clearDiscordPresence(); try { discordRpc?.destroy(); } catch (e) {} });
   app.on('window-all-closed', () => app.quit());
 }
