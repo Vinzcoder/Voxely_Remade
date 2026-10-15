@@ -114,7 +114,10 @@ let meta = { id: GID === 'new' ? null : GID, title: '', tagline: '', desc: '', t
 let parts = [], scripts = [], importedModels = [], importedMeshes = [], sel = null, tool = 'move', clip = null, dirty = false, testing = false, outfit = null, openScript = -1, drawerTab = 'script', dragging = false;
 const voxelTexture = new BABYLON.Texture('../game/assets/voxel-studs.jpg', scene, true, false);
 voxelTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE; voxelTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-const COLORS = {}, matOf = hex => COLORS[hex] || (COLORS[hex] = (() => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = BABYLON.Color3.FromHexString(hex); m.diffuseTexture = voxelTexture; m.specularColor = BABYLON.Color3.Black(); m.roughness = 0.92; m.freeze(); return m; })());
+const matOf = p => { const m = new BABYLON.StandardMaterial('block-' + (p.n || 'part'), scene), relief = voxelTexture.clone();
+  const tiles = Math.max(2, Math.min(64, Math.max(p.w || 1, p.d || 1) * 2.4)); relief.uScale = tiles; relief.vScale = tiles;
+  m.diffuseColor = BABYLON.Color3.FromHexString(p.c || '#a3a3a3'); m.bumpTexture = relief; m.bumpTexture.level = 0.38;
+  m.specularColor = BABYLON.Color3.Black(); m.roughness = 0.92; m.freeze(); return m; };
 const toast = m => { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 1800); };
 const setStatus = (m, err) => { $('status').textContent = m; $('status').className = err ? 'err' : ''; };
 const mark = () => { dirty = true; $('gname').textContent = (meta.title || 'Game baru') + ' *'; };
@@ -143,7 +146,7 @@ function ladderMat(p) {
 function paint(p) {
   const m = p.mesh; m.rotationQuaternion = null;
   m.position.set(p.x, p.y, p.z); m.scaling.set(p.w, p.h, p.d); m.rotation.set(0, p.r * Math.PI / 180, 0);
-  m.material = p.l ? ladderMat(p) : matOf(p.c); m.visibility = 1 - p.t;
+  m.material = p.l ? ladderMat(p) : matOf(p); m.visibility = 1 - p.t;
 }
 function mkPart(d) {
   const p = Object.assign({ n: 'Part', x: 0, y: 0.5, z: 0, w: 4, h: 1, d: 2, c: '#a3a3a3', r: 0, t: 0, cc: 1, l: 0, k: 0, sp: 0 }, d);
