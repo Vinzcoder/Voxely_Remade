@@ -112,7 +112,9 @@ $('ribbon').innerHTML = RIB.map(([name, items]) => `<div class="grp"><div class=
 /* ---------------- state ---------------- */
 let meta = { id: GID === 'new' ? null : GID, title: '', tagline: '', desc: '', tags: '', sky: '#7ec8ff', a1: '#1463ff', a2: '#0a0f1a', thumbNew: null };
 let parts = [], scripts = [], importedModels = [], importedMeshes = [], sel = null, tool = 'move', clip = null, dirty = false, testing = false, outfit = null, openScript = -1, drawerTab = 'script', dragging = false;
-const COLORS = {}, matOf = hex => COLORS[hex] || (COLORS[hex] = (() => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = BABYLON.Color3.FromHexString(hex); m.specularColor = BABYLON.Color3.Black(); return m; })());
+const voxelTexture = new BABYLON.Texture('../game/assets/voxel-studs.jpg', scene, true, false);
+voxelTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE; voxelTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+const COLORS = {}, matOf = hex => COLORS[hex] || (COLORS[hex] = (() => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = BABYLON.Color3.FromHexString(hex); m.diffuseTexture = voxelTexture; m.specularColor = BABYLON.Color3.Black(); m.roughness = 0.92; m.freeze(); return m; })());
 const toast = m => { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = 'none'), 1800); };
 const setStatus = (m, err) => { $('status').textContent = m; $('status').className = err ? 'err' : ''; };
 const mark = () => { dirty = true; $('gname').textContent = (meta.title || 'Game baru') + ' *'; };

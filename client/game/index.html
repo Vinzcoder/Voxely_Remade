@@ -191,6 +191,14 @@ try {
 } catch (e) { loadError('Gagal memulai grafis: ' + e.message); throw e; }
 const c3 = h => BABYLON.Color3.FromHexString(h);
 const mat = hex => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = c3(hex); m.specularColor = BABYLON.Color3.Black(); return m; };
+const voxelTexture = new BABYLON.Texture('assets/voxel-studs.jpg', scene, true, false);
+voxelTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE; voxelTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+const blockMatCache = {};
+const blockMat = hex => blockMatCache[hex] || (blockMatCache[hex] = (() => {
+  const m = new BABYLON.StandardMaterial('block-' + hex.slice(1), scene);
+  m.diffuseColor = c3(hex); m.diffuseTexture = voxelTexture; m.specularColor = BABYLON.Color3.Black();
+  m.roughness = 0.92; m.freeze(); return m;
+})());
 
 new BABYLON.HemisphericLight('h', new BABYLON.Vector3(0.3, 1, 0.2), scene).intensity = 0.75;
 new BABYLON.DirectionalLight('d', new BABYLON.Vector3(-0.4, -1, -0.3), scene).intensity = 0.45;
@@ -371,7 +379,7 @@ function addPart(b, i) {
   const m = BABYLON.MeshBuilder.CreateBox('part' + i, { size: 1 }, scene); // unit cube, scaled to the part size
   const p = Object.assign({ id: i, n: '', r: 0, t: 0, cc: 1, l: 0, k: 0, sp: 0 }, b, { mesh: m, ddx: 0, ddy: 0, ddz: 0, mv: false, removed: false });
   m.scaling.set(p.w, p.h, p.d); m.position.set(p.x, p.y, p.z); m.rotation.y = (p.r || 0) * Math.PI / 180; m.visibility = 1 - (p.t || 0);
-  m.material = p.l ? ladderMat(p) : mat2(p.c);
+  m.material = p.l ? ladderMat(p) : blockMat(p.c);
   colSize(p); return p;
 }
 function rebuildLists() { solids = parts.filter(p => p.cc && !p.l && !p.removed); ladders = parts.filter(p => p.l && !p.removed); spawns = parts.filter(p => p.sp && !p.removed); }
@@ -470,7 +478,7 @@ function applyOps(ops) {
       } break;
       case 'size': if (p) { p.w = clampN(fin(o.w, p.w), 0.2, 2000); p.h = clampN(fin(o.h, p.h), 0.2, 500); p.d = clampN(fin(o.d, p.d), 0.2, 2000); p.mesh.scaling.set(p.w, p.h, p.d); colSize(p); } break;
       case 'rot': if (p) { p.r = clampN(fin(o.r, 0), -3600, 3600); p.mesh.rotation.y = p.r * Math.PI / 180; colSize(p); } break;
-      case 'col': if (p && /^#[0-9a-f]{6}$/i.test(o.c)) { p.c = o.c; if (!p.l) p.mesh.material = mat2(o.c); } break;
+      case 'col': if (p && /^#[0-9a-f]{6}$/i.test(o.c)) { p.c = o.c; if (!p.l) p.mesh.material = blockMat(o.c); } break;
       case 'tr': if (p) { p.t = clampN(fin(o.t, 0), 0, 1); p.mesh.visibility = 1 - p.t; } break;
       case 'cc': if (p) { p.cc = o.v ? 1 : 0; lists = true; } break;
       case 'rm': if (p) { p.removed = true; p.mesh.setEnabled(false); touching.delete(p.id); touchWatch.delete(p.id); lists = true; } break;
