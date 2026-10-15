@@ -2,6 +2,12 @@
 
 Voxely adalah game client Electron, game web Babylon.js, server multiplayer Socket.IO, Voxely Studio, avatar customization, dan marketplace item gratis.
 
+## License
+
+Copyright (c) Voxely 2026. All rights reserved.
+
+This project is closed-source. No license is granted to the public. You may view the source code for evaluation purposes, but modification, redistribution, or commercial use of this software, in whole or in part, is strictly prohibited without explicit written permission from the copyright holder.
+
 ## Membuat client desktop
 
 Gunakan Node.js 20+:
@@ -48,3 +54,4 @@ Voxely Studio menyediakan tombol **Save .vxly** untuk menyimpan metadata game, l
 ## Discord Rich Presence
 
 Electron client menggunakan Discord IPC. Saat bermain, Discord menampilkan judul game Voxely dan jumlah pemain; saat membuka Studio, Discord menampilkan status pembuatan game. Discord Desktop harus sedang berjalan. Rich Presence tidak memakai bot token, public key, atau kredensial rahasia.
+
