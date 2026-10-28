@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -118,8 +118,7 @@
   #pv { width:100%; margin:14px 0 8px; border:1px solid var(--line); display:block; }
   .mrow { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap; } .mrow a { flex:1; color:var(--link); } .mrow a:hover { color:var(--strong); } .mrow small { color:var(--dim); }
   .empty { padding:20px; color:var(--dim); } .search { margin-bottom:16px; max-width:420px; }
-  .pc { display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line); padding:12px 14px; transition:border-color .15s, background .15s; } .pc:hover { background:var(--hover); } .pc small { display:block; color:var(--dim); margin-top:2px; } .av2 { width:40px; height:40px; flex:none; }
-  .art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; } img.av { object-fit:cover; }
+  .pc { display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line); padding:12px 14px; transition:border-color .15s, background .15s; } .pc:hover { background:var(--hover); } .pc small { display:block; color:var(--dim); margin-top:2px; } .av2 { width:40px; height:40px; flex:none; }  .art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; } img.av { object-fit:cover; }
   .prow { display:flex; gap:16px; align-items:center; margin-bottom:6px; }
   .trow { display:flex; gap:12px; align-items:center; }
   .tprev { width:160px; height:90px; background:var(--input); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--dim); overflow:hidden; } .tprev img { width:100%; height:100%; object-fit:cover; }
@@ -220,6 +219,31 @@
   .mgh { display:flex; gap:22px; align-items:center; flex-wrap:wrap; } .mga { width:260px; height:146px; flex:none; position:relative; } .gc.dv .acts { margin-top:10px; } .sep2 { border-top:1px solid var(--line); margin:18px 0; }
   .empty-home { text-align:center; padding:70px 20px; } .empty-home h2 { color:var(--strong); font-size:24px; margin-bottom:8px; } .empty-home p { color:var(--dim); margin-bottom:20px; }
 
+  /* ---------- friends strip (home) ---------- */
+  .fstrip { margin-bottom:22px; }
+  .fs-head { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); }
+  .fs-head b { font-size:11px; font-weight:700; letter-spacing:.16em; color:var(--dim); }
+  .fs-head a { font-size:12px; color:var(--link); font-weight:600; } .fs-head a:hover { color:var(--strong); }
+  .fs-row { display:flex; gap:4px; padding:14px 12px; overflow-x:auto; scrollbar-width:thin; }
+  .fs-item { flex:0 0 auto; width:92px; display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; padding:8px 4px; transition:background .15s; }
+  .fs-item:hover { background:var(--hover); }
+  .fs-item .fav { position:relative; line-height:0; }
+  .fs-item .fav .av { width:54px; height:54px; }
+  .fs-dot { position:absolute; right:-2px; bottom:-2px; width:13px; height:13px; border:2px solid var(--panel); background:#22c55e; box-shadow:0 0 6px #22c55e; }
+  .fs-dot.off { background:var(--dim); box-shadow:none; }
+  .fs-item b { max-width:86px; font-size:12px; color:var(--strong); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fs-item small { max-width:86px; font-size:10px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fs-item small.on { color:#22c55e; }
+  .fs-empty { padding:16px; color:var(--dim); font-size:13px; }
+  .fs-empty a { color:var(--link); font-weight:600; } .fs-empty a:hover { color:var(--strong); }
+
+  /* ---------- profile meta ---------- */
+  .prof-3d { flex:0 0 300px; max-width:100%; }
+  .prof-info { flex:1; min-width:260px; }
+  .meta-list { display:flex; flex-direction:column; gap:6px; margin:10px 0 4px; color:var(--dim); font-size:13.5px; }
+  .meta-list b { color:var(--soft); font-weight:600; }
+  .meta-list .ic2 { width:15px; height:15px; vertical-align:-2px; margin-right:7px; opacity:.75; }
+
   /* ---------- footer ---------- */
   .site-foot { border-top:1px solid var(--line); background:var(--panel3); background:color-mix(in srgb, var(--bg) 70%, transparent); }
   .site-foot .wrap { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; padding-top:22px; padding-bottom:22px; color:var(--dim); font-size:12px; }
@@ -243,20 +267,20 @@
   <div class="user" id="me"></div>
 </div></header>
 <main><div class="wrap" id="view"></div></main>
-<footer class="site-foot"><div class="wrap"><div><b>VOXELY</b>© <span id="yr"></span> Voxely. Dibuat untuk para pembuat game.</div><nav><a href="#/">Games</a><a href="#/forum">Forum</a><a href="#/marketplace">Marketplace</a><a href="#/dev">Developer Portal</a></nav></div></footer>
+<footer class="site-foot"><div class="wrap"><div><b>VOXELY</b>© <span id="yr"></span> Voxely. Built for game creators.</div><nav><a href="#/">Games</a><a href="#/forum">Forum</a><a href="#/marketplace">Marketplace</a><a href="#/dev">Developer Portal</a></nav></div></footer>
 
 <div class="veil" id="login"><div class="box">
   <div class="bm"><svg viewBox="0 0 64 64" aria-hidden="true"><polygon points="32,5 57,19 32,33 7,19" fill="#5f9bff"/><polygon points="7,19 32,33 32,60 7,46" fill="#1463ff"/><polygon points="57,19 32,33 32,60 57,46" fill="#0a3fb8"/></svg>VOXELY</div>
-  <h3>Masuk ke Voxely</h3>
-  <p>Masuk dengan Google, atau langsung main sebagai guest tanpa daftar.</p>
-  <button class="btn gbtn" id="googleBtn"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Lanjut dengan Google</button><div class="or">atau sebagai guest</div>
-  <input id="nick" maxlength="16" placeholder="Nama kamu (boleh kosong = acak)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
-  <button class="btn" id="guestBtn">Lanjut sebagai Guest</button>
+  <h3>Log in to Voxely</h3>
+  <p>Sign in with Google, or jump straight in as a guest — no signup needed.</p>
+  <button class="btn gbtn" id="googleBtn"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google</button><div class="or">or continue as a guest</div>
+  <input id="nick" maxlength="16" placeholder="Your name (leave blank for random)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
+  <button class="btn" id="guestBtn">Continue as Guest</button>
 </div></div>
 <div class="veil" id="launch"><div class="box">
   <h3 id="lTitle"></h3><p id="lText"></p>
   <button class="btn" id="lDl" style="display:none;margin-bottom:8px" onclick="download()">Download Voxely Client</button>
-  <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Tutup</button>
+  <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Close</button>
 </div></div>
 <div id="toast"></div>
 
@@ -277,7 +301,7 @@ const E = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>
 const tags = g => g.tags.map(t => `<span class="tag">${E(t)}</span>`).join('');
 const total = () => games.reduce((n, g) => n + g.online, 0);
 function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1800); }
-function soon() { toast('Segera hadir'); }
+function soon() { toast('Coming soon'); }
 function verifiedBadge(u) { return Number(u?.followers || 0) >= 1000 ? '<img class="verified" src="/assets/images/checkmark.svg" alt="Verified" title="Verified creator · 1,000+ followers">' : ''; }
 function avatar(u, n) {
   const st = `width:${n}px;height:${n}px;flex:none`;
@@ -294,15 +318,17 @@ function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small J
       c.getContext('2d').drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
       URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg', 0.85));
     };
-    img.onerror = () => alert('File bukan gambar yang valid');
+    img.onerror = () => alert('That file is not a valid image');
     img.src = url;
   };
   inp.click();
 }
 
 async function guestLogin() {
-  const r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) });
-  const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Gagal login'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
+  let r;
+  try { r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) }); }
+  catch (e) { $('#loginErr').textContent = 'Could not reach the server'; return; }
+  const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Login failed'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
   $('#login').classList.remove('on'); renderMe(); route(); syncOutfit();
 }
 function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
@@ -327,27 +353,50 @@ function drawCar() {
     <div class="r"><span class="kick">FEATURED</span><h2>${E(g.title)}</h2><div class="meta">${E(g.tagline)}</div><div class="chips">${tags(g)}</div>
     <div class="onl">${g.online ? '<span class="live"></span>' : ''}${g.online} players online</div>
     <div class="shots">${(g.thumb ? [0] : [1, 2, 3]).map(n => art(g, n)).map(a => `<div>${a}</div>`).join('')}</div>
-    <a class="btn" href="#/game/${g.id}">Lihat game</a></div>`;
+    <a class="btn" href="#/game/${g.id}">View Game</a></div>`;
   $('#dots').innerHTML = games.map((_, i) => `<b class="${i === idx ? 'on' : ''}" onclick="idx=${i};drawCar()"></b>`).join('');
 }
 function go(d) { idx = (idx + d + games.length) % games.length; drawCar(); }
 
+/* ---------- online status helpers ---------- */
+const ONLINE_WINDOW = 2 * 60 * 1000; // a user counts as "online" for 2 minutes after their last request
+const isOnline = p => !!p.game || (Date.now() - (p.lastSeen || 0) < ONLINE_WINDOW);
+const statusHTML = p => p.game ? '<span class="live"></span>Playing: ' + E(p.game) : isOnline(p) ? '<span class="live"></span>Online' : 'Last online ' + ago(p.lastSeen || 0);
+const statusShort = p => p.game ? 'Playing' : isOnline(p) ? 'Online' : ago(p.lastSeen || 0);
+
+async function loadFriendsStrip() {
+  const host = $('#friendsStrip'); if (!host) return;
+  let d = null;
+  try { d = await gj('/api/friends'); } catch (e) {}
+  if (!d || !host.isConnected) return host.remove();
+  if (!d.friends.length) {
+    host.innerHTML = `<div class="fs-head"><b>FRIENDS</b><a href="#/people">Find friends</a></div>
+      <div class="fs-empty">You haven't added any friends yet. Open <a href="#/people">People</a>, visit a profile and click <b>Add Friend</b> to see them here.</div>`;
+    return;
+  }
+  const sorted = [...d.friends].sort((a, b) => (!!b.game - !!a.game) || (isOnline(b) - isOnline(a)) || (b.lastSeen || 0) - (a.lastSeen || 0));
+  host.innerHTML = `<div class="fs-head"><b>FRIENDS · ${d.friends.length}</b><a href="#/friends">View all</a></div>
+    <div class="fs-row">${sorted.map(p => `<a class="fs-item" href="#/user/${p.uid}" title="${E(p.name)} — ${p.game ? 'Playing ' + E(p.game) : isOnline(p) ? 'Online' : 'Last online ' + ago(p.lastSeen || 0)}">
+      <span class="fav">${avatar(p, 54)}<i class="fs-dot ${p.game || isOnline(p) ? '' : 'off'}"></i></span>
+      <b>${E(p.name)}</b><small class="${p.game || isOnline(p) ? 'on' : ''}">${statusShort(p)}</small></a>`).join('')}</div>`;
+}
+
 function home() {
   if (!games.length) { // nothing published yet: show a friendly empty state instead of crashing
-    $('#view').innerHTML = `<div class="card empty-home"><h2>Belum ada game</h2><p>Jadilah yang pertama menerbitkan game di Voxely.</p><a class="btn" href="#/dev">Buka Developer Portal</a></div>`;
+    $('#view').innerHTML = `<div class="card empty-home"><h2>No games yet</h2><p>Be the first to publish a game on Voxely.</p><a class="btn" href="#/dev">Open Developer Portal</a></div>`;
     return;
   }
   const top = [...games].sort((a, b) => b.online - a.online)[0];
-  $('#view').innerHTML = `<span class="label">FEATURED &amp; RECOMMENDED</span>
+  $('#view').innerHTML = `<div class="card fstrip" id="friendsStrip"></div><span class="label">FEATURED &amp; RECOMMENDED</span>
     <div class="cols"><div><div class="car" id="car"></div><div class="dots" id="dots"></div></div>
     <div class="side">
       <div class="card trend"><h4>TRENDING NOW</h4><a href="#/game/${top.id}">${art(top)}<div class="in"><b>${E(top.title)}</b><small>${top.online} online</small></div></a></div>
       <div class="card act"><h4>COMMUNITY ACTIVITY</h4><div class="in">${spark()}<div class="n">${total()}<small>GAMERS ONLINE</small></div></div>
-      <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} game sedang aktif</div></div>
+      <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} games live now</div></div>
     </div></div>
     <h3 class="sec">ALL GAMES</h3>
     <div class="grid">${games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.online ? '<span class="live"></span>' : ''}${g.online} online · Free</small></div></a>`).join('')}</div>`;
-  idx = Math.min(idx, games.length - 1); drawCar();
+  idx = Math.min(idx, games.length - 1); drawCar(); loadFriendsStrip();
   timer = setInterval(() => $('#car') && go(1), 6000);
 }
 
@@ -357,12 +406,12 @@ function gamePage(id) {
     <div class="gmain">${art(g)}<div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
       <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>VISITS</dt><dd>${g.visits || 0}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
     <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
-    <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Main langsung dari browser HP atau gunakan Voxely Client di PC. <a onclick="download()">Download Voxely Client</a> tersedia untuk desktop.</div><div id="servers"></div><div id="reviews"></div>`;
-  rvDraft = null; loadServers(id); loadReviews(id);
+    <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Play straight from your mobile browser, or use the Voxely Client on your PC. <a onclick="download()">Download Voxely Client</a> is available for desktop.</div><div id="servers"></div><div id="gameBadges"></div><div id="reviews"></div>`;
+  rvDraft = null; loadServers(id); loadGameBadges(id); loadReviews(id);
 }
 
 function download() {
-  if (!VOXELY.download) return alert('Link download belum diatur (CLIENT_DOWNLOAD_URL di Vercel).');
+  if (!VOXELY.download) return alert('The download link is not configured yet (set CLIENT_DOWNLOAD_URL on Vercel).');
   location.href = VOXELY.download;
 }
 function show(title, text, dl) {
@@ -373,26 +422,26 @@ async function play(id, room) {
   const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
   if (!ok) return logout();
   if (mobileGame) {
-    show('Membuka Voxely…', 'Game berjalan langsung di browser HP.', false);
+    show('Launching Voxely…', 'The game runs right in your mobile browser.', false);
     location.href = `/game/?game=${encodeURIComponent(id)}&room=${encodeURIComponent(room || '')}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`;
     return;
   }
-  show('Membuka Voxely Client…', 'Jika browser bertanya, pilih "Open Voxely Client".', false);
+  show('Launching Voxely Client…', 'If your browser asks, choose "Open Voxely Client".', false);
   location.href = `voxely://play?game=${id}&room=${room || ''}&token=${session.token}&server=${encodeURIComponent(S)}`;
   setTimeout(() => {
     if (document.hasFocus() && document.visibilityState === 'visible')
-      show('Client belum terpasang', 'Download dan install Voxely Client dulu, lalu klik Play lagi.', true);
+      show('Client not installed', 'Download and install the Voxely Client first, then click Play again.', true);
     else $('#launch').classList.remove('on');
   }, 2500);
 }
 
 const THEMES = {
-  'blue-dark': { n: "Biru Gelap", d: "Default", l: 0, v: ["#04060b", "#0a0f1a", "#071127", "#050913", "#0d1524", "#101c33", "#0b1428", "#1b2a4a", "#15233f", "#1463ff", "#0a3fb8", "#3a82ff", "#6fa8ff", "#e6edf7", "#7d8aa3", "#b6c2d9", "#ffffff", "#ffffff", "#0f2a5c", "#0a1c3d"] },
-  'red-dark': { n: "Merah Gelap", d: "", l: 0, v: ["#0b0507", "#150b0e", "#1a0d11", "#0f0709", "#190d10", "#251318", "#1f1014", "#3b1b22", "#2e161b", "#e23b4b", "#a8212f", "#ff5a68", "#ff8a95", "#f3e7e8", "#a58a8d", "#d6bfc2", "#ffffff", "#ffffff", "#4a1219", "#2b0a0e"] },
-  'ayu-dark': { n: "Ayu Gelap", d: "", l: 0, v: ["#0b0e14", "#11151c", "#0d1017", "#0a0d12", "#0e1218", "#171c26", "#161b24", "#232a36", "#232a36", "#ff8f40", "#cc6f26", "#ffa769", "#ffb454", "#bfbdb6", "#6c7380", "#a0a6b2", "#f0eee8", "#0b0e14", "#2a1d10", "#1a1209"] },
-  'blue-light': { n: "Biru Terang", d: "", l: 1, v: ["#eef3fb", "#ffffff", "#e6edf8", "#ffffff", "#f5f8fd", "#e8f0fc", "#dbe5f4", "#dfe7f4", "#cfd9ea", "#1463ff", "#0a3fb8", "#3a82ff", "#1352d6", "#172033", "#5c6b85", "#3a4863", "#0b1530", "#ffffff", "#dbe8ff", "#c5d9fb"] },
-  'red-light': { n: "Merah Terang", d: "", l: 1, v: ["#faf2f2", "#ffffff", "#f6e6e7", "#ffffff", "#fcf6f6", "#f9e8e9", "#f0dcdd", "#f2dfe0", "#e7cfd1", "#d62839", "#a31d2c", "#ec4757", "#b3202f", "#2a1416", "#8a6468", "#5a3a3d", "#1f0c0e", "#ffffff", "#fbdfe2", "#f4c9ce"] },
-  'ayu-light': { n: "Ayu Terang", d: "", l: 1, v: ["#fafafa", "#ffffff", "#f1f1f2", "#ffffff", "#f7f7f8", "#fdeedd", "#e9e9ea", "#ececed", "#dcdddf", "#fa8d3e", "#d9701f", "#ffa45e", "#c4600f", "#3d4148", "#8a9199", "#5c6166", "#1e2227", "#1f1306", "#ffe9d3", "#fcd9b6"] }
+  'blue-dark': { n: "Dark Blue", d: "Default", l: 0, v: ["#04060b", "#0a0f1a", "#071127", "#050913", "#0d1524", "#101c33", "#0b1428", "#1b2a4a", "#15233f", "#1463ff", "#0a3fb8", "#3a82ff", "#6fa8ff", "#e6edf7", "#7d8aa3", "#b6c2d9", "#ffffff", "#ffffff", "#0f2a5c", "#0a1c3d"] },
+  'red-dark': { n: "Dark Red", d: "", l: 0, v: ["#0b0507", "#150b0e", "#1a0d11", "#0f0709", "#190d10", "#251318", "#1f1014", "#3b1b22", "#2e161b", "#e23b4b", "#a8212f", "#ff5a68", "#ff8a95", "#f3e7e8", "#a58a8d", "#d6bfc2", "#ffffff", "#ffffff", "#4a1219", "#2b0a0e"] },
+  'ayu-dark': { n: "Dark Amber", d: "", l: 0, v: ["#0b0e14", "#11151c", "#0d1017", "#0a0d12", "#0e1218", "#171c26", "#161b24", "#232a36", "#232a36", "#ff8f40", "#cc6f26", "#ffa769", "#ffb454", "#bfbdb6", "#6c7380", "#a0a6b2", "#f0eee8", "#0b0e14", "#2a1d10", "#1a1209"] },
+  'blue-light': { n: "Light Blue", d: "", l: 1, v: ["#eef3fb", "#ffffff", "#e6edf8", "#ffffff", "#f5f8fd", "#e8f0fc", "#dbe5f4", "#dfe7f4", "#cfd9ea", "#1463ff", "#0a3fb8", "#3a82ff", "#1352d6", "#172033", "#5c6b85", "#3a4863", "#0b1530", "#ffffff", "#dbe8ff", "#c5d9fb"] },
+  'red-light': { n: "Light Red", d: "", l: 1, v: ["#faf2f2", "#ffffff", "#f6e6e7", "#ffffff", "#fcf6f6", "#f9e8e9", "#f0dcdd", "#f2dfe0", "#e7cfd1", "#d62839", "#a31d2c", "#ec4757", "#b3202f", "#2a1416", "#8a6468", "#5a3a3d", "#1f0c0e", "#ffffff", "#fbdfe2", "#f4c9ce"] },
+  'ayu-light': { n: "Light Amber", d: "", l: 1, v: ["#fafafa", "#ffffff", "#f1f1f2", "#ffffff", "#f7f7f8", "#fdeedd", "#e9e9ea", "#ececed", "#dcdddf", "#fa8d3e", "#d9701f", "#ffa45e", "#c4600f", "#3d4148", "#8a9199", "#5c6166", "#1e2227", "#1f1306", "#ffe9d3", "#fcd9b6"] }
 };
 const TK = ["--bg", "--panel", "--panel3", "--input", "--row2", "--hover", "--track", "--alt", "--line", "--blue", "--blue2", "--blue-hover", "--link", "--text", "--dim", "--soft", "--strong", "--on", "--notice1", "--notice2"];
 function applyTheme(id) {
@@ -403,17 +452,17 @@ function applyTheme(id) {
 }
 function settingsPage() {
   let cur = 'blue-dark'; try { cur = JSON.parse(localStorage.getItem('voxelyTheme')).id || cur; } catch (e) {}
-  const card = ([id, t]) => `<button class="thm ${id === cur ? 'on' : ''}" onclick="applyTheme('${id}');settingsPage()"><span class="sw3">${[0, 1, 9, 13].map(i => `<i style="background:${t.v[i]}"></i>`).join('')}</span><b>${t.n}</b><small>${t.d || (t.l ? 'Terang' : 'Gelap')}</small></button>`;
-  $('#view').innerHTML = `<span class="label">SETTINGS</span><div class="card pad" style="max-width:780px"><h3 class="ft">Tema tampilan</h3>
-    <div class="hint">Pilih tema warna untuk website Voxely. Pilihanmu tersimpan di browser ini.</div>
+  const card = ([id, t]) => `<button class="thm ${id === cur ? 'on' : ''}" onclick="applyTheme('${id}');settingsPage()"><span class="sw3">${[0, 1, 9, 13].map(i => `<i style="background:${t.v[i]}"></i>`).join('')}</span><b>${t.n}</b><small>${t.d || (t.l ? 'Light' : 'Dark')}</small></button>`;
+  $('#view').innerHTML = `<span class="label">SETTINGS</span><div class="card pad" style="max-width:780px"><h3 class="ft">Appearance</h3>
+    <div class="hint">Choose a color theme for the Voxely website. Your choice is saved in this browser.</div>
     <div class="thmgrid">${Object.entries(THEMES).map(card).join('')}</div></div>`;
 }
 
 /* ---------- Avatar editor ---------- */
 const AVP = ['head', 'torso', 'armL', 'armR', 'legL', 'legR'];
-const AV_PARTS = [['all', 'Semua'], ['head', 'Kepala'], ['torso', 'Badan'], ['armL', 'Lengan kiri'], ['armR', 'Lengan kanan'], ['legL', 'Kaki kiri'], ['legR', 'Kaki kanan']];
-const AV_FACES = [['smile', 'Senyum'], ['cool', 'Keren'], ['wink', 'Kedip'], ['surprised', 'Kaget'], ['sad', 'Sedih'], ['angry', 'Marah']];
-const AV_HATS = [['none', 'Tanpa topi'], ['cap', 'Topi'], ['tophat', 'Topi tinggi'], ['crown', 'Mahkota'], ['headphones', 'Headphone'], ['horns', 'Tanduk']];
+const AV_PARTS = [['all', 'All'], ['head', 'Head'], ['torso', 'Torso'], ['armL', 'Left Arm'], ['armR', 'Right Arm'], ['legL', 'Left Leg'], ['legR', 'Right Leg']];
+const AV_FACES = [['smile', 'Smile'], ['cool', 'Cool'], ['wink', 'Wink'], ['surprised', 'Surprised'], ['sad', 'Sad'], ['angry', 'Angry']];
+const AV_HATS = [['none', 'No Hat'], ['cap', 'Cap'], ['tophat', 'Top Hat'], ['crown', 'Crown'], ['headphones', 'Headphones'], ['horns', 'Horns']];
 const AV_PAL = ['#f5cd2f', '#f2c14e', '#e6eaf2', '#ffffff', '#9ca3af', '#374151', '#111111', '#0d69ac', '#1463ff', '#06b6d4', '#a4bd47', '#22c55e', '#2e7d32', '#d62839', '#ef4444', '#f97316', '#ec4899', '#8b5cf6', '#8b5a2b', '#c68642', '#e0ac69', '#f1c27d', '#ffdbac', '#614335'];
 const avBase = c => ({ skin: Object.fromEntries(AVP.map(k => [k, c])), face: 'smile', hat: 'none', hatColor: '#e63946' });
 const AV_PRESETS = {
@@ -464,12 +513,12 @@ function drawAvatar(cv, o) { // front view, drawn on a 320x400 grid
   g.fill(); g.stroke();
   drawFace(g, o.face, cx, hy + hh / 2, hh); drawHat(g, o.hat, o.hatColor, cx, hy);
 }
-function pickTshirt() { const i=document.createElement('input'); i.type='file'; i.accept='image/png,image/jpeg,image/webp'; i.onchange=()=>{const f=i.files[0]; if(!f||f.size>120*1024)return alert('File maksimal 120 KB'); const r=new FileReader(); r.onload=()=>{outfit.tshirt=r.result; saveOutfit(); avatarPage();}; r.readAsDataURL(f);}; i.click(); }
+function pickTshirt() { const i=document.createElement('input'); i.type='file'; i.accept='image/png,image/jpeg,image/webp'; i.onchange=()=>{const f=i.files[0]; if(!f||f.size>120*1024)return alert('File must be 120 KB or smaller'); const r=new FileReader(); r.onload=()=>{outfit.tshirt=r.result; saveOutfit(); avatarPage();}; r.readAsDataURL(f);}; i.click(); }
 function removeTshirt() { outfit.tshirt=null; saveOutfit(); avatarPage(); }
 function saveOutfit() {
-  localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); drawAvatar($('#avc'), outfit); update3D();
+  localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); drawAvatar($('#avc'), outfit); update3D(outfit);
   clearTimeout(avTimer);
-  avTimer = setTimeout(() => { if (session) rq('POST', '/api/outfit', outfit).then(r => r.ok && toast('Avatar tersimpan')).catch(() => {}); }, 700);
+  avTimer = setTimeout(() => { if (session) rq('POST', '/api/outfit', outfit).then(r => r.ok && toast('Avatar saved')).catch(() => {}); }, 700);
 }
 async function syncOutfit() { // local copy wins; otherwise pull the one saved on the server
   if (!session) return;
@@ -483,24 +532,24 @@ async function syncOutfit() { // local copy wins; otherwise pull the one saved o
 const swatches = (cur, fn) => `<div class="avpal">${AV_PAL.map(c => `<button class="swb ${c.toLowerCase() === String(cur).toLowerCase() ? 'on' : ''}" style="background:${c}" onclick="${fn}('${c}')"></button>`).join('')}<input type="color" value="${cur}" oninput="${fn}(this.value,true)"></div>`;
 function avatarPage() {
   $('#view').innerHTML = `<span class="label">AVATAR</span><div class="avgrid">
-    <div class="card pad avprev"><div class="av3d" id="av3d"><span class="av3-load">Memuat pratinjau 3D…</span><div class="av3-hint">TARIK UNTUK MEMUTAR · SCROLL UNTUK ZOOM</div></div><canvas id="avc" width="320" height="400" style="display:none"></canvas>
+    <div class="card pad avprev"><div class="av3d" id="av3d"><span class="av3-load">Loading 3D preview…</span><div class="av3-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div></div><canvas id="avc" width="320" height="400" style="display:none"></canvas>
       <div class="av3-tools" id="av3tools">${av3Tools()}</div>
-      <div class="acts" style="justify-content:center"><button class="btn sm alt" onclick="avRandom()">Acak</button><button class="btn sm alt" onclick="avPreset('Default')">Reset</button></div>
+      <div class="acts" style="justify-content:center"><button class="btn sm alt" onclick="avRandom()">Randomize</button><button class="btn sm alt" onclick="avPreset('Default')">Reset</button></div>
       <label>Preset</label><div class="tpl" style="margin:6px 0 0">${Object.keys(AV_PRESETS).map(n => `<button class="vb" onclick="avPreset('${n}')">${n}</button>`).join('')}</div></div>
-    <div class="card pad"><div class="avtabs">${[['warna', 'Warna tubuh'], ['wajah', 'Wajah'], ['topi', 'Topi']].map(([k, n]) => `<button class="vb ${avTab === k ? 'on' : ''}" onclick="avTab='${k}';avatarPage()">${n}</button>`).join('')}</div>
-      <div id="avbody"></div><div class="shirt-upload"><button class="btn sm alt" onclick="pickTshirt()">Upload T-shirt</button><button class="x" onclick="removeTshirt()">Hapus T-shirt</button><small style="color:var(--dim)">PNG/JPG/WEBP, maksimal 120 KB</small></div><div class="hint" style="margin-top:16px">Avatar tersimpan otomatis dan dipakai saat kamu bermain. Pemain lain melihatnya saat kamu masuk ke server.</div></div></div>`;
-  drawAvatar($('#avc'), outfit); drawAvBody(); mount3D();
+    <div class="card pad"><div class="avtabs">${[['warna', 'Body Colors'], ['wajah', 'Face'], ['topi', 'Hat']].map(([k, n]) => `<button class="vb ${avTab === k ? 'on' : ''}" onclick="avTab='${k}';avatarPage()">${n}</button>`).join('')}</div>
+      <div id="avbody"></div><div class="shirt-upload"><button class="btn sm alt" onclick="pickTshirt()">Upload T-shirt</button><button class="x" onclick="removeTshirt()">Remove T-shirt</button><small style="color:var(--dim)">PNG/JPG/WEBP, max 120 KB</small></div><div class="hint" style="margin-top:16px">Your avatar saves automatically and is used whenever you play. Other players see it when you join a server.</div></div></div>`;
+  drawAvatar($('#avc'), outfit); drawAvBody(); mount3D('#av3d', outfit, { tools: true });
 }
 function drawAvBody() {
   const b = $('#avbody'); if (!b) return;
   if (avTab === 'warna') {
     const cur = avPart === 'all' ? outfit.skin.head : outfit.skin[avPart];
-    b.innerHTML = `<label>Bagian tubuh</label><div class="tpl" style="margin:6px 0 14px">${AV_PARTS.map(([k, n]) => `<button class="vb ${avPart === k ? 'on' : ''}" onclick="avPart='${k}';drawAvBody()">${n}</button>`).join('')}</div><label>Warna</label>${swatches(cur, 'avColor')}`;
+    b.innerHTML = `<label>Body part</label><div class="tpl" style="margin:6px 0 14px">${AV_PARTS.map(([k, n]) => `<button class="vb ${avPart === k ? 'on' : ''}" onclick="avPart='${k}';drawAvBody()">${n}</button>`).join('')}</div><label>Color</label>${swatches(cur, 'avColor')}`;
   } else if (avTab === 'wajah') {
     b.innerHTML = `<div class="avtiles">${AV_FACES.map(([k, n]) => `<button class="tile ${outfit.face === k ? 'on' : ''}" onclick="avFace('${k}')"><canvas width="90" height="90" data-face="${k}"></canvas><small>${n}</small></button>`).join('')}</div>`;
     b.querySelectorAll('canvas').forEach(c => { const g = c.getContext('2d'); g.fillStyle = outfit.skin.head; g.fillRect(0, 0, 90, 90); drawFace(g, c.dataset.face, 45, 45, 75); });
   } else {
-    b.innerHTML = `<div class="avtiles">${AV_HATS.map(([k, n]) => `<button class="tile ${outfit.hat === k ? 'on' : ''}" onclick="avHat('${k}')"><canvas width="90" height="90" data-hat="${k}"></canvas><small>${n}</small></button>`).join('')}</div>${outfit.hat !== 'none' ? `<label style="margin-top:14px">Warna topi</label>${swatches(outfit.hatColor, 'avHatColor')}` : ''}`;
+    b.innerHTML = `<div class="avtiles">${AV_HATS.map(([k, n]) => `<button class="tile ${outfit.hat === k ? 'on' : ''}" onclick="avHat('${k}')"><canvas width="90" height="90" data-hat="${k}"></canvas><small>${n}</small></button>`).join('')}</div>${outfit.hat !== 'none' ? `<label style="margin-top:14px">Hat color</label>${swatches(outfit.hatColor, 'avHatColor')}` : ''}`;
     b.querySelectorAll('canvas').forEach(c => {
       const g = c.getContext('2d'); g.fillStyle = outfit.skin.head; g.fillRect(45 - 18, 62, 36, 28);
       g.save(); g.scale(0.55, 0.55); drawHat(g, c.dataset.hat, outfit.hatColor, 45 / 0.55, 62 / 0.55); g.restore();
@@ -549,7 +598,7 @@ function shirtTexture(src, color) { // torso colour with the uploaded T-shirt dr
   });
 }
 function buildAvatar3D(o) {
-  const T = THREE, sk = (o && o.skin) || {}, g = new T.Group(), limbs = {};
+  const T = THREE; o = o || {}; const sk = (o && o.skin) || {}, g = new T.Group(), limbs = {};
   const lam = c => new T.MeshLambertMaterial({ color: new T.Color(/^#[0-9a-f]{6}$/i.test(c) ? c : '#e6eaf2') });
   const edged = m => { m.add(new T.LineSegments(new T.EdgesGeometry(m.geometry), new T.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32 }))); return m; };
   const limb = (key, x, y, color) => { // group pivots at the hip / shoulder so it can swing
@@ -575,10 +624,10 @@ function buildAvatar3D(o) {
   return { group: g, limbs };
 }
 function disposeTree(o) { o.traverse(n => { if (n.geometry) n.geometry.dispose(); [].concat(n.material || []).forEach(m => m.dispose()); }); }
-function update3D() {
+function update3D(o) {
   const a = av3; if (!a) return;
   if (a.model) { a.pivot.remove(a.model); disposeTree(a.model); }
-  const b = buildAvatar3D(outfit); a.model = b.group; a.limbs = b.limbs; a.pivot.add(b.group);
+  const b = buildAvatar3D(o || outfit); a.model = b.group; a.limbs = b.limbs; a.pivot.add(b.group);
   if (!a.walk) av3Pose(0);
 }
 function av3Pose(s) { const L = av3 && av3.limbs; if (!L) return; L.legL.rotation.x = s; L.legR.rotation.x = -s; L.armL.rotation.x = -s; L.armR.rotation.x = s; }
@@ -616,24 +665,28 @@ function av3Frame(t) {
   if (a.walk) { a.ph += dt * 6; av3Pose(Math.sin(a.ph) * 0.75); }
   a.r.render(a.scene, a.cam);
 }
-async function mount3D() {
-  const host = $('#av3d'); if (!host) return;
+async function mount3D(hostSel, of, opts) { // mount the shared 3D avatar preview into any host element
+  const host = typeof hostSel === 'string' ? $(hostSel) : hostSel; if (!host) return;
+  opts = opts || {};
   try {
     await loadThree();
     if (!host.isConnected) return;               // the page was re-rendered while three.js was loading
     if (!av3) init3D();
     const ld = host.querySelector('.av3-load'); if (ld) ld.remove();
     host.insertBefore(av3.canvas, host.firstChild); // one WebGL context is reused across re-renders
-    resize3D(); update3D();
+    if (!av3.drag) { av3.pivot.rotation.y = 0.35; av3.cam.position.set(0, 3.7, 14.5); } // fresh 3/4 view for each page
+    resize3D(); update3D(of);
+    if (opts.tools === false) av3.auto = true;   // profile previews just gently spin
     if (!av3.running) { av3.running = true; av3.last = performance.now(); requestAnimationFrame(av3Frame); }
   } catch (e) { // no WebGL / offline: fall back to the flat 2D preview
     console.warn('3D preview unavailable:', e); av3 = null;
-    host.style.display = 'none'; const c2 = $('#avc'); if (c2) c2.style.display = 'block'; const t = $('#av3tools'); if (t) t.remove();
+    host.innerHTML = ''; const c2 = document.createElement('canvas'); c2.width = 320; c2.height = 400; c2.style.width = '100%'; c2.style.display = 'block';
+    host.appendChild(c2); drawAvatar(c2, of || outfit);
   }
 }
 function av3Tools() {
   const on = (k, d) => (av3 ? av3[k] : d) ? 'on' : '';
-  return `<button class="vb ${on('auto', true)}" id="t3auto" onclick="av3Toggle('auto')">Putar otomatis</button><button class="vb" onclick="av3View(0)">Depan</button><button class="vb" onclick="av3View(Math.PI)">Belakang</button><button class="vb ${on('walk', false)}" id="t3walk" onclick="av3Toggle('walk')">Jalan</button>`;
+  return `<button class="vb ${on('auto', true)}" id="t3auto" onclick="av3Toggle('auto')">Auto-rotate</button><button class="vb" onclick="av3View(0)">Front</button><button class="vb" onclick="av3View(Math.PI)">Back</button><button class="vb ${on('walk', false)}" id="t3walk" onclick="av3Toggle('walk')">Walk</button>`;
 }
 function av3Toggle(k) {
   if (!av3) return; av3[k] = !av3[k];
@@ -644,15 +697,15 @@ function av3View(rad) { if (!av3) return; av3.auto = false; av3.pivot.rotation.y
 
 /* ---------- Free Marketplace ---------- */
 const MARKET_ITEMS = [
-  { id:'hat-cap-blue', name:'Skyline Cap', type:'hat', value:'cap', color:'#1463ff', desc:'Topi biru klasik untuk avatar harian.' },
-  { id:'hat-crown-gold', name:'Starter Crown', type:'hat', value:'crown', color:'#ffd700', desc:'Mahkota emas gratis untuk tampil standout.' },
-  { id:'hat-headphones', name:'Pulse Headphones', type:'hat', value:'headphones', color:'#8b5cf6', desc:'Headphone neon untuk sesi bermain panjang.' },
-  { id:'face-cool', name:'Cool Face', type:'face', value:'cool', color:'#06b6d4', desc:'Ekspresi santai dengan kacamata hitam.' },
-  { id:'face-wink', name:'Wink Face', type:'face', value:'wink', color:'#ec4899', desc:'Ekspresi kedip yang playful.' },
-  { id:'skin-ocean', name:'Ocean Suit', type:'skin', value:'#0d69ac', color:'#0d69ac', desc:'Warna badan biru ocean untuk karakter.' },
-  { id:'skin-lime', name:'Lime Suit', type:'skin', value:'#a4bd47', color:'#a4bd47', desc:'Warna lime cerah untuk avatar.' },
-  { id:'bundle-noob', name:'Classic Noob Bundle', type:'preset', value:'Noob', color:'#f5cd2f', desc:'Bundle starter warna kuning, biru, dan hijau.' },
-  { id:'bundle-ninja', name:'Midnight Ninja Bundle', type:'preset', value:'Ninja', color:'#1f2530', desc:'Bundle gelap dengan wajah keren.' }
+  { id:'hat-cap-blue', name:'Skyline Cap', type:'hat', value:'cap', color:'#1463ff', desc:'A classic blue cap for your everyday avatar.' },
+  { id:'hat-crown-gold', name:'Starter Crown', type:'hat', value:'crown', color:'#ffd700', desc:'A free golden crown to help you stand out.' },
+  { id:'hat-headphones', name:'Pulse Headphones', type:'hat', value:'headphones', color:'#8b5cf6', desc:'Neon headphones for long play sessions.' },
+  { id:'face-cool', name:'Cool Face', type:'face', value:'cool', color:'#06b6d4', desc:'A chill expression behind sunglasses.' },
+  { id:'face-wink', name:'Wink Face', type:'face', value:'wink', color:'#ec4899', desc:'A playful winking expression.' },
+  { id:'skin-ocean', name:'Ocean Suit', type:'skin', value:'#0d69ac', color:'#0d69ac', desc:'An ocean-blue body color for your character.' },
+  { id:'skin-lime', name:'Lime Suit', type:'skin', value:'#a4bd47', color:'#a4bd47', desc:'A bright lime color for your avatar.' },
+  { id:'bundle-noob', name:'Classic Noob Bundle', type:'preset', value:'Noob', color:'#f5cd2f', desc:'A starter bundle in yellow, blue and green.' },
+  { id:'bundle-ninja', name:'Midnight Ninja Bundle', type:'preset', value:'Ninja', color:'#1f2530', desc:'A dark bundle with a cool face.' }
 ];
 let marketFilter = 'all';
 function ownedMarket() { try { return new Set(JSON.parse(localStorage.getItem('voxelyMarketOwned') || '[]')); } catch (e) { return new Set(); } }
@@ -663,7 +716,7 @@ function marketPreview(item) {
 }
 function buyMarket(id) {
   const item=MARKET_ITEMS.find(x=>x.id===id); if(!item) return;
-  const owned=ownedMarket(); owned.add(id); saveMarketOwned(owned); equipMarket(item); toast(item.name + ' ditambahkan ke koleksi'); marketplacePage();
+  const owned=ownedMarket(); owned.add(id); saveMarketOwned(owned); equipMarket(item); toast(item.name + ' added to your collection'); marketplacePage();
 }
 function equipMarket(item) {
   if(item.type==='hat') { outfit.hat=item.value; outfit.hatColor=item.color; }
@@ -674,7 +727,7 @@ function equipMarket(item) {
 }
 function marketplacePage() {
   const owned=ownedMarket(), list=MARKET_ITEMS.filter(x=>marketFilter==='all'||x.type===marketFilter);
-  $('#view').innerHTML=`<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Free items, pilih gaya kamu.</h1><p>Semua item di sini gratis. Klaim sekali, lalu langsung equip untuk dipakai di avatar dan game.</p></div><div class="market-filter">${[['all','Semua'],['hat','Topi'],['face','Wajah'],['skin','Warna'],['preset','Bundle']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div><div class="hint">Koleksi kamu: <b>${owned.size}</b> / ${MARKET_ITEMS.length} item gratis · outfit tersimpan otomatis di browser dan disinkronkan saat login.</div><div class="market-grid">${list.map(item=>{const has=owned.has(item.id);return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="112" height="140"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc)}</p><div class="market-meta"><span>FREE</span><span class="${has?'owned':''}">${has?'✓ Dimiliki':'Gratis'}</span></div><button class="btn ${has?'alt':''}" onclick="${has?`equipMarket(MARKET_ITEMS.find(x=>x.id==='${item.id}'));toast('Avatar diperbarui')`:`buyMarket('${item.id}')`} ">${has?'Equip':'Klaim gratis'}</button></div>`}).join('')}</div>`;
+  $('#view').innerHTML=`<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Free items — pick your style.</h1><p>Everything here is free. Claim an item once, then equip it instantly to wear it on your avatar and in games.</p></div><div class="market-filter">${[['all','All'],['hat','Hats'],['face','Faces'],['skin','Colors'],['preset','Bundles']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div><div class="hint">Your collection: <b>${owned.size}</b> / ${MARKET_ITEMS.length} free items · your outfit saves automatically in this browser and syncs when you log in.</div><div class="market-grid">${list.map(item=>{const has=owned.has(item.id);return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="112" height="140"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc)}</p><div class="market-meta"><span>FREE</span><span class="${has?'owned':''}">${has?'✓ Owned':'Free'}</span></div><button class="btn ${has?'alt':''}" onclick="${has?`equipMarket(MARKET_ITEMS.find(x=>x.id==='${item.id}'));toast('Avatar updated')`:`buyMarket('${item.id}')`} ">${has?'Equip':'Claim Free'}</button></div>`}).join('')}</div>`;
   list.forEach(marketPreview);
 }
 
@@ -701,7 +754,7 @@ async function rq(method, path, body) {
 async function gj(path) { const r = await fetch(S + path, { headers: { Authorization: 'Bearer ' + session.token } }); return r.ok ? r.json() : null; }
 
 /* ---------- Server list ---------- */
-const upt = s => s < 60 ? 'baru dimulai' : s < 3600 ? Math.floor(s / 60) + ' mnt' : Math.floor(s / 3600) + ' jam';
+const upt = s => s < 60 ? 'just started' : s < 3600 ? Math.floor(s / 60) + ' min' : Math.floor(s / 3600) + ' h';
 async function loadServers(id) {
   if (!$('#servers')) return;
   const r = await fetch(S + '/api/games/' + id + '/servers'); if (!r.ok || !$('#servers')) return;
@@ -710,9 +763,23 @@ async function loadServers(id) {
       <div class="sbar"><i style="width:${Math.min(100, x.players / x.max * 100)}%"></i></div>
       ${x.names.length ? `<small>${x.names.map(E).join(', ')}${x.players > x.names.length ? ' …' : ''}</small>` : ''}</div>
       <button class="btn sm" ${x.full ? 'disabled' : ''} onclick="play('${id}','${x.id}')">${x.full ? 'Full' : 'Join'}</button></div>`;
-  $('#servers').innerHTML = `<h3 class="ft" style="font-size:22px;margin:32px 0 12px">Servers <small style="color:var(--dim);font-size:13px;font-weight:400">${l.length} aktif</small> <a style="font-size:12px;font-weight:400;color:var(--link)" onclick="loadServers('${id}')">Refresh</a></h3>
-    <div class="card">${l.length ? l.map(row).join('') : '<div class="empty">Belum ada server aktif. Klik Play untuk memulai server baru.</div>'}
-      <div class="srv last"><small style="color:var(--dim)">Mau main di server sendiri?</small><button class="btn sm alt" onclick="play('${id}','new')">+ Buat server baru</button></div></div>`;
+  $('#servers').innerHTML = `<h3 class="ft" style="font-size:22px;margin:32px 0 12px">Servers <small style="color:var(--dim);font-size:13px;font-weight:400">${l.length} active</small> <a style="font-size:12px;font-weight:400;color:var(--link)" onclick="loadServers('${id}')">Refresh</a></h3>
+    <div class="card">${l.length ? l.map(row).join('') : '<div class="empty">No active servers yet. Click Play to start a new one.</div>'}
+      <div class="srv last"><small style="color:var(--dim)">Want a server of your own?</small><button class="btn sm alt" onclick="play('${id}','new')">+ Create new server</button></div></div>`;
+}
+
+/* ---------- Game badges (public view on the game page) ---------- */
+const trigText = b => b.trigger === 'playtime' ? 'Play for ' + b.value + ' minute' + (Number(b.value) === 1 ? '' : 's') : b.trigger === 'touch' ? 'Touch the part "' + E(b.value) + '"' : 'Join the game for the first time';
+async function loadGameBadges(id) {
+  const host = $('#gameBadges'); if (!host) return;
+  let d = null;
+  try { d = await (await fetch(S + '/api/games/' + id + '/badges')).json(); } catch (e) {}
+  if (!d || !d.badges || !d.badges.length || !host.isConnected) return host.remove();
+  let mine = null;
+  try { mine = await gj('/api/me/badges'); } catch (e) {}
+  const mineIds = new Set(((mine && mine.badges) || []).map(b => b.id));
+  host.innerHTML = `<h3 class="ft" style="font-size:22px;margin:32px 0 12px">Badges <small style="color:var(--dim);font-size:13px;font-weight:400">${d.total} collectible</small></h3>
+    <div class="badge-grid" style="margin-bottom:8px">${d.badges.map(b => badgeItem({ ...b, description: (mineIds.has(b.id) ? '✓ You earned this badge. ' : '') + (b.description || trigText(b)) })).join('')}</div>`;
 }
 
 /* ---------- Reviews ---------- */
@@ -728,12 +795,12 @@ async function loadReviews(id) {
   if (!r.ok || !$('#reviews')) return;
   const d = await r.json();
   if (rvDraft === null && d.mine) rvUp = d.mine.up;
-  const form = d.isOwner ? '<div class="notice">Kamu tidak bisa mereview game buatanmu sendiri.</div>' : `<div class="rform"><div class="tg">
+  const form = d.isOwner ? '<div class="notice">You cannot review your own game.</div>' : `<div class="rform"><div class="tg">
       <button id="rvY" class="vb ${rvUp ? 'on' : ''}" onclick="setUp(true)">${IC.up} Recommend</button>
       <button id="rvN" class="vb ${rvUp ? '' : 'on'}" onclick="setUp(false)">${IC.down} Not Recommend</button></div>
-      <textarea id="rvText" maxlength="500" placeholder="Tulis review kamu…" oninput="rvDraft=this.value">${E(rvDraft ?? d.mine?.text ?? '')}</textarea>
+      <textarea id="rvText" maxlength="500" placeholder="Write your review…" oninput="rvDraft=this.value">${E(rvDraft ?? d.mine?.text ?? '')}</textarea>
       <button class="btn" onclick="submitReview('${id}')">${d.mine ? 'Update review' : 'Post review'}</button>
-      ${d.mine ? `<button class="btn alt" onclick="delReview('${id}')">Hapus review</button>` : ''}</div>`;
+      ${d.mine ? `<button class="btn alt" onclick="delReview('${id}')">Delete review</button>` : ''}</div>`;
   const card = x => `<div class="rv"><div><a href="#/user/${x.uid}">${avatar(x, 56)}</a></div><div class="rvr">
       <button class="flag" title="Report" onclick="reportReview('${id}','${x.id}')">${IC.flag}</button>
       <div class="rvh"><a href="#/user/${x.uid}"><b>${E(x.name)}</b></a> <span>- ${dateStr(x.ts)}</span></div>
@@ -748,29 +815,29 @@ async function loadReviews(id) {
     <div class="sortbar">Sort by:
       <button class="btn sm ${rvSort === 'recent' ? '' : 'alt'}" onclick="rvSort='recent';loadReviews('${id}')">Most Recent</button>
       <button class="btn sm ${rvSort === 'helpful' ? '' : 'alt'}" onclick="rvSort='helpful';loadReviews('${id}')">Most Helpful</button></div>
-    ${d.reviews.length ? d.reviews.map(card).join('') : '<div class="card empty">Belum ada review. Jadilah yang pertama!</div>'}`;
+    ${d.reviews.length ? d.reviews.map(card).join('') : '<div class="card empty">No reviews yet. Be the first!</div>'}`;
 }
 function setUp(v) { rvUp = v; $('#rvY').classList.toggle('on', v); $('#rvN').classList.toggle('on', !v); }
 async function submitReview(id) {
   const r = await rq('POST', '/api/games/' + id + '/reviews', { up: rvUp, text: $('#rvText').value });
-  if (!r.ok) return alert(r.data.error || 'Gagal mengirim review');
-  rvDraft = null; toast('Review dikirim'); loadReviews(id);
+  if (!r.ok) return alert(r.data.error || 'Failed to submit review');
+  rvDraft = null; toast('Review posted'); loadReviews(id);
 }
-async function delReview(id) { if (!confirm('Hapus review kamu?')) return; await rq('DELETE', '/api/games/' + id + '/reviews'); rvDraft = null; loadReviews(id); }
+async function delReview(id) { if (!confirm('Delete your review?')) return; await rq('DELETE', '/api/games/' + id + '/reviews'); rvDraft = null; loadReviews(id); }
 async function voteReview(id, rid, v) {
   const r = await rq('POST', '/api/games/' + id + '/reviews/' + rid + '/vote', { v });
-  if (!r.ok) return alert(r.data.error || 'Gagal vote');
+  if (!r.ok) return alert(r.data.error || 'Vote failed');
   loadReviews(id);
 }
 async function reportReview(id, rid) {
-  if (!confirm('Laporkan review ini?')) return;
-  await rq('POST', '/api/games/' + id + '/reviews/' + rid + '/report', {}); toast('Laporan terkirim');
+  if (!confirm('Report this review?')) return;
+  await rq('POST', '/api/games/' + id + '/reviews/' + rid + '/report', {}); toast('Report submitted');
 }
 
 /* ---------- Forum ---------- */
 const bubble = c => `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8"><path d="M3 3h12v9H8l-3 3v-3H3z"/><path d="M9 16h7l3 3v-3h2V8h-4"/></svg>`;
 const fnav = () => '<div class="fnav"><a href="#/forum">Home</a><a href="#/forum/search">Search</a><a href="#/forum/mine">My Posts</a></div>';
-const threadTable = l => l.length ? `<div class="ftable tt"><div class="fh"><span>Author</span><span>Thread</span></div>${l.map(t => `<div class="fr"><div class="au"><b>${E(t.author.name)}</b>${avatar(t.author, 48)}</div><div><a class="tl" href="#/forum/t/${t.id}">${E(t.title)}</a><small>Posted: ${ago(t.ts)}</small><small>Replies: ${t.replies} | Views: ${t.views}</small></div></div>`).join('')}</div>` : '<div class="card empty">Belum ada thread.</div>';
+const threadTable = l => l.length ? `<div class="ftable tt"><div class="fh"><span>Author</span><span>Thread</span></div>${l.map(t => `<div class="fr"><div class="au"><b>${E(t.author.name)}</b>${avatar(t.author, 48)}</div><div><a class="tl" href="#/forum/t/${t.id}">${E(t.title)}</a><small>Posted: ${ago(t.ts)}</small><small>Replies: ${t.replies} | Views: ${t.views}</small></div></div>`).join('')}</div>` : '<div class="card empty">No threads yet.</div>';
 async function forumRoute(h) {
   let m;
   if ((m = h.match(/^#\/forum\/c\/([\w-]+)/))) return catPage(m[1]);
@@ -781,7 +848,7 @@ async function forumRoute(h) {
   return forumHome();
 }
 async function forumHome() {
-  const d = await gj('/api/forum'); if (!d) return ($('#view').innerHTML = '<div class="empty">Gagal memuat forum.</div>');
+  const d = await gj('/api/forum'); if (!d) return ($('#view').innerHTML = '<div class="empty">Failed to load the forum.</div>');
   $('#view').innerHTML = `<h1 class="ftitle">Forum</h1>${fnav()}
     <div class="ftable"><div class="fh"><span>Forum</span><span>Threads</span><span>Posts</span></div>
     ${d.cats.map(c => `<a class="fr" href="#/forum/c/${c.id}"><div class="fc">${bubble(c.color)}<div><b>${E(c.name)}</b><small>${E(c.desc)}</small></div></div><span>${c.threads}</span><span>${c.posts}</span></a>`).join('')}</div>
@@ -794,14 +861,14 @@ async function catPage(id) {
     <p style="margin:12px 0 16px;color:var(--soft)">${E(d.cat.desc)}</p>${threadTable(d.threads)}`;
 }
 function newThreadPage(id) {
-  $('#view').innerHTML = `<div class="crumb"><a href="#/forum">Forum</a> &gt; <a href="#/forum/c/${id}">Kembali</a> &gt; New Thread</div>
+  $('#view').innerHTML = `<div class="crumb"><a href="#/forum">Forum</a> &gt; <a href="#/forum/c/${id}">Back</a> &gt; New Thread</div>
     <h1 class="ftitle">New Thread</h1><div class="card pad" style="max-width:720px">
-    <label>Judul</label><input id="thTitle" maxlength="100"><label>Isi</label><textarea id="thBody" maxlength="2000" style="height:160px"></textarea>
+    <label>Title</label><input id="thTitle" maxlength="100"><label>Body</label><textarea id="thBody" maxlength="2000" style="height:160px"></textarea>
     <button class="btn" onclick="submitThread('${id}')">Post Thread</button></div>`;
 }
 async function submitThread(cat) {
   const r = await rq('POST', '/api/forum/cat/' + cat, { title: $('#thTitle').value, body: $('#thBody').value });
-  if (!r.ok) return alert(r.data.error || 'Gagal membuat thread');
+  if (!r.ok) return alert(r.data.error || 'Failed to create thread');
   location.hash = '#/forum/t/' + r.data.id;
 }
 async function threadPage(id) {
@@ -815,19 +882,19 @@ async function threadPage(id) {
 }
 async function sendReply(id) {
   const r = await rq('POST', '/api/forum/thread/' + id + '/reply', { body: $('#rpBody').value });
-  if (!r.ok) return alert(r.data.error || 'Gagal membalas');
+  if (!r.ok) return alert(r.data.error || 'Failed to reply');
   threadPage(id);
 }
-async function delThread(id, cat) { if (!confirm('Hapus thread ini?')) return; await rq('DELETE', '/api/forum/thread/' + id); location.hash = '#/forum/c/' + cat; }
-async function delPost(id, pid) { if (!confirm('Hapus balasan ini?')) return; await rq('DELETE', '/api/forum/thread/' + id + '/post/' + pid); threadPage(id); }
+async function delThread(id, cat) { if (!confirm('Delete this thread?')) return; await rq('DELETE', '/api/forum/thread/' + id); location.hash = '#/forum/c/' + cat; }
+async function delPost(id, pid) { if (!confirm('Delete this reply?')) return; await rq('DELETE', '/api/forum/thread/' + id + '/post/' + pid); threadPage(id); }
 let fq = '';
 function searchPage() {
-  $('#view').innerHTML = `<h1 class="ftitle">Forum</h1>${fnav()}<div class="fsearch"><input id="fq" class="search" placeholder="Cari thread…" value="${E(fq)}" onkeydown="if(event.key==='Enter')searchGo()"><button class="btn" onclick="searchGo()">Search</button></div><div id="fres"></div>`;
+  $('#view').innerHTML = `<h1 class="ftitle">Forum</h1>${fnav()}<div class="fsearch"><input id="fq" class="search" placeholder="Search threads…" value="${E(fq)}" onkeydown="if(event.key==='Enter')searchGo()"><button class="btn" onclick="searchGo()">Search</button></div><div id="fres"></div>`;
   if (fq) searchGo();
 }
 async function searchGo() {
   fq = $('#fq').value.trim();
-  $('#fres').innerHTML = fq.length < 2 ? '<div class="empty">Ketik minimal 2 huruf.</div>' : threadTable((await gj('/api/forum/search?q=' + encodeURIComponent(fq))) || []);
+  $('#fres').innerHTML = fq.length < 2 ? '<div class="empty">Type at least 2 characters.</div>' : threadTable((await gj('/api/forum/search?q=' + encodeURIComponent(fq))) || []);
 }
 async function minePage() {
   const l = (await gj('/api/forum/mine')) || [];
@@ -845,25 +912,40 @@ async function saveProfile(patch) {
   if (r.ok) { session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); }
   return r;
 }
+const IC_CLOCK = '<svg class="ic2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+const IC_CAL = '<svg class="ic2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+const IC_GAME = '<svg class="ic2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="4"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="16" cy="11" r="1"/><circle cx="18" cy="13" r="1"/></svg>';
 function profilePage() {
   const u = session.user;
   $('#view').innerHTML = `<span class="label">PROFILE</span>
-    <div class="card pad" style="max-width:520px"><div class="prow">${avatar(u, 96)}<div>
-      <button class="btn alt" onclick="changeAvatar()">Upload foto profil</button> ${u.av ? '<button class="x" onclick="removeAvatar()">Hapus foto</button>' : ''}
-      <small style="display:block;color:var(--dim);margin-top:6px">PNG/JPG/WEBP, otomatis dipotong persegi</small></div></div>
-      <label>Nama tampilan</label><input id="pName" maxlength="16" value="${E(u.name)}">
-      <div id="pErr" style="color:#ff5c6c;margin-top:8px"></div>
-      <button class="btn" onclick="saveName()">Simpan nama</button></div>
-    <div class="card pad" style="max-width:520px;margin-top:18px"><h3 class="sec" style="margin:0 0 12px">MY BADGES</h3><div id="myBadges"></div><button class="btn alt" onclick="location.hash='#/badges'">Lihat semua badge</button></div>`;
+    <div class="card pad prof" style="max-width:860px">
+      <div class="prof-3d"><div class="av3d" id="myav3d"><span class="av3-load">Loading 3D avatar…</span><div class="av3-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div></div>
+        <div class="acts" style="justify-content:center"><a class="btn sm alt" href="#/avatar">Customize avatar</a></div></div>
+      <div class="prof-info">
+        <div class="prow">${avatar(u, 96)}<div>
+          <button class="btn alt" onclick="changeAvatar()">Upload profile photo</button> ${u.av ? '<button class="x" onclick="removeAvatar()">Remove photo</button>' : ''}
+          <small style="display:block;color:var(--dim);margin-top:6px">PNG/JPG/WEBP, auto-cropped to a square</small></div></div>
+        <div class="meta-list">
+          <div>${IC_CLOCK} <b>${statusHTML({ game: null, lastSeen: Date.now() })}</b></div>
+          <div>${IC_CAL} Joined Voxely <b>${u.joined ? dateStr(u.joined) : 'recently'}</b></div>
+          <div>${IC_GAME} Playing as <b>${u.google ? 'Google account' : 'Guest account'}</b></div>
+        </div>
+        <label>Display name</label><input id="pName" maxlength="16" value="${E(u.name)}">
+        <div id="pErr" style="color:#ff5c6c;margin-top:8px"></div>
+        <button class="btn" onclick="saveName()">Save name</button>
+      </div>
+    </div>
+    <div class="card pad" style="max-width:860px;margin-top:18px"><h3 class="sec" style="margin:0 0 12px">MY BADGES</h3><div id="myBadges"></div><button class="btn alt" onclick="location.hash='#/badges'">View all badges</button></div>`;
+  mount3D('#myav3d', outfit, { tools: false });
   loadMyBadges();
 }
 async function loadMyBadges() {
   const d = await gj('/api/me/badges');
   if (!d || !d.badges || !d.badges.length) {
-    $('#myBadges').innerHTML = '<div class="empty">Belum punya badge.</div>';
+    $('#myBadges').innerHTML = '<div class="empty">No badges yet. Play games with badges to earn them!</div>';
     return;
   }
-  $('#myBadges').innerHTML = `<div class="badge-grid">${d.badges.slice(0, 6).map(b => badgeItem(b)).join('')}</div>`;
+  $('#myBadges').innerHTML = `<div class="badge-grid">${d.badges.slice(0, 8).map(b => badgeItem(b)).join('')}</div>`;
 }
 function badgeItem(b) {
   const color = b.color || '#ffd700';
@@ -873,11 +955,11 @@ function badgeItem(b) {
     ${b.gameTitle ? `<span class="badge-name" style="color:var(--dim);font-size:10px">${E(b.gameTitle)}</span>` : ''}
   </div>`;
 }
-function changeAvatar() { pickImage(128, 128, async img => { const r = await saveProfile({ avatar: img }); r.ok ? profilePage() : alert(r.data.error || 'Gagal upload'); }); }
+function changeAvatar() { pickImage(128, 128, async img => { const r = await saveProfile({ avatar: img }); r.ok ? profilePage() : alert(r.data.error || 'Upload failed'); }); }
 async function removeAvatar() { await saveProfile({ avatar: null }); profilePage(); }
 async function saveName() {
   const r = await saveProfile({ name: $('#pName').value });
-  if (r.ok) { $('#pErr').textContent = ''; toast('Nama disimpan'); } else $('#pErr').textContent = r.data.error || 'Gagal menyimpan';
+  if (r.ok) { $('#pErr').textContent = ''; toast('Name saved'); } else $('#pErr').textContent = r.data.error || 'Failed to save';
 }
 
 /* ---------- Thumbnails ---------- */
@@ -886,43 +968,43 @@ function pickThumb() { pickImage(640, 360, img => { dev.thumb = img; drawThumb()
 function setThumb(id) {
   pickImage(640, 360, async img => {
     const r = await api('/api/games/' + id + '/thumb', { image: img });
-    if (!r.ok) return alert(r.data.error || 'Gagal upload');
-    await loadGames(); drawMine(); toast('Thumbnail diperbarui');
+    if (!r.ok) return alert(r.data.error || 'Upload failed');
+    await loadGames(); drawMine(); toast('Thumbnail updated');
   });
 }
 
 /* ---------- People ---------- */
 let pq = '', ppl = [];
 async function peoplePage() {
-  ppl = await (await fetch(S + '/api/people')).json();
-  $('#view').innerHTML = `<span class="label">PEOPLE</span><br><input class="search" placeholder="Cari nama…" value="${E(pq)}" oninput="pq=this.value;drawPeople()"><div class="grid" id="pp"></div>`;
+  try { ppl = await (await fetch(S + '/api/people')).json(); } catch (e) { ppl = []; }
+  $('#view').innerHTML = `<span class="label">PEOPLE</span><br><input class="search" placeholder="Search names…" value="${E(pq)}" oninput="pq=this.value;drawPeople()"><div class="grid" id="pp"></div>`;
   drawPeople();
 }
 function drawPeople() {
   const l = ppl.filter(p => p.name.toLowerCase().includes(pq.toLowerCase()));
-  $('#pp').innerHTML = l.length ? l.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline'}</small></div></a>`).join('') : '<div class="empty">Tidak ada pemain.</div>';
+  $('#pp').innerHTML = l.length ? l.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${p.game ? '<span class="live"></span>Playing: ' + E(p.game) : isOnline(p) ? '<span class="live"></span>Online' : 'Last online ' + ago(p.lastSeen || 0)}</small></div></a>`).join('') : '<div class="empty">No players found.</div>';
 }
 
 /* ---------- Developer Portal: dashboard, Studio launcher, game management ---------- */
 async function openStudio(id) {
   const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
   if (!ok) return logout();
-  show('Membuka Voxely Studio…', 'Jika browser bertanya, pilih "Open Voxely Client".', false);
+  show('Launching Voxely Studio…', 'If your browser asks, choose "Open Voxely Client".', false);
   location.href = `voxely://studio?game=${id || 'new'}&token=${session.token}&server=${encodeURIComponent(S)}`;
   setTimeout(() => {
-    if (document.hasFocus() && document.visibilityState === 'visible') show('Client belum terpasang', 'Voxely Studio ada di dalam Voxely Client. Download dan install client versi terbaru dulu, lalu coba lagi.', true);
+    if (document.hasFocus() && document.visibilityState === 'visible') show('Client not installed', 'Voxely Studio lives inside the Voxely Client. Download and install the latest client first, then try again.', true);
     else $('#launch').classList.remove('on');
   }, 2500);
 }
 async function devHome() {
   await loadGames(); const mine = games.filter(g => g.mine);
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
-    <div class="card pad"><h3 class="ft">Buat game</h3>
-      <div class="hint"><b>Voxely Studio</b> ada di dalam Voxely Client: editor 3D dengan Explorer, Properties, dan <b>script</b> (JavaScript) supaya game kamu lebih bebas. Klik tombol di bawah untuk membukanya (client harus terpasang).<br>${session.user.google ? '✓ Kamu login dengan Google: game kamu disimpan permanen.' : '⚠ Login sebagai guest: game hanya tersimpan sementara. Login dengan Google agar tersimpan permanen.'}</div>
-      <div class="acts"><button class="btn" onclick="openStudio('new')">Buka Studio — game baru</button><a class="btn alt" href="#/dev/quick">Editor cepat (web)</a></div></div>
-    <h3 class="sec">GAME SAYA</h3>
+    <div class="card pad"><h3 class="ft">Create a game</h3>
+      <div class="hint"><b>Voxely Studio</b> lives inside the Voxely Client: a 3D editor with Explorer, Properties and <b>scripting</b> (JavaScript) so your game can go further. Click the button below to open it (the client must be installed).<br>${session.user.google ? '✓ You are logged in with Google: your games are saved permanently.' : '⚠ You are logged in as a guest: games are only stored temporarily. Log in with Google to keep them permanently.'}</div>
+      <div class="acts"><button class="btn" onclick="openStudio('new')">Open Studio — new game</button><a class="btn alt" href="#/dev/quick">Quick editor (web)</a></div></div>
+    <h3 class="sec">MY GAMES</h3>
     ${mine.length ? `<div class="grid">${mine.map(g => `<div class="gc dv">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.visits || 0} visits · ${g.online} online</small>
-      <div class="acts"><a class="btn sm" href="#/manage/${g.id}">Kelola</a><button class="btn sm alt" onclick="openStudio('${g.id}')">Studio</button></div></div></div>`).join('')}</div>` : '<div class="card empty">Belum ada game. Buat yang pertama di Studio!</div>'}`;
+      <div class="acts"><a class="btn sm" href="#/manage/${g.id}">Manage</a><button class="btn sm alt" onclick="openStudio('${g.id}')">Studio</button></div></div></div>`).join('')}</div>` : '<div class="card empty">No games yet. Create your first one in Studio!</div>'}`;
 }
 let mgTab = 'stats';
 async function managePage(id) {
@@ -931,81 +1013,80 @@ async function managePage(id) {
   $('#view').innerHTML = `<div class="crumb"><a href="#/dev">Developer Portal</a> &gt; ${E(g.title)}</div>
     <div class="mgh"><div class="mga">${art(g)}</div><div><h1 class="ftitle">${E(g.title)}</h1>
       <div style="color:var(--dim);margin-bottom:12px">${tags(g)} ${g.visits || 0} visits · ${g.online} online</div>
-      <div class="acts"><button class="btn sm" onclick="play('${id}')">Main</button><button class="btn sm alt" onclick="openStudio('${id}')">Buka di Studio</button><a class="btn sm alt" href="#/game/${id}">Halaman game</a></div></div></div>
-    <div class="avtabs" style="margin-top:18px">${[['stats', 'Statistik'], ['reviews', 'Review'], ['badges', 'Badge'], ['settings', 'Pengaturan']].map(([k, n]) => `<button class="vb ${mgTab === k ? 'on' : ''}" onclick="mgTab='${k}';managePage('${id}')">${n}</button>`).join('')}</div>
-    <div id="mgbody"><div class="empty">Memuat…</div></div>`;
+      <div class="acts"><button class="btn sm" onclick="play('${id}')">Play</button><button class="btn sm alt" onclick="openStudio('${id}')">Open in Studio</button><a class="btn sm alt" href="#/game/${id}">Game page</a></div></div></div>
+    <div class="avtabs" style="margin-top:18px">${[['stats', 'Stats'], ['reviews', 'Reviews'], ['badges', 'Badges'], ['settings', 'Settings']].map(([k, n]) => `<button class="vb ${mgTab === k ? 'on' : ''}" onclick="mgTab='${k}';managePage('${id}')">${n}</button>`).join('')}</div>
+    <div id="mgbody"><div class="empty">Loading…</div></div>`;
   ({ stats: mgStats, reviews: mgReviews, badges: mgBadges, settings: mgSettings })[mgTab](id);
 }
 async function mgStats(id) {
-  const d = await gj('/api/games/' + id + '/stats'); if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Statistik tidak tersedia.</div>');
-  const dur = s => s >= 3600 ? (s / 3600).toFixed(1) + ' jam' : s >= 60 ? Math.round(s / 60) + ' mnt' : s + ' dtk';
+  const d = await gj('/api/games/' + id + '/stats'); if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Stats are unavailable.</div>');
+  const dur = s => s >= 3600 ? (s / 3600).toFixed(1) + ' h' : s >= 60 ? Math.round(s / 60) + ' min' : s + ' s';
   const mx = Math.max(1, ...d.daily.map(x => x.n)), card = (n, l) => `<div class="stc"><b>${n}</b><small>${l}</small></div>`;
-  $('#mgbody').innerHTML = `<div class="stgrid">${card(d.visits, 'Total kunjungan')}${card(d.unique, 'Pemain unik')}${card(d.online, 'Online sekarang')}${card(d.peak, 'Puncak online')}${card(dur(d.secs), 'Total waktu bermain')}${card(dur(d.avg), 'Rata-rata sesi')}${card(d.servers, 'Server aktif')}${card(d.reviews ? Math.round(d.up / d.reviews * 100) + '% (' + d.reviews + ')' : '-', 'Review positif')}</div>
-    <div class="card pad" style="margin-top:14px"><h3 class="ft">Kunjungan 14 hari terakhir</h3><div class="chart">${d.daily.map(x => `<div class="cb" title="${x.d}: ${x.n}"><span>${x.n || ''}</span><i style="height:${Math.round(x.n / mx * 100)}%"></i><small>${x.d.slice(8)}</small></div>`).join('')}</div></div>
+  $('#mgbody').innerHTML = `<div class="stgrid">${card(d.visits, 'Total visits')}${card(d.unique, 'Unique players')}${card(d.online, 'Online now')}${card(d.peak, 'Peak online')}${card(dur(d.secs), 'Total playtime')}${card(dur(d.avg), 'Average session')}${card(d.servers, 'Active servers')}${card(d.reviews ? Math.round(d.up / d.reviews * 100) + '% (' + d.reviews + ')' : '-', 'Positive reviews')}</div>
+    <div class="card pad" style="margin-top:14px"><h3 class="ft">Visits — last 14 days</h3><div class="chart">${d.daily.map(x => `<div class="cb" title="${x.d}: ${x.n}"><span>${x.n || ''}</span><i style="height:${Math.round(x.n / mx * 100)}%"></i><small>${x.d.slice(8)}</small></div>`).join('')}</div></div>
     <div class="acts"><button class="btn sm alt" onclick="managePage('${id}')">Refresh</button></div>`;
 }
 async function mgReviews(id) {
   const d = await gj('/api/games/' + id + '/reviews?sort=recent');
-  $('#mgbody').innerHTML = !d || !d.reviews.length ? '<div class="card empty">Belum ada review untuk game ini.</div>'
-    : `<div class="hint">${d.total} review · ${Math.round(d.up / d.total * 100)}% merekomendasikan</div>` + d.reviews.map(x => `<div class="rv"><div><a href="#/user/${x.uid}">${avatar(x, 56)}</a></div><div class="rvr">
+  $('#mgbody').innerHTML = !d || !d.reviews.length ? '<div class="card empty">No reviews for this game yet.</div>'
+    : `<div class="hint">${d.total} reviews · ${Math.round(d.up / d.total * 100)}% recommend</div>` + d.reviews.map(x => `<div class="rv"><div><a href="#/user/${x.uid}">${avatar(x, 56)}</a></div><div class="rvr">
       <div class="rvh"><a href="#/user/${x.uid}"><b>${E(x.name)}</b></a> <span>- ${dateStr(x.ts)}</span></div>
       <div class="rec ${x.up ? '' : 'neg'}">${x.up ? IC.up : IC.down}<div><b>${x.up ? 'Recommended' : 'Not Recommended'}</b></div></div><p>${E(x.text)}</p>
-      <div class="rvf"><span>${x.yes} orang menilai review ini berguna</span></div></div></div>`).join('');
+      <div class="rvf"><span>${x.yes} people found this review helpful</span></div></div></div>`).join('');
 }
 async function mgSettings(id) {
-  const d = await gj('/api/games/' + id + '/source'); if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Tidak bisa memuat pengaturan.</div>');
-  $('#mgbody').innerHTML = `<div class="card pad" style="max-width:720px"><h3 class="ft">Pengaturan game</h3>
-    <label>Nama game</label><input id="sTitle" maxlength="30" value="${E(d.title)}">
+  const d = await gj('/api/games/' + id + '/source'); if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Could not load the settings.</div>');
+  $('#mgbody').innerHTML = `<div class="card pad" style="max-width:720px"><h3 class="ft">Game settings</h3>
+    <label>Game name</label><input id="sTitle" maxlength="30" value="${E(d.title)}">
     <label>Tagline</label><input id="sTag" maxlength="60" value="${E(d.tagline)}">
-    <label>Deskripsi</label><textarea id="sDesc" maxlength="400">${E(d.desc)}</textarea>
-    <label>Tag (pisahkan koma, maks 3)</label><input id="sTags" value="${E((d.tags || []).join(', '))}">
-    <label>Thumbnail</label><div class="trow"><div class="tprev" id="stprev">${d.hasThumb ? `<img src="${S}/api/thumb/${id}?v=${Date.now()}" alt="">` : '16:9'}</div><button class="btn alt" onclick="mgThumb('${id}')">Upload thumbnail baru</button></div>
-    <div id="sErr" class="err" style="margin-top:10px"></div><button class="btn" onclick="mgSave('${id}')">Simpan perubahan</button>
-    <div class="sep2"></div><button class="x" onclick="mgDelete('${id}')">Hapus game ini</button></div>`;
+    <label>Description</label><textarea id="sDesc" maxlength="400">${E(d.desc)}</textarea>
+    <label>Tags (comma-separated, max 3)</label><input id="sTags" value="${E((d.tags || []).join(', '))}">
+    <label>Thumbnail</label><div class="trow"><div class="tprev" id="stprev">${d.hasThumb ? `<img src="${S}/api/thumb/${id}?v=${Date.now()}" alt="">` : '16:9'}</div><button class="btn alt" onclick="mgThumb('${id}')">Upload new thumbnail</button></div>
+    <div id="sErr" class="err" style="margin-top:10px"></div><button class="btn" onclick="mgSave('${id}')">Save changes</button>
+    <div class="sep2"></div><button class="x" onclick="mgDelete('${id}')">Delete this game</button></div>`;
 }
 async function mgSave(id) {
   const r = await rq('PUT', '/api/games/' + id, { title: $('#sTitle').value, tagline: $('#sTag').value, desc: $('#sDesc').value, tags: $('#sTags').value.split(',').map(t => t.trim()).filter(Boolean) });
-  if (!r.ok) { $('#sErr').textContent = r.data.error || 'Gagal menyimpan'; return; }
-  toast('Perubahan disimpan'); managePage(id);
+  if (!r.ok) { $('#sErr').textContent = r.data.error || 'Failed to save'; return; }
+  toast('Changes saved'); managePage(id);
 }
 function mgThumb(id) {
   pickImage(640, 360, async img => {
     const r = await rq('POST', '/api/games/' + id + '/thumb', { image: img });
-    if (!r.ok) return alert(r.data.error || 'Gagal upload'); toast('Thumbnail diperbarui'); managePage(id);
+    if (!r.ok) return alert(r.data.error || 'Upload failed'); toast('Thumbnail updated'); managePage(id);
   });
 }
-async function mgDelete(id) { if (!confirm('Hapus game ini selamanya? Review dan statistiknya ikut hilang.')) return; await rq('DELETE', '/api/games/' + id); location.hash = '#/dev'; }
+async function mgDelete(id) { if (!confirm('Delete this game forever? Its reviews and stats will be lost too.')) return; await rq('DELETE', '/api/games/' + id); location.hash = '#/dev'; }
 
-/* ---------- Badges of a game (Kelola -> Badge) ---------- */
-const trigText = b => b.trigger === 'playtime' ? 'Bermain ' + b.value + ' menit' : b.trigger === 'touch' ? 'Sentuh part "' + b.value + '"' : 'Pertama kali bergabung';
+/* ---------- Badges of a game (Manage -> Badges) ---------- */
 async function mgBadges(id) {
   const d = await gj('/api/games/' + id + '/badges');
-  if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Tidak bisa memuat badge.</div>');
-  $('#mgbody').innerHTML = `<div class="hint">Pemain mendapatkan badge saat bermain game ini, lalu badge tampil di profil mereka.</div>
-    ${d.badges.length ? `<div class="badge-grid">${d.badges.map(b => `<div>${badgeItem(b)}<small style="display:block;color:var(--dim);margin:4px 0 6px">${E(trigText(b))} · ${b.earners} pemain</small><button class="x" onclick="mgDelBadge('${id}','${b.id}')">Hapus</button></div>`).join('')}</div>` : '<div class="card empty">Belum ada badge. Buat badge pertama di bawah.</div>'}
-    <div class="card pad" style="margin-top:14px;max-width:640px"><h3 class="ft">Buat badge baru</h3>
-      <label>Nama badge</label><input id="bName" maxlength="40" placeholder="contoh: Pendaki">
-      <label>Deskripsi</label><input id="bDesc" maxlength="200" placeholder="Cara mendapatkannya">
-      <div style="display:flex;gap:12px"><div style="flex:1"><label>Ikon (emoji)</label><input id="bIcon" maxlength="4" value="⭐"></div><div><label>Warna</label><input id="bColor" type="color" value="#ffd700"></div></div>
-      <label>Cara mendapatkan</label><select id="bTrig" onchange="mgTrigChange()"><option value="join">Pertama kali bergabung ke game</option><option value="playtime">Bermain selama beberapa menit</option><option value="touch">Menyentuh part tertentu</option></select>
-      <label id="bValLab">Tidak perlu isi apa-apa</label><input id="bVal" disabled>
+  if (!d) return ($('#mgbody').innerHTML = '<div class="card empty">Could not load the badges.</div>');
+  $('#mgbody').innerHTML = `<div class="hint">Players earn these badges while playing your game; earned badges show up on their profiles.</div>
+    ${d.badges.length ? `<div class="badge-grid">${d.badges.map(b => `<div>${badgeItem(b)}<small style="display:block;color:var(--dim);margin:4px 0 6px">${E(trigText(b))} · ${b.earners} player${b.earners === 1 ? '' : 's'}</small><button class="x" onclick="mgDelBadge('${id}','${b.id}')">Delete</button></div>`).join('')}</div>` : '<div class="card empty">No badges yet. Create the first one below.</div>'}
+    <div class="card pad" style="margin-top:14px;max-width:640px"><h3 class="ft">Create a new badge</h3>
+      <label>Badge name</label><input id="bName" maxlength="40" placeholder="e.g. Summit Climber">
+      <label>Description</label><input id="bDesc" maxlength="200" placeholder="How to earn it">
+      <div style="display:flex;gap:12px"><div style="flex:1"><label>Icon (emoji)</label><input id="bIcon" maxlength="4" value="🏆"></div><div><label>Color</label><input id="bColor" type="color" value="#ffd700"></div></div>
+      <label>How to earn</label><select id="bTrig" onchange="mgTrigChange()"><option value="join">Joining the game for the first time</option><option value="playtime">Playing for a number of minutes</option><option value="touch">Touching a specific part</option></select>
+      <label id="bValLab">Nothing to fill in</label><input id="bVal" disabled>
       <div id="bErr" class="err" style="margin-top:10px"></div>
-      <button class="btn" onclick="mgAddBadge('${id}')">Buat badge</button></div>`;
+      <button class="btn" onclick="mgAddBadge('${id}')">Create badge</button></div>`;
 }
 function mgTrigChange() {
   const t = $('#bTrig').value, v = $('#bVal'), lab = $('#bValLab');
   v.value = ''; v.disabled = t === 'join'; v.type = t === 'playtime' ? 'number' : 'text';
-  v.placeholder = t === 'playtime' ? 'contoh: 5' : t === 'touch' ? 'contoh: Puncak' : '';
-  lab.textContent = t === 'playtime' ? 'Berapa menit bermain?' : t === 'touch' ? 'Nama part (sama persis dengan "Nama part" di editor)' : 'Tidak perlu isi apa-apa';
+  v.placeholder = t === 'playtime' ? 'e.g. 5' : t === 'touch' ? 'e.g. Summit' : '';
+  lab.textContent = t === 'playtime' ? 'How many minutes?' : t === 'touch' ? 'Part name (must exactly match the part "Name" in the editor)' : 'Nothing to fill in';
 }
 async function mgAddBadge(id) {
   const err = $('#bErr'); err.textContent = '';
   const r = await rq('POST', '/api/games/' + id + '/badges', { name: $('#bName').value, description: $('#bDesc').value, icon: $('#bIcon').value, color: $('#bColor').value, trigger: $('#bTrig').value, value: $('#bVal').value });
-  if (!r.ok) { err.textContent = r.data.error || 'Gagal membuat badge'; return; }
-  toast('Badge dibuat'); mgBadges(id);
+  if (!r.ok) { err.textContent = r.data.error || 'Failed to create badge'; return; }
+  toast('Badge created'); mgBadges(id);
 }
 async function mgDelBadge(id, bid) {
-  if (!confirm('Hapus badge ini? Badge hilang dari pemain yang sudah mendapatkannya.')) return;
+  if (!confirm('Delete this badge? Players who earned it will lose it.')) return;
   await rq('DELETE', '/api/games/' + id + '/badges/' + bid); mgBadges(id);
 }
 
@@ -1015,10 +1096,10 @@ const AH = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer '
 const PAL = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ffffff', '#9ca3af', '#374151', '#8b5a2b'];
 const GR = c => ({ x: 0, y: -0.5, z: 0, w: 40, h: 1, d: 40, c });
 const TPL = {
-  flat: { n: 'Lapangan', sky: '#7ec8ff', b: () => [GR('#5cb85c'), { x: 6, y: 1, z: 4, w: 4, h: 2, d: 4, c: '#e0a040' }, { x: -8, y: 0.75, z: -6, w: 6, h: 1.5, d: 3, c: '#8e6bd0' }, { x: 6, y: 1, z: 1.85, w: 1.4, h: 2, d: 0.3, c: '#c8903c', l: 1 }] },
-  obby: { n: 'Obby melayang', sky: '#1b2a49', b: () => [{ x: 0, y: -0.5, z: 0, w: 10, h: 1, d: 10, c: '#3b82f6' }, { x: 0, y: 1, z: 11, w: 4, h: 1, d: 4, c: '#f97316' }, { x: 5, y: 2.5, z: 17, w: 4, h: 1, d: 4, c: '#eab308' }, { x: 11, y: 4, z: 20, w: 4, h: 1, d: 4, c: '#22c55e' }, { x: 17, y: 5.5, z: 14, w: 3, h: 1, d: 3, c: '#ec4899' }, { x: 20, y: 7, z: 7, w: 8, h: 1, d: 8, c: '#ffffff' }] },
-  stairs: { n: 'Tangga', sky: '#ffd6e8', b: () => [GR('#f9a8d4'), ...Array.from({ length: 8 }, (_, i) => ({ x: 0, y: i * 0.8 + 0.4, z: i * 3 - 6, w: 8, h: 0.8, d: 3, c: i % 2 ? '#a7f3d0' : '#fde68a' }))] },
-  blank: { n: 'Kosong', sky: '#7ec8ff', b: () => [{ x: 0, y: -0.5, z: 0, w: 12, h: 1, d: 12, c: '#5cb85c' }] }
+  flat: { n: 'Field', sky: '#7ec8ff', b: () => [GR('#5cb85c'), { x: 6, y: 1, z: 4, w: 4, h: 2, d: 4, c: '#e0a040' }, { x: -8, y: 0.75, z: -6, w: 6, h: 1.5, d: 3, c: '#8e6bd0' }, { x: 6, y: 1, z: 1.85, w: 1.4, h: 2, d: 0.3, c: '#c8903c', l: 1 }] },
+  obby: { n: 'Floating Obby', sky: '#1b2a49', b: () => [{ x: 0, y: -0.5, z: 0, w: 10, h: 1, d: 10, c: '#3b82f6' }, { x: 0, y: 1, z: 11, w: 4, h: 1, d: 4, c: '#f97316' }, { x: 5, y: 2.5, z: 17, w: 4, h: 1, d: 4, c: '#eab308' }, { x: 11, y: 4, z: 20, w: 4, h: 1, d: 4, c: '#22c55e' }, { x: 17, y: 5.5, z: 14, w: 3, h: 1, d: 3, c: '#ec4899' }, { x: 20, y: 7, z: 7, w: 8, h: 1, d: 8, c: '#ffffff' }] },
+  stairs: { n: 'Stairs', sky: '#ffd6e8', b: () => [GR('#f9a8d4'), ...Array.from({ length: 8 }, (_, i) => ({ x: 0, y: i * 0.8 + 0.4, z: i * 3 - 6, w: 8, h: 0.8, d: 3, c: i % 2 ? '#a7f3d0' : '#fde68a' }))] },
+  blank: { n: 'Blank', sky: '#7ec8ff', b: () => [{ x: 0, y: -0.5, z: 0, w: 12, h: 1, d: 12, c: '#5cb85c' }] }
 };
 const topOf = b => +(b.y + b.h / 2).toFixed(1);
 const fresh = () => ({ id: null, title: '', tagline: '', desc: '', tags: '', sky: '#7ec8ff', a1: '#1463ff', a2: '#0a0f1a', boxes: TPL.flat.b(), sel: 0, scale: 8, thumb: null });
@@ -1032,50 +1113,50 @@ function devNew() { dev = fresh(); localStorage.removeItem('voxelyDraft'); devPa
 async function devPage() {
   await loadGames(); dev = dev || newDev();
   const ed = !!dev.id;
-  $('#view').innerHTML = `<span class="label">EDITOR CEPAT</span> <a href="#/dev" style="color:var(--link);margin-left:10px">← Developer Portal</a>
+  $('#view').innerHTML = `<span class="label">QUICK EDITOR</span> <a href="#/dev" style="color:var(--link);margin-left:10px">← Developer Portal</a>
     <div class="cols"><div>
-      <div class="card pad step"><h3 class="ft"><i class="sn">1</i> Info game</h3>
-        ${ed ? '<div class="hint">Kamu sedang mengedit game yang sudah dipublish. <a style="color:var(--link)" onclick="devNew()">Buat game baru</a></div>' : '<div class="hint">Isi nama dan deskripsi game kamu. Semua bisa diubah lagi nanti.</div>'}
-        <label>Judul game</label><input maxlength="30" placeholder="Contoh: Pulau Obby" value="${E(dev.title)}" oninput="dev.title=this.value;draft()">
-        <label>Tagline (kalimat pendek)</label><input maxlength="60" placeholder="Contoh: Lompat sampai puncak!" value="${E(dev.tagline)}" oninput="dev.tagline=this.value;draft()">
-        <label>Deskripsi</label><textarea maxlength="400" placeholder="Ceritakan tentang game kamu…" oninput="dev.desc=this.value;draft()">${E(dev.desc)}</textarea>
-        <label>Tag (pisahkan dengan koma, maks 3)</label><input placeholder="Obby, Santai, Seru" value="${E(dev.tags)}" oninput="dev.tags=this.value;draft()">
-        <label>Thumbnail <small>(opsional — kalau kosong dipakai warna cover)</small></label>
+      <div class="card pad step"><h3 class="ft"><i class="sn">1</i> Game info</h3>
+        ${ed ? '<div class="hint">You are editing a published game. <a style="color:var(--link)" onclick="devNew()">Create a new game</a></div>' : '<div class="hint">Enter your game\u2019s name and description. Everything can be changed later.</div>'}
+        <label>Game title</label><input maxlength="30" placeholder="e.g. Obby Island" value="${E(dev.title)}" oninput="dev.title=this.value;draft()">
+        <label>Tagline (short sentence)</label><input maxlength="60" placeholder="e.g. Jump your way to the top!" value="${E(dev.tagline)}" oninput="dev.tagline=this.value;draft()">
+        <label>Description</label><textarea maxlength="400" placeholder="Tell players about your game…" oninput="dev.desc=this.value;draft()">${E(dev.desc)}</textarea>
+        <label>Tags (comma-separated, max 3)</label><input placeholder="Obby, Chill, Fun" value="${E(dev.tags)}" oninput="dev.tags=this.value;draft()">
+        <label>Thumbnail <small>(optional — cover colors are used if empty)</small></label>
         <div class="trow"><div class="tprev" id="tprev"></div><button class="btn alt" onclick="pickThumb()">Upload thumbnail</button></div>
-        <div class="row3"><div><label>Warna langit</label><input type="color" value="${dev.sky}" oninput="dev.sky=this.value;draw();draft()"></div>
+        <div class="row3"><div><label>Sky color</label><input type="color" value="${dev.sky}" oninput="dev.sky=this.value;draw();draft()"></div>
           <div><label>Cover 1</label><input type="color" value="${dev.a1}" oninput="dev.a1=this.value;draft()"></div>
           <div><label>Cover 2</label><input type="color" value="${dev.a2}" oninput="dev.a2=this.value;draft()"></div></div>
       </div>
-      <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">2</i> Bangun dunia</h3>
-        <div class="hint"><b>Cara pakai:</b> tarik kotak untuk memindahkan · klik dua kali di peta untuk menambah platform · kotak pertama (<b>START</b>) adalah tempat pemain muncul · angka di kotak = ketinggiannya · <b>+ Tangga</b> membuat tangga yang bisa dipanjat pemain (tahan W).</div>
-        <div class="tpl">Mulai dari template: ${Object.entries(TPL).map(([k, t]) => `<button class="vb" onclick="applyTpl('${k}')">${t.n}</button>`).join('')}</div>
-        <div class="tools"><button class="btn sm" onclick="addPlat()">+ Platform</button><button class="btn sm alt" onclick="addLadder()">+ Tangga</button><button class="btn sm alt" onclick="zoom(1.25)">Zoom +</button><button class="btn sm alt" onclick="zoom(0.8)">Zoom −</button><small id="cnt" style="color:var(--dim)"></small></div>
+      <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">2</i> Build the world</h3>
+        <div class="hint"><b>How to use:</b> drag boxes to move them · double-click the map to add a platform · the first box (<b>START</b>) is where players spawn · the number on a box is its height · <b>+ Ladder</b> creates a ladder players can climb (hold W).</div>
+        <div class="tpl">Start from a template: ${Object.entries(TPL).map(([k, t]) => `<button class="vb" onclick="applyTpl('${k}')">${t.n}</button>`).join('')}</div>
+        <div class="tools"><button class="btn sm" onclick="addPlat()">+ Platform</button><button class="btn sm alt" onclick="addLadder()">+ Ladder</button><button class="btn sm alt" onclick="zoom(1.25)">Zoom +</button><button class="btn sm alt" onclick="zoom(0.8)">Zoom −</button><small id="cnt" style="color:var(--dim)"></small></div>
         <canvas id="cv" width="720" height="440"></canvas><div id="selp"></div>
       </div>
       <div class="card pad step" style="margin-top:14px"><h3 class="ft"><i class="sn">3</i> Publish</h3>
-        <div class="hint">Setelah publish, game langsung muncul di Store dan bisa dimainkan lewat tombol Play.<br>${session.user.google ? '✓ Kamu login dengan Google: game kamu <b>disimpan permanen</b> dan tidak hilang saat server di-update.' : '⚠ Kamu login sebagai guest: game hanya tersimpan sementara dan bisa hilang saat server di-update. Login dengan Google agar tersimpan permanen.'}</div>
-        <div id="dErr" class="err"></div><button class="btn" onclick="publish()">${ed ? 'Simpan perubahan' : 'Publish game'}</button></div>
+        <div class="hint">Once published, your game appears in the store right away and can be played with the Play button.<br>${session.user.google ? '✓ You are logged in with Google: your game is <b>saved permanently</b> and survives server updates.' : '⚠ You are logged in as a guest: your game is only stored temporarily and may be lost when the server updates. Log in with Google to keep it permanently.'}</div>
+        <div id="dErr" class="err"></div><button class="btn" onclick="publish()">${ed ? 'Save changes' : 'Publish game'}</button></div>
     </div>
-    <div class="side"><div class="card"><h4>GAME SAYA</h4><div id="mine"></div></div></div></div>`;
+    <div class="side"><div class="card"><h4>MY GAMES</h4><div id="mine"></div></div></div></div>`;
   bindCanvas(); draw(); drawSel(); drawMine(); drawThumb();
 }
 function applyTpl(k) {
-  if (dev.boxes.length > 3 && !confirm('Ganti dunia dengan template ini? Perubahan di peta akan hilang.')) return;
+  if (dev.boxes.length > 3 && !confirm('Replace the world with this template? Unsaved map changes will be lost.')) return;
   dev.boxes = TPL[k].b(); dev.sky = TPL[k].sky; dev.sel = 0; draft(); devPage();
 }
 function zoom(f) { dev.scale = Math.max(2, Math.min(24, dev.scale * f)); draw(); }
 function addPlat(x, z) {
-  if (dev.boxes.length >= 40) return toast('Maksimal 40 platform');
+  if (dev.boxes.length >= 40) return toast('Maximum of 40 platforms');
   const n = dev.boxes.length;
   dev.boxes.push({ x: x ?? (n * 3) % 15 - 6, y: 0.5, z: z ?? 0, w: 4, h: 1, d: 4, c: PAL[Math.floor(Math.random() * 8)] });
   dev.sel = n; draw(); drawSel(); draft();
 }
 function addLadder() {
-  if (dev.boxes.length >= 40) return toast('Maksimal 40 platform');
+  if (dev.boxes.length >= 40) return toast('Maximum of 40 platforms');
   dev.boxes.push({ x: 0, y: 2, z: 0, w: 1.4, h: 4, d: 0.3, c: '#c8903c', l: 1 }); dev.sel = dev.boxes.length - 1; draw(); drawSel(); draft();
 }
 function dupPlat() { const b = dev.boxes[dev.sel]; if (b) { addPlat(b.x + 2, b.z + 2); Object.assign(dev.boxes[dev.sel], { y: b.y, w: b.w, h: b.h, d: b.d, c: b.c, l: b.l }); draw(); drawSel(); draft(); } }
-function delPlat() { if (dev.boxes.length < 2) return toast('Minimal 1 platform'); dev.boxes.splice(dev.sel, 1); dev.sel = Math.min(dev.sel, dev.boxes.length - 1); draw(); drawSel(); draft(); }
+function delPlat() { if (dev.boxes.length < 2) return toast('At least 1 platform is required'); dev.boxes.splice(dev.sel, 1); dev.sel = Math.min(dev.sel, dev.boxes.length - 1); draw(); drawSel(); draft(); }
 function makeStart() { const i = dev.sel; [dev.boxes[0], dev.boxes[i]] = [dev.boxes[i], dev.boxes[0]]; dev.sel = 0; draw(); drawSel(); draft(); }
 function setProp(k, v) {
   const b = dev.boxes[dev.sel]; if (!b) return;
@@ -1088,16 +1169,16 @@ function setProp(k, v) {
 }
 function drawSel() {
   const el = $('#selp'); if (!el) return;
-  $('#cnt').textContent = dev.boxes.length + ' platform';
+  $('#cnt').textContent = dev.boxes.length + ' platforms';
   const b = dev.boxes[dev.sel];
-  if (!b) { el.innerHTML = '<div class="empty">Klik sebuah platform di peta untuk mengubah ukuran dan warnanya.</div>'; return; }
+  if (!b) { el.innerHTML = '<div class="empty">Click a platform on the map to change its size and color.</div>'; return; }
   const sl = (k, lab, min, max, val) => `<div><label>${lab}: <b id="v_${k}">${val}</b></label><input type="range" min="${min}" max="${max}" step="0.5" value="${val}" oninput="setProp('${k}', +this.value)"></div>`;
   el.innerHTML = `<div class="selp"><b>Platform ${dev.sel + 1}${dev.sel === 0 ? ' · START' : ''}</b>
-    <div class="row2">${sl('w', 'Lebar (kiri-kanan)', 1, 60, b.w)}${sl('d', 'Panjang (depan-belakang)', 1, 60, b.d)}${sl('h', 'Tebal', 0.5, 10, b.h)}${sl('top', 'Ketinggian dari dasar', 0, 40, topOf(b))}</div>
-    <label>Warna</label><div class="sw">${PAL.map(c => `<button class="swb ${c === b.c ? 'on' : ''}" style="background:${c}" onclick="setProp('c','${c}');drawSel()"></button>`).join('')}<input type="color" value="${b.c}" oninput="setProp('c',this.value)"></div>
-    <label class="chk"><input type="checkbox" ${b.l ? 'checked' : ''} onchange="setProp('l', this.checked ? 1 : 0)"> Bisa dipanjat (tangga, tahan W)</label>
-    <label>Nama part <small style="color:var(--dim)">(dipakai badge "sentuh part")</small></label><input value="${E(b.n || '')}" maxlength="30" placeholder="contoh: Puncak" oninput="setProp('n', this.value)">
-    <div class="acts"><button class="btn sm alt" ${dev.sel === 0 ? 'disabled' : ''} onclick="makeStart()">Jadikan START</button><button class="btn sm alt" onclick="dupPlat()">Duplikat</button><button class="x" onclick="delPlat()">Hapus</button></div></div>`;
+    <div class="row2">${sl('w', 'Width (left-right)', 1, 60, b.w)}${sl('d', 'Length (front-back)', 1, 60, b.d)}${sl('h', 'Thickness', 0.5, 10, b.h)}${sl('top', 'Height from ground', 0, 40, topOf(b))}</div>
+    <label>Color</label><div class="sw">${PAL.map(c => `<button class="swb ${c === b.c ? 'on' : ''}" style="background:${c}" onclick="setProp('c','${c}');drawSel()"></button>`).join('')}<input type="color" value="${b.c}" oninput="setProp('c',this.value)"></div>
+    <label class="chk"><input type="checkbox" ${b.l ? 'checked' : ''} onchange="setProp('l', this.checked ? 1 : 0)"> Climbable (ladder, hold W)</label>
+    <label>Part name <small style="color:var(--dim)">(used by "touch part" badges)</small></label><input value="${E(b.n || '')}" maxlength="30" placeholder="e.g. Summit" oninput="setProp('n', this.value)">
+    <div class="acts"><button class="btn sm alt" ${dev.sel === 0 ? 'disabled' : ''} onclick="makeStart()">Make START</button><button class="btn sm alt" onclick="dupPlat()">Duplicate</button><button class="x" onclick="delPlat()">Delete</button></div></div>`;
 }
 function draw() {
   const c = $('#cv'); if (!c) return;
@@ -1136,25 +1217,25 @@ function bindCanvas() {
 }
 function drawMine() {
   const m = games.filter(g => g.mine);
-  $('#mine').innerHTML = m.length ? m.map(g => `<div class="mrow"><a href="#/game/${g.id}">${E(g.title)}</a><small>${g.online} online</small><button class="x" onclick="editGame('${g.id}')">Edit</button><button class="x" onclick="setThumb('${g.id}')">Thumb</button><button class="x" onclick="delGame('${g.id}')">Hapus</button></div>`).join('') : '<div class="empty">Belum ada game. Buat yang pertama di sebelah kiri!</div>';
+  $('#mine').innerHTML = m.length ? m.map(g => `<div class="mrow"><a href="#/game/${g.id}">${E(g.title)}</a><small>${g.online} online</small><button class="x" onclick="editGame('${g.id}')">Edit</button><button class="x" onclick="setThumb('${g.id}')">Thumb</button><button class="x" onclick="delGame('${g.id}')">Delete</button></div>`).join('') : '<div class="empty">No games yet. Create your first one on the left!</div>';
 }
 async function editGame(id) {
-  const d = await gj('/api/games/' + id + '/source'); if (!d) return alert('Tidak bisa memuat game ini');
+  const d = await gj('/api/games/' + id + '/source'); if (!d) return alert('Could not load this game');
   dev = { id, title: d.title, tagline: d.tagline, desc: d.desc, tags: d.tags.join(', '), sky: d.sky, a1: d.art[0], a2: d.art[1], boxes: d.boxes, sel: 0, scale: 8, thumb: null };
   await devPage(); window.scrollTo(0, 0);
 }
 async function delGame(id) {
-  if (!confirm('Hapus game ini?')) return;
+  if (!confirm('Delete this game?')) return;
   await fetch(S + '/api/games/' + id, { method: 'DELETE', headers: AH() });
   if (dev && dev.id === id) dev = null;
   devPage();
 }
 async function publish() {
   const err = $('#dErr'); err.textContent = '';
-  if (dev.title.trim().length < 3) { err.textContent = 'Isi judul game dulu (minimal 3 huruf) di langkah 1.'; return; }
+  if (dev.title.trim().length < 3) { err.textContent = 'Enter a game title first (at least 3 characters) in step 1.'; return; }
   const body = { title: dev.title, tagline: dev.tagline, desc: dev.desc, tags: dev.tags.split(',').map(t => t.trim()).filter(Boolean), sky: dev.sky, art: [dev.a1, dev.a2], boxes: dev.boxes, thumb: dev.thumb || undefined };
   const r = await rq(dev.id ? 'PUT' : 'POST', dev.id ? '/api/games/' + dev.id : '/api/games', body);
-  if (!r.ok) { err.textContent = r.data.error || 'Gagal publish'; return; }
+  if (!r.ok) { err.textContent = r.data.error || 'Publish failed'; return; }
   const id = dev.id || r.data.id; localStorage.removeItem('voxelyDraft'); dev = null; location.hash = '#/game/' + id;
 }
 
@@ -1166,50 +1247,59 @@ async function refreshBadge() {
 }
 async function friendAct(uid, a) {
   const r = await rq('POST', '/api/friends/' + uid + '/' + a, {});
-  if (!r.ok) alert(r.data.error || 'Gagal'); route(); refreshBadge();
+  if (!r.ok) alert(r.data.error || 'Failed'); route(); refreshBadge();
 }
-async function unfriend(uid) { if (!confirm('Hapus dari daftar teman?')) return; await rq('DELETE', '/api/friends/' + uid); route(); refreshBadge(); }
-const status = p => p.game ? '<span class="live"></span>Bermain: ' + E(p.game) : 'Offline';
-async function toggleFollow(uid, following) { const r=following ? await rq('DELETE','/api/users/'+uid+'/follow',{}) : await rq('POST','/api/users/'+uid+'/follow',{}); if(!r.ok) return alert(r.data.error||'Gagal mengubah follow'); userPage(uid); }
+async function unfriend(uid) { if (!confirm('Remove from your friends list?')) return; await rq('DELETE', '/api/friends/' + uid); route(); refreshBadge(); }
+async function toggleFollow(uid, following) { const r=following ? await rq('DELETE','/api/users/'+uid+'/follow',{}) : await rq('POST','/api/users/'+uid+'/follow',{}); if(!r.ok) return alert(r.data.error||'Failed to change follow status'); userPage(uid); }
 async function userPage(uid) {
   if (uid === session.user.uid) return (location.hash = '#/profile');
   const d = await gj('/api/users/' + uid);
-  if (!d) return ($('#view').innerHTML = '<div class="card empty">Pengguna tidak ditemukan (mungkin server sempat restart).</div>');
+  if (!d) return ($('#view').innerHTML = '<div class="card empty">User not found (the server may have restarted).</div>');
   const A = (a, t, c) => `<button class="btn ${c || ''}" onclick="friendAct('${uid}','${a}')">${t}</button>`;
   const follow = d.followed ? `<button class="btn alt" onclick="toggleFollow('${uid}',true)">Following</button>` : `<button class="btn" onclick="toggleFollow('${uid}',false)">Follow</button>`;
-  const act = { none: A('request', '+ Add Friend'), sent: `<button class="btn alt" disabled>Request terkirim</button> ${A('cancel', 'Batalkan', 'alt')}`,
-    received: `${A('accept', 'Terima pertemanan')} ${A('decline', 'Tolak', 'alt')}`, friends: `<span class="free">✓ Friends</span><button class="x" onclick="unfriend('${uid}')">Unfriend</button>` }[d.friend] || '';
+  const act = { none: A('request', '+ Add Friend'), sent: `<button class="btn alt" disabled>Request sent</button> ${A('cancel', 'Cancel', 'alt')}`,
+    received: `${A('accept', 'Accept Friend')} ${A('decline', 'Decline', 'alt')}`, friends: `<span class="free">✓ Friends</span><button class="x" onclick="unfriend('${uid}')">Unfriend</button>` }[d.friend] || '';
   const profileActions = `${follow} ${act}`;
   $('#view').innerHTML = `<div class="crumb"><a href="#/people">People</a> &gt; ${E(d.name)}</div>
-    <div class="card pad prof">${avatar(d, 110)}${d.outfit ? '<canvas id="uav" width="140" height="175"></canvas>' : ''}<div><h1 class="ftitle" style="margin:0">${E(d.name)}${verifiedBadge(d)}</h1>
-      <div style="color:var(--dim);margin:6px 0 4px">${status(d)} · ${d.friends} friends</div><div class="follow-stat"><b>${d.followers || 0}</b> followers · <b>${d.following || 0}</b> following</div><div class="acts">${profileActions}</div></div></div>
-    ${d.badges && d.badges.length ? `<div class="card pad" style="margin-top:18px"><h3 class="sec" style="margin:0 0 12px">BADGES</h3><div class="badge-grid">${d.badges.map(b => badgeItem(b)).join('')}</div></div>` : ''}
+    <div class="card pad prof">
+      <div class="prof-3d"><div class="av3d" id="uav3d"><span class="av3-load">Loading 3D avatar…</span><div class="av3-hint">DRAG TO ROTATE · SCROLL TO ZOOM</div></div></div>
+      <div class="prof-info"><div class="prow">${avatar(d, 96)}<div style="min-width:0">
+        <h1 class="ftitle" style="margin:0;font-size:26px">${E(d.name)}${verifiedBadge(d)}</h1>
+        <div class="follow-stat"><b>${d.followers || 0}</b> followers · <b>${d.following || 0}</b> following · <b>${d.friends}</b> friends</div></div></div>
+        <div class="meta-list">
+          <div>${IC_CLOCK} ${statusHTML(d)}</div>
+          <div>${IC_CAL} Joined Voxely on <b>${d.joined ? dateStr(d.joined) : 'an unknown date'}</b></div>
+          ${d.badgeTotal ? `<div>🏆 <b>${d.badgeTotal}</b> badge${d.badgeTotal === 1 ? '' : 's'} earned</div>` : ''}
+        </div>
+        <div class="acts">${profileActions}</div></div>
+    </div>
+    ${d.badges && d.badges.length ? `<div class="card pad" style="margin-top:18px"><h3 class="sec" style="margin:0 0 12px">BADGES${d.badgeTotal > d.badges.length ? ' · SHOWING ' + d.badges.length + ' OF ' + d.badgeTotal : ''}</h3><div class="badge-grid">${d.badges.map(b => badgeItem(b)).join('')}</div></div>` : '<div class="card pad empty" style="margin-top:18px">No badges yet.</div>'}
     <h3 class="sec">GAMES BY ${E(d.name).toUpperCase()}</h3>
-    ${d.games.length ? `<div class="grid">${d.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.online} online</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum membuat game.</div>'}`;
-  if (d.outfit && $('#uav')) drawAvatar($('#uav'), d.outfit);
+    ${d.games.length ? `<div class="grid">${d.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}</b><small>${g.online} online</small></div></a>`).join('')}</div>` : '<div class="card empty">No games created yet.</div>'}`;
+  mount3D('#uav3d', d.outfit, { tools: false });
 }
 async function notifPage() {
   const d = await gj('/api/notifications'); if (!d) return;
   const row = (x, body, btns) => `<div class="nr"><a href="#/user/${x.user.uid}">${avatar(x.user, 44)}</a><div class="nt"><div>${body}</div><small>${ago(x.ts)}</small></div><div>${btns}</div></div>`;
   const nm = x => `<a href="#/user/${x.user.uid}"><b>${E(x.user.name)}</b></a>`;
-  const all = [...d.requests.map(x => row(x, nm(x) + ' ingin berteman denganmu', `<button class="btn sm" onclick="friendAct('${x.user.uid}','accept')">Terima</button> <button class="btn sm alt" onclick="friendAct('${x.user.uid}','decline')">Tolak</button>`)),
-    ...d.accepted.map(x => row(x, nm(x) + ' menerima permintaan pertemananmu', ''))];
-  $('#view').innerHTML = `<span class="label">NOTIFICATIONS</span>${all.length ? `<div class="card">${all.join('')}</div>` : '<div class="card empty">Belum ada notifikasi.</div>'}`;
+  const all = [...d.requests.map(x => row(x, nm(x) + ' wants to be your friend', `<button class="btn sm" onclick="friendAct('${x.user.uid}','accept')">Accept</button> <button class="btn sm alt" onclick="friendAct('${x.user.uid}','decline')">Decline</button>`)),
+    ...d.accepted.map(x => row(x, nm(x) + ' accepted your friend request', ''))];
+  $('#view').innerHTML = `<span class="label">NOTIFICATIONS</span>${all.length ? `<div class="card">${all.join('')}</div>` : '<div class="card empty">No notifications yet.</div>'}`;
   if (d.accepted.some(x => !x.read)) { await rq('POST', '/api/notifications/read', {}); refreshBadge(); }
 }
 async function friendsPage() {
   const d = await gj('/api/friends'); if (!d) return;
-  $('#view').innerHTML = `<span class="label">FRIENDS</span>${d.friends.length ? `<div class="grid">${d.friends.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${status(p)}</small></div></a>`).join('')}</div>` : '<div class="card empty">Belum punya teman. Buka <a href="#/people" style="color:var(--link)">People</a>, klik profil seseorang, lalu Add Friend.</div>'}`;
+  $('#view').innerHTML = `<span class="label">FRIENDS</span>${d.friends.length ? `<div class="grid">${d.friends.map(p => `<a class="pc" href="#/user/${p.uid}">${avatar(p, 40)}<div><b>${E(p.name)}</b><small>${statusHTML(p)}</small></div></a>`).join('')}</div>` : '<div class="card empty">No friends yet. Open <a href="#/people" style="color:var(--link)">People</a>, visit someone\'s profile, then Add Friend.</div>'}`;
 }
 async function badgesPage() {
   const all = await gj('/api/badges');
   const mine = await gj('/api/me/badges');
   const mineIds = new Set(((mine && mine.badges) || []).map(b => b.id));
   let html = `<span class="label">BADGES</span>
-    <div class="hint">Badge didapat dengan bermain game. Setiap badge milik satu game; developer membuatnya di Developer Portal → Kelola → Badge.</div>`;
-  if (mine && mine.badges.length) html += `<div class="card pad" style="margin-bottom:18px"><h3 class="sec" style="margin:0 0 12px">BADGE SAYA (${mine.total})</h3><div class="badge-grid">${mine.badges.map(b => badgeItem(b)).join('')}</div></div>`;
-  if (all && all.badges.length) html += `<div class="card pad"><h3 class="sec" style="margin:0 0 12px">SEMUA BADGE (${all.total})</h3><div class="badge-grid">${all.badges.map(b => badgeItem({ ...b, description: (mineIds.has(b.id) ? '✓ Sudah kamu dapatkan. ' : '') + (b.description || '') })).join('')}</div></div>`;
-  else html += '<div class="card empty">Belum ada badge di game mana pun.</div>';
+    <div class="hint">Badges are earned by playing games. Each badge belongs to one game; developers create them in Developer Portal → Manage → Badges.</div>`;
+  if (mine && mine.badges.length) html += `<div class="card pad" style="margin-bottom:18px"><h3 class="sec" style="margin:0 0 12px">MY BADGES (${mine.total})</h3><div class="badge-grid">${mine.badges.map(b => badgeItem(b)).join('')}</div></div>`;
+  if (all && all.badges.length) html += `<div class="card pad"><h3 class="sec" style="margin:0 0 12px">ALL BADGES (${all.total})</h3><div class="badge-grid">${all.badges.map(b => badgeItem({ ...b, description: (mineIds.has(b.id) ? '✓ You earned this badge. ' : '') + (b.description || trigText(b)) })).join('')}</div></div>`;
+  else html += '<div class="card empty">No badges exist in any game yet.</div>';
   $('#view').innerHTML = html;
 }
 
@@ -1255,7 +1345,7 @@ async function googleLogin() { // exchange an existing Supabase session for a Vo
   const { data } = await sb.auth.getSession();
   const at = data?.session?.access_token; if (!at) return false;
   const r = await fetch(S + '/api/login/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ access_token: at }) }).catch(() => null);
-  if (!r || !r.ok) { $('#loginErr').textContent = r ? ((await r.json().catch(() => ({}))).error || 'Login Google gagal') : 'Server tidak bisa dihubungi'; return false; }
+  if (!r || !r.ok) { $('#loginErr').textContent = r ? ((await r.json().catch(() => ({}))).error || 'Google login failed') : 'Could not reach the server'; return false; }
   session = await r.json(); localStorage.setItem('voxely', JSON.stringify(session)); return true;
 }
 if (!sb) $('#googleBtn').style.display = 'none';
