@@ -87,6 +87,64 @@ const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
 const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
 
+// ---------- BUX economy: wallet, shop, inventory, transactions ----------
+// Everything is server-side: the client only asks to buy, the server checks the balance and ownership.
+const CURRENCY = 'BUX', START_BUX = 500, DAILY_BUX = 100, DAILY_MS = 24 * 3600 * 1000, MAX_TX = 100;
+const SHOP = [ // kind 'item' = avatar item (equip on the website), kind 'tool' = gear that shows up on the in-game hotbar
+  { id: 'hat-cap-blue', kind: 'item', name: 'Skyline Cap', price: 50 },
+  { id: 'hat-headphones', kind: 'item', name: 'Pulse Headphones', price: 120 },
+  { id: 'hat-crown-gold', kind: 'item', name: 'Starter Crown', price: 200 },
+  { id: 'face-cool', kind: 'item', name: 'Cool Face', price: 80 },
+  { id: 'face-wink', kind: 'item', name: 'Wink Face', price: 80 },
+  { id: 'skin-ocean', kind: 'item', name: 'Ocean Suit', price: 60 },
+  { id: 'skin-lime', kind: 'item', name: 'Lime Suit', price: 60 },
+  { id: 'bundle-noob', kind: 'item', name: 'Classic Noob Bundle', price: 150 },
+  { id: 'bundle-ninja', kind: 'item', name: 'Midnight Ninja Bundle', price: 250 },
+  { id: 'tool-sword', kind: 'tool', name: 'Sword', price: 150, icon: '🗡️', desc: 'A sturdy blade. Game scripts decide what it does.' },
+  { id: 'tool-pistol', kind: 'tool', name: 'Pistol', price: 300, icon: '🔫', desc: 'A ranged sidearm for shooter-style games.' },
+  { id: 'tool-medkit', kind: 'tool', name: 'Medkit', price: 75, icon: '➕', desc: 'Patch yourself up in games that support healing.' },
+  { id: 'tool-flashlight', kind: 'tool', name: 'Flashlight', price: 100, icon: '🔦', desc: 'Light the way through dark places.' },
+  { id: 'tool-grapple', kind: 'tool', name: 'Grappling Hook', price: 250, icon: '🪝', desc: 'Swing and climb to hard-to-reach spots.' }
+];
+const shopItem = id => SHOP.find(x => x.id === id);
+function logTx(u, type, label, amount, item) { // newest first, capped
+  const w = u.wallet;
+  w.tx.unshift({ id: crypto.randomBytes(4).toString('hex'), type, label, amount, balance: w.bux, item: item || null, ts: Date.now() });
+  if (w.tx.length > MAX_TX) w.tx.length = MAX_TX;
+}
+function walletOf(u) { // created lazily so guests and Google users both get one
+  if (!u.wallet) { u.wallet = { bux: START_BUX, inv: [], tx: [], dailyAt: 0 }; logTx(u, 'bonus', 'Welcome bonus', START_BUX); }
+  return u.wallet;
+}
+const walletPub = u => { const w = walletOf(u); return { currency: CURRENCY, bux: w.bux, inventory: w.inv.slice(), dailyIn: Math.max(0, w.dailyAt + DAILY_MS - Date.now()), dailyAmount: DAILY_BUX }; };
+function pushWallet(u) { // live-update the HUD of every game window this user has open
+  for (const s of io.sockets.sockets.values()) if (s.user === u) s.emit('wallet', walletPub(u));
+}
+const authed = (req, res) => { const u = sessions.get((req.headers.authorization || '').replace('Bearer ', '')); if (!u) res.sendStatus(401); return u; };
+app.get('/api/shop', (_req, res) => res.json({ currency: CURRENCY, items: SHOP }));
+app.get('/api/me/wallet', (req, res) => { const u = authed(req, res); if (u) res.json(walletPub(u)); });
+app.get('/api/me/transactions', (req, res) => { const u = authed(req, res); if (u) res.json({ transactions: walletOf(u).tx }); });
+app.post('/api/shop/buy', (req, res) => {
+  const u = authed(req, res); if (!u) return;
+  const it = shopItem(String(req.body?.id || '')); if (!it) return res.status(404).json({ error: 'Item not found' });
+  const w = walletOf(u);
+  if (w.inv.includes(it.id)) return res.status(400).json({ error: 'You already own this item', ...walletPub(u) });
+  if (w.bux < it.price) return res.status(400).json({ error: 'Not enough ' + CURRENCY + ' — you need ' + (it.price - w.bux) + ' more', ...walletPub(u) });
+  w.bux -= it.price; w.inv.push(it.id); // sync handler: balance check and deduction can't race
+  logTx(u, 'purchase', 'Bought ' + it.name, -it.price, it.id);
+  pushWallet(u);
+  res.json({ ...walletPub(u), bought: it.id });
+});
+app.post('/api/me/daily', (req, res) => {
+  const u = authed(req, res); if (!u) return;
+  const w = walletOf(u);
+  if (w.dailyAt + DAILY_MS > Date.now()) return res.status(400).json({ error: 'Daily reward is not ready yet', ...walletPub(u) });
+  w.bux += DAILY_BUX; w.dailyAt = Date.now();
+  logTx(u, 'reward', 'Daily reward', DAILY_BUX);
+  pushWallet(u);
+  res.json(walletPub(u));
+});
+
 app.get('/api/me', (req, res) => {
   const u = sessions.get((req.headers.authorization || '').replace('Bearer ', ''));
   u ? res.json(pubUser(u)) : res.sendStatus(401);
@@ -640,6 +698,7 @@ io.on('connection', socket => {
     inst.players.set(socket.id, me);
     trackJoin(gid, socket.user); joinedAt = Date.now();
     socket.emit('init', { me, room: inst.id, now: Date.now(), start: inst.ts, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes, scripts: g.scripts || [], badges: badgesOf(g).map(b => ({ trigger: b.trigger, value: b.value })) }, players: [...inst.players.values()] });
+    socket.emit('wallet', walletPub(socket.user)); // BUX counter + hotbar for the game HUD
     socket.to(inst.id).emit('join', me);
     io.to(inst.id).emit('count', inst.players.size);
     grantBadges(gid, b => b.trigger === 'join'); // "first join" badges
