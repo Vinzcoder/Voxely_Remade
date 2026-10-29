@@ -26,7 +26,7 @@
   .nav a { display:flex; align-items:center; padding:0 16px; color:var(--dim); font-weight:600; letter-spacing:.02em; transition:color .15s, background .15s, box-shadow .15s; }
   .nav a:hover { color:var(--strong); background:var(--hover); }
   .nav a.on { color:var(--strong); box-shadow:inset 0 -2px 0 var(--blue); }
-  .user { position:relative; }
+  .user { position:relative; display:flex; align-items:center; gap:6px; }
   .user > button { background:none; border:0; color:var(--text); display:flex; align-items:center; gap:9px; font:inherit; font-weight:600; cursor:pointer; padding:6px 8px; transition:background .15s; } .user > button:hover { background:var(--hover); }
   .av { width:28px; height:28px; display:inline-block; border:1px solid var(--line); }
   .menu { display:none; position:absolute; right:0; top:50px; width:240px; background:var(--panel); border:1px solid var(--line); z-index:5; box-shadow:0 24px 50px -16px rgba(0,0,0,.7); }
@@ -103,6 +103,28 @@
   .box .bm { display:flex; align-items:center; gap:10px; margin-bottom:18px; font-weight:800; letter-spacing:.3em; font-size:13px; color:var(--strong); } .box .bm svg { width:24px; height:24px; }
   .box h3 { color:var(--strong); font-size:21px; margin-bottom:6px; } .box p { color:var(--dim); margin-bottom:18px; line-height:1.5; }
   .box input { width:100%; background:var(--input); border:1px solid var(--line); color:var(--strong); padding:12px; margin-bottom:12px; font:inherit; } .box .btn { width:100%; }
+
+  /* ---------- BUX wallet, buy dialog, inventory ---------- */
+  .coin { width:18px; height:18px; flex:none; background:#f5b301; color:#201600; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:11px; line-height:1; }
+  .buxpill { display:flex; align-items:center; gap:8px; padding:6px 12px; border:1px solid var(--line); background:var(--panel); color:var(--strong); font-weight:700; font-size:13px; letter-spacing:.02em; transition:border-color .15s, background .15s; } .buxpill:hover { border-color:var(--blue); background:var(--hover); }
+  .buxpill small { color:var(--dim); font-size:10px; letter-spacing:.14em; font-weight:700; }
+  .buybox { text-align:center; } .buybox h3 { margin-bottom:14px; }
+  .buyart { height:156px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--panel3),var(--row2)); margin-bottom:16px; } .buyart canvas { width:112px; height:140px; }
+  .buybox p.q { color:var(--soft); font-size:16px; margin-bottom:12px; }
+  .buyrow { display:flex; justify-content:space-between; padding:9px 2px; border-top:1px solid var(--line); color:var(--dim); text-align:left; } .buyrow b { color:var(--strong); display:inline-flex; align-items:center; gap:7px; }
+  .buyerr { color:#ff5c6c; min-height:20px; margin-top:10px; font-size:13px; }
+  .buybtns { display:flex; gap:10px; margin-top:6px; } .buybtns .btn { flex:1; width:auto; padding-left:10px; padding-right:10px; }
+  .wallet-card { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; padding:20px 22px; margin-bottom:18px; }
+  .wallet-card .big { display:flex; align-items:center; gap:14px; } .wallet-card .big .coin { width:34px; height:34px; font-size:20px; }
+  .wallet-card .amt { font-size:34px; font-weight:800; color:var(--strong); line-height:1; font-variant-numeric:tabular-nums; } .wallet-card .amt small { font-size:13px; letter-spacing:.14em; color:var(--dim); margin-left:6px; }
+  .wallet-card .sub { color:var(--dim); font-size:12px; margin-top:6px; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .tx-row { display:grid; grid-template-columns:130px 1fr 110px 110px; gap:14px; align-items:center; padding:12px 16px; border-top:1px solid var(--line); } .tx-row:first-child { border-top:0; }
+  .tx-row .when { color:var(--dim); font-size:12px; } .tx-row .bal { color:var(--dim); text-align:right; font-size:12px; } .tx-amt { text-align:right; font-weight:700; font-variant-numeric:tabular-nums; } .tx-amt.pos { color:#22c55e; } .tx-amt.neg { color:#ff5c6c; }
+  .hotbar-prev { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .slotp { position:relative; width:84px; height:84px; background:#0e1a33; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; text-align:center; padding:14px 4px 0; color:var(--strong); font-weight:600; font-size:13px; } .slotp b { position:absolute; top:6px; left:8px; color:var(--dim); font-size:13px; }
+  .price { display:inline-flex; align-items:center; gap:7px; color:var(--strong); font-weight:700; letter-spacing:.02em; }
+  @media (max-width:640px) { .tx-row { grid-template-columns:1fr auto; } .tx-row .when, .tx-row .bal { display:none; } .buxpill small { display:none; } }
   #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--blue); color:var(--on); padding:11px 20px; display:none; z-index:40; font-weight:600; box-shadow:0 18px 40px -12px rgba(0,0,0,.7); }
 
   /* ---------- forms ---------- */
@@ -263,7 +285,7 @@
 <body>
 <header class="top"><div class="wrap">
   <a class="logo" href="#/"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lt" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7fb0ff"/><stop offset="1" stop-color="#3a82ff"/></linearGradient><linearGradient id="ll" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1463ff"/><stop offset="1" stop-color="#0a3fb8"/></linearGradient><linearGradient id="lr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d4fd6"/><stop offset="1" stop-color="#062a7a"/></linearGradient></defs><polygon points="32,5 57,19 32,33 7,19" fill="url(#lt)"/><polygon points="7,19 32,33 32,60 7,46" fill="url(#ll)"/><polygon points="57,19 32,33 32,60 57,46" fill="url(#lr)"/></svg>VOXELY</a>
-  <nav class="nav"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a></nav>
+  <nav class="nav"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a><a id="nInv" href="#/inventory">Inventory</a></nav>
   <div class="user" id="me"></div>
 </div></header>
 <main><div class="wrap" id="view"></div></main>
@@ -282,6 +304,16 @@
   <button class="btn" id="lDl" style="display:none;margin-bottom:8px" onclick="download()">Download Voxely Client</button>
   <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Close</button>
 </div></div>
+<div class="veil" id="buy"><div class="box buybox">
+  <h3>Buy Item</h3>
+  <div class="buyart"><canvas id="buyArt" width="112" height="140"></canvas></div>
+  <p class="q" id="buyQ"></p>
+  <div class="buyrow"><span>Price</span><b><span class="coin">B</span><span id="buyPrice"></span></b></div>
+  <div class="buyrow"><span>Your balance</span><b id="buyBal"></b></div>
+  <div class="buyrow"><span>Balance after</span><b id="buyAfter"></b></div>
+  <div class="buyerr" id="buyErr"></div>
+  <div class="buybtns"><button class="btn alt" onclick="closeBuy()">Cancel</button><button class="btn" id="buyGo" onclick="confirmBuy()">Get</button></div>
+</div></div>
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -292,6 +324,7 @@ const mobileGame = matchMedia('(pointer: coarse)').matches || navigator.maxTouch
 const sb = window.supabase && VOXELY.supabaseUrl ? supabase.createClient(VOXELY.supabaseUrl, VOXELY.supabaseKey, { auth: { flowType: 'pkce' } }) : null;
 const $ = s => document.querySelector(s);
 let games = [], session = JSON.parse(localStorage.getItem('voxely') || 'null'), idx = 0, timer = null, hist = [0, 0, 0, 0, 0, 0];
+let wallet = null, shopItems = [], buying = null, invTab = 'items'; // BUX wallet (balance + owned item ids) lives on the server
 
 const art = (g, seed = 0) => {
   let b = ''; for (let i = 0; i < 8; i++) b += `<i style="left:${i*13-2}%;width:12%;height:${18+((i*37+seed*23+g.title.length*9)%50)}%"></i>`;
@@ -329,12 +362,12 @@ async function guestLogin() {
   try { r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) }); }
   catch (e) { $('#loginErr').textContent = 'Could not reach the server'; return; }
   const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Login failed'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
-  $('#login').classList.remove('on'); renderMe(); route(); syncOutfit();
+  $('#login').classList.remove('on'); renderMe(); route(); syncOutfit(); refreshWallet();
 }
-function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
+function logout(manual) { localStorage.removeItem('voxely'); session = null; wallet = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
 function renderMe() {
   if (!session) { $('#me').innerHTML = ''; return; }
-  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
+  $('#me').innerHTML = `<a class="buxpill" href="#/inventory" title="Your BUX balance"><span class="coin">B</span><b id="buxTop">${wallet ? fmtBux(wallet.bux) : '…'}</b><small>BUX</small></a><button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
     <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>Guest account</small></div>
     <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/settings">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
 }
@@ -708,16 +741,53 @@ const MARKET_ITEMS = [
   { id:'bundle-ninja', name:'Midnight Ninja Bundle', type:'preset', value:'Ninja', color:'#1f2530', desc:'A dark bundle with a cool face.' }
 ];
 let marketFilter = 'all';
-function ownedMarket() { try { return new Set(JSON.parse(localStorage.getItem('voxelyMarketOwned') || '[]')); } catch (e) { return new Set(); } }
-function saveMarketOwned(set) { localStorage.setItem('voxelyMarketOwned', JSON.stringify([...set])); }
-function marketPreview(item) {
-  const id = 'market-canvas-' + item.id;
-  setTimeout(() => { const c = document.getElementById(id); if (!c) return; const g=c.getContext('2d'); g.fillStyle=item.color; g.fillRect(26,30,60,70); g.fillStyle=outfit.skin.head; g.beginPath(); g.arc(56,28,22,0,Math.PI*2); g.fill(); drawFace(g, item.type==='face' ? item.value : outfit.face, 56, 28, 38); if (item.type==='hat' || (item.type==='preset' && item.value==='Noob')) drawHat(g, item.type==='preset' ? 'none' : item.value, item.color, 56, 7); }, 0);
+const fmtBux = n => Number(n || 0).toLocaleString('en-US');
+const buxTag = n => `<span class="price"><span class="coin">B</span>${fmtBux(n)} BUX</span>`;
+const fmtDur = ms => { const m = Math.ceil(ms / 60000); return m >= 60 ? Math.floor(m / 60) + 'h ' + (m % 60) + 'm' : m + 'm'; };
+async function refreshWallet() {
+  if (!session) return;
+  const r = await fetch(S + '/api/me/wallet', { headers: { Authorization: 'Bearer ' + session.token } }).catch(() => null);
+  if (!r || !r.ok) return;
+  wallet = await r.json();
+  const el = $('#buxTop'); if (el) el.textContent = fmtBux(wallet.bux);
 }
-function buyMarket(id) {
-  const item=MARKET_ITEMS.find(x=>x.id===id); if(!item) return;
-  const owned=ownedMarket(); owned.add(id); saveMarketOwned(owned); equipMarket(item); toast(item.name + ' added to your collection'); marketplacePage();
+async function loadShop() { if (shopItems.length) return; const r = await fetch(S + '/api/shop').catch(() => null); if (r && r.ok) shopItems = (await r.json()).items || []; }
+function marketList() { // server = id / name / price / kind; the cosmetic look (color, preview) stays here
+  return shopItems.map(si => { const c = MARKET_ITEMS.find(x => x.id === si.id); return c ? { ...c, ...si, type: c.type } : { ...si, type: 'tool', color: '#5f9bff' }; });
 }
+function ownedMarket() { return new Set(wallet ? wallet.inventory : []); }
+function marketPreview(item, cid) {
+  const id = cid || ('market-canvas-' + item.id);
+  setTimeout(() => { const c = document.getElementById(id); if (!c) return; const g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height);
+    if (item.type==='tool') { g.fillStyle='rgba(95,155,255,.16)'; g.fillRect(14,22,84,96); g.font='54px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText(item.icon||'?',56,72); return; }
+    g.fillStyle=item.color; g.fillRect(26,30,60,70); g.fillStyle=outfit.skin.head; g.beginPath(); g.arc(56,28,22,0,Math.PI*2); g.fill(); drawFace(g, item.type==='face' ? item.value : outfit.face, 56, 28, 38); if (item.type==='hat' || (item.type==='preset' && item.value==='Noob')) drawHat(g, item.type==='preset' ? 'none' : item.value, item.color, 56, 7); }, 0);
+}
+function closeBuy() { $('#buy').classList.remove('on'); buying = null; }
+function openBuy(id) { // the "Buy Item" dialog
+  const item = marketList().find(x => x.id === id); if (!item || !wallet) return;
+  buying = item;
+  $('#buyQ').textContent = 'Would you like to get “' + item.name + '”?';
+  $('#buyPrice').textContent = fmtBux(item.price) + ' BUX';
+  $('#buyBal').textContent = fmtBux(wallet.bux) + ' BUX';
+  const left = wallet.bux - item.price;
+  $('#buyAfter').textContent = left >= 0 ? fmtBux(left) + ' BUX' : '—';
+  $('#buyErr').textContent = left < 0 ? 'Not enough BUX — you need ' + fmtBux(-left) + ' more.' : '';
+  $('#buyGo').disabled = left < 0; $('#buyGo').textContent = 'Get';
+  $('#buy').classList.add('on'); marketPreview(item, 'buyArt');
+}
+async function confirmBuy() {
+  if (!buying) return;
+  const item = buying, btn = $('#buyGo'); btn.disabled = true; btn.textContent = 'Buying…';
+  let r; try { r = await rq('POST', '/api/shop/buy', { id: item.id }); } catch (e) { return closeBuy(); }
+  if (r.data && r.data.bux !== undefined) { wallet = r.data; const el = $('#buxTop'); if (el) el.textContent = fmtBux(wallet.bux); }
+  if (!r.ok) { $('#buyErr').textContent = r.data.error || 'Purchase failed'; btn.textContent = 'Get'; return; }
+  closeBuy();
+  if (item.type !== 'tool') equipMarket(item); // wear new avatar items right away, like before
+  toast(item.name + ' added to your inventory');
+  if (location.hash.startsWith('#/inventory')) inventoryPage(); else marketplacePage();
+}
+$('#buy').addEventListener('click', e => { if (e.target.id === 'buy') closeBuy(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && buying) closeBuy(); });
 function equipMarket(item) {
   if(item.type==='hat') { outfit.hat=item.value; outfit.hatColor=item.color; }
   if(item.type==='face') outfit.face=item.value;
@@ -725,10 +795,41 @@ function equipMarket(item) {
   if(item.type==='preset') outfit=AV_PRESETS[item.value]();
   saveOutfit();
 }
-function marketplacePage() {
-  const owned=ownedMarket(), list=MARKET_ITEMS.filter(x=>marketFilter==='all'||x.type===marketFilter);
-  $('#view').innerHTML=`<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Free items — pick your style.</h1><p>Everything here is free. Claim an item once, then equip it instantly to wear it on your avatar and in games.</p></div><div class="market-filter">${[['all','All'],['hat','Hats'],['face','Faces'],['skin','Colors'],['preset','Bundles']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div><div class="hint">Your collection: <b>${owned.size}</b> / ${MARKET_ITEMS.length} free items · your outfit saves automatically in this browser and syncs when you log in.</div><div class="market-grid">${list.map(item=>{const has=owned.has(item.id);return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="112" height="140"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc)}</p><div class="market-meta"><span>FREE</span><span class="${has?'owned':''}">${has?'✓ Owned':'Free'}</span></div><button class="btn ${has?'alt':''}" onclick="${has?`equipMarket(MARKET_ITEMS.find(x=>x.id==='${item.id}'));toast('Avatar updated')`:`buyMarket('${item.id}')`} ">${has?'Equip':'Claim Free'}</button></div>`}).join('')}</div>`;
-  list.forEach(marketPreview);
+async function marketplacePage() {
+  await Promise.all([loadShop(), wallet ? 0 : refreshWallet()]);
+  const all = marketList();
+  if (!all.length) { $('#view').innerHTML = '<div class="card empty">Could not load the marketplace. Check your connection and try again.</div>'; return; }
+  const owned = ownedMarket(), list = all.filter(x => marketFilter === 'all' || x.type === marketFilter);
+  $('#view').innerHTML = `<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Spend your BUX.</h1><p>BUX is the Voxely currency. Buy avatar items to wear everywhere, or gear that appears on your in-game hotbar. Everything you buy lives in your <a href="#/inventory" style="color:var(--link)">Inventory</a>.</p></div><div class="market-filter">${[['all','All'],['hat','Hats'],['face','Faces'],['skin','Colors'],['preset','Bundles'],['tool','Gear']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div>
+  <div class="hint">Your balance: ${buxTag(wallet ? wallet.bux : 0)} &nbsp;·&nbsp; Owned: <b>${all.filter(x => owned.has(x.id)).length}</b> / ${all.length} items &nbsp;·&nbsp; Need more BUX? Claim your daily reward in <a href="#/inventory" style="color:var(--link)">Inventory</a>.</div>
+  <div class="market-grid">${list.map(item => { const has = owned.has(item.id), tool = item.type === 'tool';
+    const btn = has ? (tool ? `<button class="btn alt" disabled>In your hotbar</button>` : `<button class="btn alt" onclick="equipMarket(marketList().find(x=>x.id==='${item.id}'));toast('Avatar updated')">Equip</button>`) : `<button class="btn" onclick="openBuy('${item.id}')">Buy</button>`;
+    return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="112" height="140"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc || '')}</p><div class="market-meta">${buxTag(item.price)}<span class="${has ? 'owned' : ''}">${has ? '✓ Owned' : (tool ? 'GEAR' : '')}</span></div>${btn}</div>`; }).join('')}</div>`;
+  list.forEach(it => marketPreview(it));
+}
+
+async function claimDaily() {
+  let r; try { r = await rq('POST', '/api/me/daily'); } catch (e) { return; }
+  if (r.data && r.data.bux !== undefined) wallet = r.data;
+  toast(r.ok ? '+' + fmtBux(wallet.dailyAmount) + ' BUX daily reward' : (r.data.error || 'Not ready yet'));
+  inventoryPage();
+}
+async function inventoryPage() {
+  await Promise.all([loadShop(), refreshWallet()]);
+  if (!wallet) { $('#view').innerHTML = '<div class="card empty">Could not load your wallet. Check your connection and try again.</div>'; return; }
+  const owned = ownedMarket(), mine = marketList().filter(x => owned.has(x.id)), items = mine.filter(x => x.type !== 'tool'), gear = mine.filter(x => x.type === 'tool');
+  const ready = wallet.dailyIn <= 0;
+  let body = '';
+  if (invTab === 'items') body = items.length ? `<div class="market-grid">${items.map(it => `<div class="market-card"><div class="market-art"><canvas id="inv-canvas-${it.id}" width="112" height="140"></canvas></div><h3>${E(it.name)}</h3><p>${E(it.desc || '')}</p><button class="btn" onclick="equipMarket(marketList().find(x=>x.id==='${it.id}'));toast('Avatar updated')">Equip</button></div>`).join('')}</div>` : '<div class="card empty">You don’t own any avatar items yet. <a href="#/marketplace" style="color:var(--link)">Visit the Marketplace</a>.</div>';
+  else if (invTab === 'gear') body = gear.length ? `<div class="hint">Gear appears on your hotbar in every game, in this order. Press <b>1–9</b> (or tap a slot) to hold a tool, press it again to put it away, and press <b>F</b> or click to use it. What a tool actually does is up to each game’s scripts.</div><div class="hotbar-prev">${gear.map((g, i) => `<div class="slotp"><b>${i + 1}</b>${E(g.name)}</div>`).join('')}</div><div class="market-grid">${gear.map(it => `<div class="market-card"><div class="market-art"><canvas id="inv-canvas-${it.id}" width="112" height="140"></canvas></div><h3>${E(it.name)}</h3><p>${E(it.desc || '')}</p></div>`).join('')}</div>` : '<div class="card empty">You don’t own any gear yet. <a href="#/marketplace" style="color:var(--link)">Visit the Marketplace</a>.</div>';
+  else {
+    const d = await gj('/api/me/transactions'), tx = (d && d.transactions) || [];
+    body = tx.length ? `<div class="card">${tx.map(t => `<div class="tx-row"><span class="when">${dateStr(t.ts)}</span><span>${E(t.label)}</span><span class="tx-amt ${t.amount > 0 ? 'pos' : t.amount < 0 ? 'neg' : ''}">${t.amount > 0 ? '+' : ''}${fmtBux(t.amount)} BUX</span><span class="bal">Balance ${fmtBux(t.balance)}</span></div>`).join('')}</div>` : '<div class="card empty">No transactions yet.</div>';
+  }
+  $('#view').innerHTML = `<span class="label">INVENTORY</span>
+  <div class="card wallet-card"><div class="big"><span class="coin">B</span><div><div class="amt">${fmtBux(wallet.bux)}<small>BUX</small></div><div class="sub">${ready ? 'Your daily reward is ready.' : 'Next daily reward in ' + fmtDur(wallet.dailyIn) + '.'}</div></div></div><button class="btn" ${ready ? '' : 'disabled'} onclick="claimDaily()">Claim +${fmtBux(wallet.dailyAmount)} BUX</button></div>
+  <div class="tabs">${[['items', 'Avatar items (' + items.length + ')'], ['gear', 'Gear (' + gear.length + ')'], ['tx', 'Transactions']].map(([k, n]) => `<button class="vb ${invTab === k ? 'on' : ''}" onclick="invTab='${k}';inventoryPage()">${n}</button>`).join('')}</div>${body}`;
+  if (invTab !== 'tx') (invTab === 'items' ? items : gear).forEach(it => marketPreview(it, 'inv-canvas-' + it.id));
 }
 
 function avRandom() {
@@ -1310,7 +1411,8 @@ async function route() {
     $('#nForum').classList.toggle('on', h.startsWith('#/forum'));
   $('#nAvatar').classList.toggle('on', h.startsWith('#/avatar'));
   $('#nMarket').classList.toggle('on', h.startsWith('#/marketplace'));
-  $('#nGames').classList.toggle('on', !/^#\/(people|forum|avatar|marketplace|settings)/.test(h));
+  $('#nInv').classList.toggle('on', h.startsWith('#/inventory'));
+  $('#nGames').classList.toggle('on', !/^#\/(people|forum|avatar|marketplace|inventory|settings)/.test(h));
   $('#nPeople').classList.toggle('on', h.startsWith('#/people'));
   if (h.startsWith('#/dev/quick')) return devPage();
   if (h.startsWith('#/dev')) return devHome();
@@ -1319,6 +1421,7 @@ async function route() {
   if (h.startsWith('#/forum')) return forumRoute(h);
   if (h.startsWith('#/avatar')) return avatarPage();
   if (h.startsWith('#/marketplace')) return marketplacePage();
+  if (h.startsWith('#/inventory')) return inventoryPage();
   if (h.startsWith('#/settings')) return settingsPage();
   if (h.startsWith('#/user/')) return userPage(h.slice(7));
   if (h.startsWith('#/notifications')) return notifPage();
@@ -1332,7 +1435,7 @@ async function route() {
 $('#guestBtn').onclick = guestLogin;
 $('#nick').onkeydown = e => e.key === 'Enter' && guestLogin();
 window.onhashchange = route;
-setInterval(() => session && !/^#\/(dev|profile|forum|avatar|marketplace|settings|manage)/.test(location.hash) && ![...document.querySelectorAll('textarea')].some(t => t.value) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
+setInterval(() => session && !/^#\/(dev|profile|forum|avatar|marketplace|inventory|settings|manage)/.test(location.hash) && ![...document.querySelectorAll('textarea')].some(t => t.value) && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && !$('#launch').classList.contains('on') && route(), 10000);
 async function refreshMe() { // validate the saved session and pick up uid/avatar
   if (!session) return;
   const r = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).catch(() => null);
@@ -1351,7 +1454,7 @@ async function googleLogin() { // exchange an existing Supabase session for a Vo
 if (!sb) $('#googleBtn').style.display = 'none';
 $('#googleBtn').onclick = async () => {
   $('#loginErr').textContent = '';
-  if (await googleLogin()) { $('#login').classList.remove('on'); renderMe(); route(); refreshBadge(); syncOutfit(); return; }
+  if (await googleLogin()) { $('#login').classList.remove('on'); renderMe(); route(); refreshBadge(); syncOutfit(); refreshWallet(); return; }
   sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + '/' } });
 };
 $('#yr').textContent = new Date().getFullYear();
@@ -1359,9 +1462,9 @@ $('#yr').textContent = new Date().getFullYear();
   renderMe();
   await refreshMe();                                  // checks the saved session (guest or Google)
   if (!session) await googleLogin();                  // coming back from Google, or server restarted
-  renderMe(); route(); refreshBadge(); syncOutfit();
+  renderMe(); route(); refreshBadge(); syncOutfit(); refreshWallet();
 })();
-setInterval(refreshBadge, 10000);
+setInterval(() => { refreshBadge(); refreshWallet(); }, 10000);
 </script>
 </body>
 </html>
