@@ -961,7 +961,7 @@ async function devPage() {
   }
   const mine = games.filter(g => g.mine).map(g => [g.id, g]);
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
-    ${devTabs('games')}<div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
+    ${devTabs('games')}<div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="openStudio('new')">＋ New game in Studio</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
     <div class="hint">You can create up to 5 games. Build the world in Voxely Studio, set a release label (WIP / ALPHA / BETA), then log every update in the changelog so players know what's new.</div>
     ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b><small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="openStudio('${id}')">Edit in Voxely Studio</button><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Quick Web Editor</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
 }
@@ -1236,7 +1236,20 @@ async function awardBadge() {
 
 /* ---------- Developer Portal: tabs, Studio launcher, My T-Shirts, My Accessories ---------- */
 const devTabs = a => `<div class="avtabs">${[['games', 'My Games', ''], ['shirts', 'My T-Shirts', '/shirts'], ['accessories', 'My Accessories', '/accessories']].map(([k, n, h]) => `<button class="vb ${a === k ? 'on' : ''}" onclick="location.hash='#/dev${h}'">${n}</button>`).join('')}</div>`;
-function openStudio(id) { const u = VOXELY.studio || '/studio/'; location.href = u + (u.includes('?') ? '&' : '?') + `game=${encodeURIComponent(id)}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`; }
+async function openStudio(id) {
+  if (needLogin()) return;
+  const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => null);
+  if (ok === false) return logout();
+  if (ok === null) return toast('Cannot reach the Voxely server');
+  show('Opening Voxely Studio…', 'Your game opens in Studio as soon as the Voxely Client starts. If your browser asks, choose "Open Voxely Client".', false);
+  let left = false; const mark = () => (left = true);
+  addEventListener('blur', mark, { once: true }); document.addEventListener('visibilitychange', mark, { once: true });
+  location.href = `voxely://studio?game=${encodeURIComponent(id)}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`;
+  setTimeout(() => {
+    if (left || !document.hasFocus()) return $('#launch').classList.remove('on');
+    show('Client not installed yet', 'Download and install the Voxely Client, then click Edit again.', true); $('#lWeb').style.display = 'none';
+  }, 2500);
+}
 let itImg = null, ITEMS = [];
 const itOutfit = it => { const o = JSON.parse(JSON.stringify(outfit)); if (it.image) o.tshirt = it.image; else { o.hat = it.hat; o.hatColor = it.color; } return o; };
 async function itemsPage(kind) {
