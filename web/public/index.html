@@ -217,6 +217,12 @@
   .cat-ic { width:36px; height:36px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:16px; }
   .pact { display:flex; gap:6px; flex:none; align-items:center; }
 </style>
+<style>
+  .pgrid { display:grid; grid-template-columns:320px 1fr; gap:18px; margin-top:18px; } .pgrid canvas { width:100%; display:block; background:var(--panel3); border:1px solid var(--line); }
+  .frow { display:flex; gap:14px; overflow-x:auto; padding-bottom:14px; } .frow .au { flex:none; width:72px; }
+  .gmain { position:relative; } .fpop { position:absolute; left:12px; top:12px; width:230px; max-width:calc(100% - 24px); background:rgba(4,6,11,.94); border:1px solid var(--blue); padding:10px 12px; z-index:3; }
+  @media (max-width:860px) { .pgrid { grid-template-columns:1fr; } }
+</style>
 </head>
 <body>
 <header class="top"><div class="wrap topin">
@@ -324,16 +330,16 @@ function go(d) { idx = (idx + d + games.length) % games.length; drawCar(); }
 
 function home() {
   const top = [...games].sort((a, b) => b.online - a.online)[0];
-  $('#view').innerHTML = `<span class="label">FEATURED &amp; RECOMMENDED</span>
+  $('#view').innerHTML = `<div id="frbar"></div><span class="label">FEATURED &amp; RECOMMENDED</span>
     <div class="cols"><div><div class="car" id="car"></div><div class="dots" id="dots"></div></div>
     <div class="side">
       <div class="card trend"><h4>TRENDING NOW</h4><a href="#/game/${top.id}">${art(top)}<div class="in"><b>${E(top.title)}${lbl(top)}</b><small>${top.online ? '<i class="on-dot"></i>' : ''}${top.online} online</small></div></a></div>
       <div class="card act"><h4>COMMUNITY ACTIVITY</h4><div class="in">${spark()}<div class="n">${total()}<small>GAMERS ONLINE</small></div></div>
       <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} games live right now</div></div>
     </div></div>
-    <h3 class="sec">ALL GAMES</h3>
+    <div id="fpl"></div><h3 class="sec">ALL GAMES</h3>
     <div class="grid">${games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online ? '<i class="on-dot"></i>' : ''}${g.online} online · Free</small></div></a>`).join('')}</div>`;
-  idx = Math.min(idx, games.length - 1); drawCar();
+  idx = Math.min(idx, games.length - 1); drawCar(); if (session) loadFriendsHome();
   timer = setInterval(() => $('#car') && go(1), 6000);
 }
 
@@ -341,13 +347,13 @@ function gamePage(id) {
   const g = games.find(x => x.id === id); if (!g) return (location.hash = '#/');
   const cl = g.changelog || [];
   $('#view').innerHTML = `<div class="crumb"><a href="#/">Games</a> &gt; ${E(g.title)}</div><div class="gtitle">${E(g.title)}${lbl(g)}</div>
-    <div class="gmain">${art(g)}<div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
+    <div class="gmain">${art(g)}<div class="fpop" id="fpop" style="display:none"></div><div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
       <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>VISITS</dt><dd>${g.visits || 0}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
     <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
     <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Play right from your mobile browser, or use the Voxely Client on PC. <a onclick="download()">Download Voxely Client</a> is available for desktop.</div>
     ${cl.length ? `<div class="card pad" style="margin-top:18px"><h3 class="ft">CHANGELOG — updates from the developer</h3>${cl.map(e => `<div class="clrow"><b>${E(e.ver)}</b><div><span>${E(e.text)}</span><small>${dateStr(e.ts)}</small></div></div>`).join('')}</div>` : ''}
     <div id="servers"></div><div id="reviews"></div>`;
-  rvDraft = null; loadServers(id); loadReviews(id);
+  rvDraft = null; loadServers(id); loadReviews(id); loadFriendsPlayed(id);
 }
 
 function download() {
@@ -785,10 +791,13 @@ async function userPage(uid) {
       <div class="acts">${session && session.user.uid !== u.uid ? fb + `<button class="btn sm alt" onclick="followAction('${u.uid}')">${u.followed ? 'Unfollow' : 'Follow'}</button>` : ''}</div>
     </div></div></div>
     ${u.badges?.length ? `<h3 class="sec">BADGES</h3><div class="badge-grid">${u.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span></div>`).join('')}</div>` : ''}
-    ${u.outfit ? `<h3 class="sec">AVATAR</h3><div class="card pad" style="max-width:340px"><canvas id="uav" width="320" height="400"></canvas></div>` : ''}
+    <div class="pgrid"><div class="card pad"><canvas id="uav" width="320" height="400"></canvas></div>
+    <div class="card pad"><h3 class="ft">About</h3><p style="color:var(--soft);margin:8px 0 16px;white-space:pre-wrap;word-break:break-word">${u.about ? E(u.about) : '<span style="color:var(--dim)">No description yet.</span>'}</p>
+      <h3 class="ft">Level</h3><div class="stc" style="margin:8px 0 16px;display:inline-block"><b>${u.level}</b><small>LEVEL</small></div>
+      <h3 class="ft">Friends (${u.friends})</h3>${u.friendList && u.friendList.length ? `<div class="frow" style="flex-wrap:wrap;margin-top:10px">${u.friendList.map(f => `<a class="au" href="#/user/${f.uid}">${avatar(f, 48)}<small style="color:var(--link);font-size:11px;word-break:break-word">${E(f.name)}</small></a>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No friends yet.</div>'}</div></div>
     <h3 class="sec">GAMES BY ${E(u.name).toUpperCase()}</h3>
     ${u.games.length ? `<div class="grid">${u.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online} online · Free</small></div></a>`).join('')}</div>` : '<div class="empty">Hasn&#39;t created any games yet.</div>'}`;
-  if (u.outfit) V3D.render($('#uav'), u.outfit);
+  V3D.render($('#uav'), u.outfit);
 }
 async function friendAction(uid, act) {
   if (!session) return ($('#login').classList.add('on'));
@@ -819,11 +828,17 @@ async function profilePage() {
       <div class="prof">${avatar(u, 96)}<div><h2 class="ftitle" style="margin:0">${E(u.name)}</h2><small style="color:var(--dim)">${u.google ? 'Google account' : 'Guest account'}</small></div></div>
       <label style="margin-top:16px">Display name</label>
       <div style="display:flex;gap:8px"><input id="pfName" value="${E(u.name)}" maxlength="16" style="flex:1"><button class="btn sm" onclick="saveName()">Save</button></div>
+      <label>About me</label><textarea id="pfAbout" maxlength="200" style="height:70px">${E(u.about || '')}</textarea><div class="acts"><button class="btn sm" onclick="saveAbout()">Save about</button><a class="btn sm alt" href="#/user/${u.uid}">View public profile</a></div>
       <div class="shirt-upload" style="margin-top:14px"><button class="btn sm alt" onclick="saveAvatar()">Change profile photo</button><button class="x" onclick="rmAvatar()">Remove photo</button><small style="color:var(--dim)">Used as the small avatar across the whole site</small></div>
       <div class="sep2"></div>
       <h3 class="ft">My badges</h3>
       ${mine?.badges?.length ? `<div class="badge-grid" style="margin-top:10px">${mine.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name">${E(b.name)}</span></div>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No badges yet.</div>'}
     </div>`;
+}
+async function saveAbout() {
+  const r = await rq('POST', '/api/profile', { about: $('#pfAbout').value });
+  if (!r.ok) return toast(r.data.error || 'Failed to save');
+  session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); toast('About saved');
 }
 async function saveName() {
   const r = await rq('POST', '/api/profile', { name: $('#pfName').value });
@@ -946,9 +961,9 @@ async function devPage() {
   }
   const mine = games.filter(g => g.mine).map(g => [g.id, g]);
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
-    <div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
+    ${devTabs('games')}<div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
     <div class="hint">You can create up to 5 games. Build the world in Voxely Studio, set a release label (WIP / ALPHA / BETA), then log every update in the changelog so players know what's new.</div>
-    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b><small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Edit</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
+    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b><small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="openStudio('${id}')">Edit in Voxely Studio</button><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Quick Web Editor</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
 }
 async function delGame(id) { if (!confirm('Delete this game permanently?')) return; await rq('DELETE', '/api/games/' + id); await loadGames(); devPage(); toast('Game deleted'); }
 
@@ -1219,6 +1234,52 @@ async function awardBadge() {
   toast('Badge awarded!');
 }
 
+/* ---------- Developer Portal: tabs, Studio launcher, My T-Shirts, My Accessories ---------- */
+const devTabs = a => `<div class="avtabs">${[['games', 'My Games', ''], ['shirts', 'My T-Shirts', '/shirts'], ['accessories', 'My Accessories', '/accessories']].map(([k, n, h]) => `<button class="vb ${a === k ? 'on' : ''}" onclick="location.hash='#/dev${h}'">${n}</button>`).join('')}</div>`;
+function openStudio(id) { const u = VOXELY.studio || '/studio/'; location.href = u + (u.includes('?') ? '&' : '?') + `game=${encodeURIComponent(id)}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`; }
+let itImg = null, ITEMS = [];
+const itOutfit = it => { const o = JSON.parse(JSON.stringify(outfit)); if (it.image) o.tshirt = it.image; else { o.hat = it.hat; o.hatColor = it.color; } return o; };
+async function itemsPage(kind) {
+  if (!session) return (location.hash = '#/');
+  itImg = null;
+  const d = await gj('/api/me/items'); if (!$('#view')) return;
+  const list = (ITEMS = d?.[kind] || []), sh = kind === 'shirts';
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>${devTabs(kind)}
+    <div class="card pad" style="max-width:560px"><h3 class="ft">${sh ? 'Upload a T-shirt' : 'Create an accessory'}</h3><div class="err" id="iterr"></div>
+      <label>Name</label><input id="itName" maxlength="30">
+      ${sh ? `<div class="shirt-upload"><button class="btn sm alt" onclick="itPick()">Choose image</button><small id="itFile" style="color:var(--dim)">PNG/JPG/WEBP, 120 KB max</small></div>`
+        : `<label>Type</label><select id="itHat">${AV_HATS.slice(1).map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select><label>Color</label><input type="color" id="itColor" value="#e63946">`}
+      <div class="acts"><button class="btn" onclick="itSave('${kind}')">Save</button></div></div>
+    <h3 class="sec">${sh ? 'MY T-SHIRTS' : 'MY ACCESSORIES'} (${list.length})</h3>
+    ${list.length ? `<div class="market-grid">${list.map(it => `<div class="market-card"><div class="market-art"><canvas id="it-${it.id}" width="320" height="400"></canvas></div><h3>${E(it.name)}</h3><div class="acts"><button class="btn sm" onclick="itWear('${it.id}')">Wear</button><button class="x" onclick="itDel('${kind}','${it.id}')">Delete</button></div></div>`).join('')}</div>` : '<div class="empty">Nothing here yet.</div>'}`;
+  list.forEach(it => drawAvatar($('#it-' + it.id), itOutfit(it)));
+}
+function itPick() { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/png,image/jpeg,image/webp'; i.onchange = () => { const f = i.files[0]; if (!f) return; if (f.size > 120 * 1024) return toast('File must be 120 KB or smaller'); const r = new FileReader(); r.onload = () => { itImg = r.result; $('#itFile').textContent = f.name; }; r.readAsDataURL(f); }; i.click(); }
+async function itSave(kind) {
+  const body = { name: $('#itName').value };
+  if (kind === 'shirts') body.image = itImg; else { body.hat = $('#itHat').value; body.color = $('#itColor').value; }
+  const r = await rq('POST', '/api/me/items/' + kind, body);
+  if (!r.ok) return ($('#iterr').textContent = r.data.error || 'Could not save');
+  toast('Saved'); itemsPage(kind);
+}
+function itWear(id) { const it = ITEMS.find(x => x.id === id); if (!it) return; outfit = itOutfit(it); saveOutfit(); toast('Equipped — it will show in your next game'); }
+async function itDel(kind, id) { if (!confirm('Delete this item?')) return; await rq('DELETE', `/api/me/items/${kind}/${id}`); itemsPage(kind); }
+
+/* ---------- friends on the home page & on game pages ---------- */
+async function loadFriendsHome() {
+  const [f, p] = await Promise.all([gj('/api/friends'), gj('/api/friends/played')]);
+  const bar = $('#frbar'), fp = $('#fpl');
+  if (bar) bar.innerHTML = `<span class="label">YOUR FRIENDS</span>` + (f && f.friends.length ? `<div class="frow">${f.friends.map(u => `<a class="au" href="#/user/${u.uid}" title="${u.game ? 'Playing ' + E(u.game) : 'Not in a game'}"><span style="position:relative">${avatar(u, 52)}${u.game ? '<i class="on-dot" style="position:absolute;right:-3px;bottom:-3px;margin:0"></i>' : ''}</span><small style="color:var(--link);font-size:11px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(u.name)}</small></a>`).join('')}</div>` : '<div class="empty" style="padding:0 0 14px">No friends yet — open People to add some!</div>');
+  if (fp && p && p.games.length) fp.innerHTML = `<h3 class="sec">YOUR FRIENDS PLAYED TOO</h3><div class="grid">${p.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${E(g.friends.slice(0, 2).map(x => x.name).join(', '))}${g.friendCount > 2 ? ' +' + (g.friendCount - 2) : ''} played</small></div></a>`).join('')}</div>`;
+}
+async function loadFriendsPlayed(id) {
+  if (!session) return;
+  const p = await gj('/api/friends/played'), el = $('#fpop'), g = p && p.games.find(x => x.id === id);
+  if (!el || !g) return;
+  el.style.display = 'block';
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><b style="color:var(--strong);font-size:12px;letter-spacing:.08em">FRIENDS WHO PLAYED</b><button class="x" style="padding:2px 8px" onclick="this.closest('.fpop').style.display='none'">✕</button></div>${g.friends.map(f => `<a class="pc" href="#/user/${f.uid}" style="padding:6px;margin-top:4px;border:0;background:transparent">${avatar(f, 28)}<span style="color:var(--link)">${E(f.name)}</span></a>`).join('')}${g.friendCount > g.friends.length ? `<small style="color:var(--dim)">+${g.friendCount - g.friends.length} more</small>` : ''}`;
+}
+
 /* ---------- router ---------- */
 function route() {
   scrollTo(0, 0);
@@ -1254,6 +1315,8 @@ function route() {
     if (p[1] === 'changelog') return changelogPage(p[2]);
     if (p[1] === 'stats') return statsPage(p[2]);
     if (p[1] === 'badges') return badgesPage();
+    if (p[1] === 'shirts') return itemsPage('shirts');
+    if (p[1] === 'accessories') return itemsPage('accessories');
     return devPage();
   }
   location.hash = '#/';
