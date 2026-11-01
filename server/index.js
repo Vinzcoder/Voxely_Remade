@@ -1,751 +1,1285 @@
-const express = require('express');
-const http = require('http');
-const crypto = require('crypto');
-const path = require('path');
-const { Server } = require('socket.io');
-
-const PORT = process.env.PORT || 3000;
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
-
-// ---------- Badge System ----------
-const BADGES = new Map(); // badgeId -> badge definition
-const USER_BADGES = new Map(); // uid -> Set of badgeIds
-
-// Badge definition structure:
-// { id, name, description, icon (emoji or color), color, category, createdBy, createdAt, isHidden }
-
-// User badge structure:
-// { badgeId, earnedAt, expiresAt (optional) }
-
-function createBadge(definition, creator) {
-  const id = 'b' + crypto.randomBytes(4).toString('hex');
-  const badge = {
-    id,
-    name: String(definition.name || '').slice(0, 40),
-    description: String(definition.description || '').slice(0, 200),
-    icon: String(definition.icon || '⭐').slice(0, 10),
-    color: /^#[0-9a-f]{6}$/i.test(definition.color) ? definition.color : '#ffd700',
-    category: String(definition.category || 'general').slice(0, 30),
-    createdBy: creator.uid,
-    createdByName: creator.name,
-    createdAt: Date.now(),
-    isHidden: !!definition.isHidden
-  };
-  BADGES.set(id, badge);
-  return badge;
-}
-
-function awardBadge(uid, badgeId) {
-  if (!BADGES.has(badgeId)) return false;
-  if (!USER_BADGES.has(uid)) {
-    USER_BADGES.set(uid, new Map());
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voxely</title>
+<script>(function(){try{var t=JSON.parse(localStorage.getItem("voxelyTheme")||"null");if(t&&t.v){var r=document.documentElement;for(var k in t.v)r.style.setProperty(k,t.v[k]);r.style.colorScheme=t.l?"light":"dark";}}catch(e){}})();</script>
+<style>
+  :root { --bg:#04060b; --panel:#0a0f1a; --panel3:#071127; --input:#050913; --row2:#0d1524; --hover:#101c33; --track:#0b1428; --alt:#1b2a4a; --line:#15233f; --blue:#1463ff; --blue2:#0a3fb8; --blue-hover:#3a82ff; --link:#6fa8ff; --text:#e6edf7; --dim:#7d8aa3; --soft:#b6c2d9; --strong:#ffffff; --on:#ffffff; --notice1:#0f2a5c; --notice2:#0a1c3d; }
+  * { box-sizing:border-box; margin:0; border-radius:0; }
+  body { background:var(--bg); color:var(--text); font:14px "Segoe UI",Arial,sans-serif; min-height:100vh; display:flex; flex-direction:column; }
+  a { color:inherit; text-decoration:none; cursor:pointer; }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 16px; }
+  /* header — single dark bar: logo, center nav, user area (final website) */
+  .top { position:sticky; top:0; z-index:30; background:var(--panel3); border-bottom:1px solid var(--line); }
+  .topin { height:54px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
+  .logo { display:inline-flex; align-items:center; gap:9px; font-size:15px; font-weight:800; letter-spacing:5px; color:var(--strong); }
+  .logo svg { width:21px; height:21px; flex:none; }
+  .sub { display:flex; justify-content:center; align-items:stretch; height:54px; gap:30px; }
+  .sub a { display:flex; align-items:center; padding:0 2px; color:var(--dim); font-weight:600; border-bottom:2px solid transparent; }
+  .sub a:hover { color:var(--strong); }
+  .sub a.on { color:var(--strong); border-bottom-color:var(--blue); }
+  .tright { display:flex; align-items:center; gap:10px; justify-self:end; }
+  .burger { display:none; background:none; border:1px solid var(--line); color:var(--strong); font-size:18px; line-height:1; padding:7px 11px; cursor:pointer; }
+  .burger:hover { border-color:var(--blue); color:var(--link); }
+  .user { position:relative; }
+  .user > button { background:none; border:0; color:var(--strong); display:flex; align-items:center; gap:8px; font:inherit; font-weight:600; cursor:pointer; }
+  .av { width:28px; height:28px; display:inline-block; border:1px solid rgba(255,255,255,.4); }
+  .menu { display:none; position:absolute; right:0; top:46px; width:230px; background:var(--panel); border:1px solid var(--line); z-index:40; }
+  .menu.on { display:block; }
+  .menu .mh { padding:12px 14px; border-bottom:1px solid var(--line); } .menu .mh small { display:block; color:var(--dim); margin-top:2px; }
+  .menu a { display:block; padding:10px 14px; } .menu a:hover { background:var(--hover); }
+  .menu .out { color:#ff5c6c; border-top:1px solid var(--line); }
+  /* footer */
+  footer.foot { margin-top:auto; border-top:1px solid var(--line); }
+  .footin { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:16px; padding-bottom:max(16px, env(safe-area-inset-bottom)); }
+  .fbrand { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  .fbrand b { font-size:14px; letter-spacing:4px; color:var(--strong); }
+  .fbrand small { color:var(--dim); }
+  .foot nav { display:flex; gap:18px; flex-wrap:wrap; }
+  .foot nav a { color:var(--dim); font-size:13px; font-weight:600; }
+  .foot nav a:hover { color:var(--strong); }
+  /* layout */
+  main { flex:1; width:100%; padding:22px 0 60px; }
+  .label { display:flex; align-items:center; gap:12px; background:none; color:var(--text); font-weight:700; letter-spacing:.12em; padding:0; margin:2px 0 14px; font-size:13px; }
+  .label::after { content:""; width:42px; height:3px; background:var(--blue); flex:none; }
+  .cols { display:grid; grid-template-columns:1fr 300px; gap:18px; }
+  .card { background:var(--panel); border:1px solid var(--line); }
+  .card h4 { background:transparent; color:var(--dim); font-size:11px; font-weight:700; letter-spacing:.16em; padding:12px 14px 10px; border-bottom:1px solid var(--line); }
+  .art { position:relative; overflow:hidden; background:linear-gradient(135deg,var(--a),var(--b)); width:100%; height:100%; min-height:60px; }
+  .art i { position:absolute; bottom:0; background:rgba(0,0,0,.3); border-top:3px solid rgba(255,255,255,.22); }
+  /* carousel */
+  .car { position:relative; display:grid; grid-template-columns:1.15fr 1fr; height:344px; background:var(--panel); border:1px solid var(--line); }
+  .car .l { cursor:pointer; } .car .r { padding:18px; display:flex; flex-direction:column; gap:6px; min-height:0; }
+  .car h2 { font-size:26px; color:var(--strong); } .car .meta { color:var(--link); font-size:13px; }
+  .ftag { display:block; color:var(--link); font-size:11px; font-weight:800; letter-spacing:.22em; }
+  .ctags { display:flex; gap:6px; flex-wrap:wrap; margin:2px 0; }
+  .ctags .tag { font-size:12px; padding:2px 10px; }
+  .car .see { margin-top:auto; align-self:flex-start; padding:10px 26px; }
+  .on-dot { display:inline-block; width:7px; height:7px; background:#22c55e; margin-right:5px; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; flex:1; min-height:0; }
+  .shots > div:first-child { grid-column:span 2; } .shots > div { min-height:0; }
+  .arr { position:absolute; top:50%; margin-top:-26px; width:34px; height:52px; background:rgba(3,7,14,.72); color:#fff; border:0; font-size:20px; cursor:pointer; z-index:2; }
+  .arr:hover { background:var(--blue-hover); }
+  .dots { display:flex; justify-content:center; gap:8px; margin:12px 0 0; }
+  .dots b { width:26px; height:6px; background:var(--alt); cursor:pointer; } .dots b.on { background:var(--blue); }
+  /* side cards */
+  .side { display:flex; flex-direction:column; gap:18px; }
+  .trend .art { height:150px; } .trend .in { padding:10px 12px; } .trend b { font-size:16px; color:var(--strong); display:block; } .trend small { color:var(--link); }
+  .act .in { padding:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .act svg { width:150px; height:46px; } .act .n { font-size:34px; font-weight:800; color:var(--strong); line-height:1; text-align:right; } .act .n small { display:block; font-size:10px; color:var(--dim); letter-spacing:.06em; font-weight:600; }
+  .act .foot { padding:0 12px 12px; color:var(--dim); font-size:12px; } .live { display:inline-block; width:8px; height:8px; background:#22c55e; margin-right:6px; }
+  /* grid */
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .gc { background:var(--panel); border:1px solid var(--line); cursor:pointer; transition:border-color .15s, transform .15s; }
+  .gc:hover { border-color:var(--blue); transform:translateY(-2px); }
+  .gc .art { height:120px; } .gc .in { padding:10px 12px; } .gc b { color:var(--strong); display:block; } .gc small { color:var(--dim); }
+  h3.sec { margin:30px 0 12px; font-size:13px; letter-spacing:.06em; color:var(--dim); }
+  .tag { display:inline-block; border:1px solid var(--blue); color:var(--link); padding:1px 8px; font-size:12px; margin:0 4px 4px 0; }
+  /* game page */
+  .crumb { color:var(--dim); font-size:12px; margin-bottom:8px; } .crumb a:hover { color:var(--strong); }
+  .gtitle { font-size:28px; color:var(--strong); margin-bottom:14px; }
+  .gmain { display:grid; grid-template-columns:1fr 320px; gap:18px; } .gmain .art { height:380px; }
+  .info { padding:16px; line-height:1.55; } .info dt { color:var(--dim); font-size:11px; letter-spacing:.06em; margin-top:12px; } .info dd { margin:2px 0 0; }
+  .buy { margin-top:18px; padding:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .buy h3 { font-size:20px; color:var(--strong); font-weight:600; }
+  .btn { background:var(--blue); color:var(--on); border:0; padding:11px 34px; font:600 15px inherit; font-family:inherit; cursor:pointer; }
+  .btn:hover { background:var(--blue-hover); } .btn.alt { color:var(--strong); background:var(--alt); }
+  .about { margin-top:18px; padding:16px; line-height:1.6; color:var(--soft); } .about a { color:var(--link); }
+  .free { border:1px solid var(--line); padding:6px 12px; color:var(--link); margin-right:10px; }
+  /* modals */
+  .veil { position:fixed; inset:0; background:rgba(0,0,0,.82); display:none; align-items:center; justify-content:center; z-index:60; } .veil.on { display:flex; }
+  .box { width:360px; background:var(--panel); border:1px solid var(--blue); padding:26px; }
+  .box h3 { color:var(--strong); font-size:20px; margin-bottom:6px; } .box p { color:var(--dim); margin-bottom:16px; line-height:1.45; }
+  .box input { width:100%; background:var(--input); border:1px solid var(--line); color:var(--strong); padding:11px; margin-bottom:12px; font:inherit; } .box .btn { width:100%; }
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--blue); color:var(--on); padding:10px 18px; display:none; z-index:70; }
+  .pad { padding:18px; } .pad label { display:block; color:var(--dim); font-size:12px; margin:12px 0 4px; }
+  .pad input:not([type=color]), .pad textarea, .search { width:100%; background:var(--input); border:1px solid var(--line); color:var(--strong); padding:9px; font:inherit; }
+  .pad textarea { height:70px; resize:vertical; } .pad input[type=color] { width:100%; height:36px; background:var(--input); border:1px solid var(--line); padding:2px; }
+  .pad select { width:100%; background:var(--input); border:1px solid var(--line); color:var(--strong); padding:9px; font:inherit; }
+  .pad .btn { margin-top:6px; } .ft { color:var(--strong); font-size:18px; }
+  .row3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .brow { display:grid; grid-template-columns:repeat(6,1fr) 44px 34px; gap:6px; align-items:end; margin-bottom:6px; }
+  .brow label { margin:0; font-size:11px; } .brow input[type=color] { height:34px; }
+  .x { background:var(--alt); color:var(--strong); border:0; cursor:pointer; padding:7px 10px; } .x:hover { background:#c0392b; }
+  #pv { width:100%; margin:14px 0 8px; border:1px solid var(--line); display:block; }
+  .mrow { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); } .mrow a { flex:1; color:var(--link); } .mrow small { color:var(--dim); }
+  .empty { padding:16px; color:var(--dim); } .search { margin-bottom:14px; max-width:420px; }
+  .pc { display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line); padding:12px; } .pc small { display:block; color:var(--dim); margin-top:2px; } .av2 { width:40px; height:40px; flex:none; }
+  .art img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; } img.av { object-fit:cover; }
+  .prow { display:flex; gap:16px; align-items:center; margin-bottom:6px; }
+  .trow { display:flex; gap:12px; align-items:center; }
+  .tprev { width:160px; height:90px; background:var(--input); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; color:var(--dim); overflow:hidden; } .tprev img { width:100%; height:100%; object-fit:cover; }
+  .ic { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; vertical-align:middle; }
+  a.btn { display:inline-block; text-align:center; } .btn.sm { padding:6px 14px; font-size:13px; }
+  .ftitle { font-size:28px; color:var(--strong); margin-bottom:8px; }
+  .fnav { display:flex; gap:20px; margin-bottom:14px; } .fnav a { color:var(--link); } .fnav a:hover { color:var(--strong); }
+  .ftable { border:1px solid var(--line); background:var(--panel); }
+  .fh { display:grid; grid-template-columns:1fr 110px 110px; background:var(--blue); color:var(--on); font-weight:600; padding:10px 14px; } .fh span:not(:first-child) { text-align:center; }
+  .fr { display:grid; grid-template-columns:1fr 110px 110px; align-items:center; padding:14px; border-top:1px solid var(--line); color:var(--text); }
+  .ftable .fr:nth-child(even) { background:var(--row2); } a.fr:hover { background:var(--hover) !important; } .fr > span { text-align:center; font-weight:600; }
+  .fc { display:flex; gap:14px; align-items:center; } .fc b { color:var(--link); font-size:16px; display:block; } .fc small { color:var(--dim); }
+  .fstat { margin-top:18px; } .fstat div { margin-top:8px; color:var(--dim); } .fstat b { color:var(--strong); }
+  .tt .fh, .tt .fr { grid-template-columns:150px 1fr; } .au { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  .tl { color:var(--link); font-weight:600; font-size:16px; display:block; margin-bottom:4px; } .tt small { display:block; color:var(--dim); }
+  .fhead { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .post { display:grid; grid-template-columns:140px 1fr; gap:14px; background:var(--panel); border:1px solid var(--line); padding:14px; margin-bottom:8px; }
+  .pa { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; word-break:break-word; } .pb small { color:var(--dim); }
+  .ptext { white-space:pre-wrap; margin:6px 0 10px; line-height:1.55; word-break:break-word; }
+  .fsearch { display:flex; gap:10px; margin-bottom:14px; } .fsearch .search { margin:0; max-width:420px; } .fsearch .btn { padding:9px 22px; }
+  .notice { background:linear-gradient(var(--notice1),var(--notice2)); border:1px solid var(--blue); padding:26px; text-align:center; color:var(--soft); margin-bottom:16px; } .notice small { display:block; margin-top:8px; color:var(--soft); }
+  .sortbar { margin:16px 0; display:flex; gap:8px; align-items:center; color:var(--dim); }
+  .rv { display:grid; grid-template-columns:70px 1fr; background:var(--panel); border:1px solid var(--line); padding:16px; margin-bottom:10px; position:relative; }
+  .rvh span { color:var(--dim); } .rec { display:inline-flex; align-items:center; gap:10px; background:var(--blue); color:var(--on); padding:8px 14px; margin:8px 0; } .rec.neg { background:#8c2331; }
+  .rec b { display:block; } .rec small { font-size:12px; opacity:.9; } .rec .ic { width:26px; height:26px; }
+  .rvr p { white-space:pre-wrap; margin:6px 0 12px; word-break:break-word; line-height:1.5; }
+  .rvf { border-top:1px solid var(--line); padding-top:10px; color:var(--dim); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .vb { background:none; border:1px solid var(--blue); color:var(--link); padding:4px 12px; cursor:pointer; font:inherit; } .vb.on { background:var(--blue); color:var(--on); } .vb:disabled { opacity:.4; cursor:default; }
+  .flag { position:absolute; right:12px; top:12px; background:none; border:0; color:var(--dim); cursor:pointer; } .flag:hover { color:var(--strong); }
+  .rform { background:var(--panel); border:1px solid var(--line); padding:16px; margin-bottom:10px; } .rform textarea { width:100%; height:90px; background:var(--input); border:1px solid var(--line); color:var(--strong); padding:9px; font:inherit; margin:10px 0; }
+  .rform .tg { display:flex; gap:8px; } .rform .vb { padding:8px 16px; }
+  .bdg { background:#ef4444; color:var(--strong); font-size:11px; padding:1px 6px; margin-left:6px; } .bdg:empty { display:none; }
+  a.pc:hover { border-color:var(--blue); } .prof { display:flex; gap:22px; align-items:center; }
+  .nr { display:flex; align-items:center; gap:14px; padding:14px; border-bottom:1px solid var(--line); } .nt { flex:1; } .nt small { color:var(--dim); } .nt a { color:var(--link); }
+  .step .ft { display:flex; align-items:center; gap:10px; margin-bottom:10px; } .sn { background:var(--blue); color:var(--on); width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; font-style:normal; font-size:14px; }
+  .hint { background:var(--panel3); border:1px solid var(--line); padding:10px 12px; color:var(--soft); margin:8px 0; line-height:1.5; } .err { color:#ff5c6c; margin-bottom:8px; }
+  .tpl { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:12px 0; color:var(--dim); } .tools { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  #cv { width:100%; border:1px solid var(--line); touch-action:none; cursor:crosshair; display:block; }
+  .selp { margin-top:12px; padding:12px; border:1px solid var(--line); background:var(--input); } .row2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+  .pad input[type=range] { background:none; border:0; padding:0; accent-color:var(--blue); }
+  .sw { display:flex; gap:6px; flex-wrap:wrap; align-items:center; } .swb { width:26px; height:26px; border:2px solid transparent; cursor:pointer; } .swb.on { border-color:var(--strong); }
+  .pad .chk { display:flex; gap:8px; align-items:center; margin-top:12px; color:var(--text); font-size:13px; } .pad .chk input[type=checkbox] { width:auto; padding:0; }
+  .acts { display:flex; gap:8px; margin-top:12px; } .mrow { flex-wrap:wrap; }
+  .market-head { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+  .market-head p { color:var(--soft); max-width:620px; line-height:1.5; margin-top:6px; }
+  .market-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px; }
+  .market-card { background:var(--panel); border:1px solid var(--line); padding:12px; transition:border-color .15s,transform .15s; }
+  .market-card:hover { border-color:var(--blue); transform:translateY(-2px); }
+  .market-card .market-art { height:180px; background:linear-gradient(135deg,var(--panel3),var(--row2)); display:flex; align-items:flex-end; justify-content:center; position:relative; overflow:hidden; }
+  .market-art canvas { height:180px; width:144px; image-rendering:auto; }
+  .market-card h3 { color:var(--strong); margin:12px 0 4px; }
+  .market-card p { color:var(--dim); min-height:34px; font-size:12px; line-height:1.4; }
+  .market-meta { display:flex; justify-content:space-between; align-items:center; margin-top:12px; color:var(--link); font-size:12px; }
+  .owned { color:#22c55e; font-weight:700; }
+  .market-card .btn { width:100%; margin-top:10px; }
+  .market-filter { display:flex; gap:8px; flex-wrap:wrap; }
+  .gbtn { background:#fff !important; color:#222 !important; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; } .gbtn:hover { background:#e8e8e8 !important; }
+  .or { color:var(--dim); text-align:center; font-size:12px; margin:14px 0 10px; }
+  .srv { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 16px; border-bottom:1px solid var(--line); } .srv.last { border-bottom:0; }
+  .sinfo { flex:1; min-width:0; } .sinfo b { color:var(--strong); } .sinfo small { display:block; color:var(--dim); margin-top:2px; }
+  .sbar { height:5px; background:var(--track); margin:8px 0 4px; max-width:260px; } .sbar i { display:block; height:100%; background:var(--blue); }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .thmgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; margin-top:14px; }
+  .thm { background:var(--panel3); border:2px solid var(--line); padding:14px; text-align:left; color:var(--text); cursor:pointer; font:inherit; } .thm.on { border-color:var(--blue); }
+  .thm b { display:block; margin:10px 0 2px; color:var(--strong); } .thm small { color:var(--dim); } .sw3 { display:flex; } .sw3 i { width:36px; height:36px; border:1px solid var(--line); margin-right:-1px; }
+  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+  .badge-item { background:var(--panel3); border:1px solid var(--line); padding:10px; text-align:center; cursor:default; }
+  .badge-icon { font-size:24px; display:block; margin-bottom:4px; }
+  .badge-name { font-size:11px; color:var(--strong); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .badge-form { background:var(--panel); border:1px solid var(--line); padding:16px; margin-bottom:10px; }
+  .badge-form input, .badge-form textarea { width:100%; margin-bottom:10px; }
+  .badge-form textarea { height:60px; }
+  .avgrid { display:grid; grid-template-columns:360px 1fr; gap:18px; } .avprev canvas { width:100%; display:block; background:var(--panel3); border:1px solid var(--line); margin-bottom:12px; }
+  .avtabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; } .avpal { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px; }
+  .avpal .swb { width:34px; height:34px; }
+  .verified { width:18px; height:18px; vertical-align:-3px; margin-left:4px; } .follow-stat { color:var(--dim); margin-top:6px; } .follow-stat b { color:var(--strong); }
+  .shirt-upload { margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; } .avpal input[type=color] { width:46px; height:34px; padding:2px; }
+  .avtiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:10px; }
+  .tile { background:var(--panel3); border:2px solid var(--line); padding:6px; cursor:pointer; color:var(--text); font:inherit; } .tile.on { border-color:var(--blue); } .tile canvas { width:100%; display:block; } .tile small { display:block; margin-top:4px; color:var(--dim); }
+  #uav { background:var(--panel3); border:1px solid var(--line); }
+  .stgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; } .stc { background:var(--panel); border:1px solid var(--line); padding:16px; } .stc b { display:block; font-size:26px; color:var(--strong); } .stc small { color:var(--dim); }
+  .chart { display:flex; align-items:flex-end; gap:6px; height:180px; margin-top:12px; } .cb { flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; font-size:11px; color:var(--dim); } .cb i { display:block; width:100%; background:var(--blue); min-height:2px; }
+  .mgh { display:flex; gap:20px; align-items:center; flex-wrap:wrap; } .mga { width:260px; height:146px; flex:none; position:relative; } .gc.dv .acts { margin-top:10px; } .sep2 { border-top:1px solid var(--line); margin:18px 0; }
+  @media (max-width:860px) {
+    .avgrid { grid-template-columns:1fr; }
+    .cols, .gmain, .car { grid-template-columns:1fr; } .car { height:auto; } .car .l { height:200px; } .gmain .art { height:240px; }
+    .arr { top:100px; margin-top:0; }
+    .topin { display:flex; justify-content:space-between; }
+    .sub { position:absolute; top:100%; left:0; right:0; display:none; flex-direction:column; height:auto; gap:0; background:var(--panel3); border-bottom:1px solid var(--line); padding:6px 0; }
+    .sub.on { display:flex; }
+    .sub a { padding:12px 18px; border-bottom:0; }
+    .sub a.on { border-bottom-color:transparent; background:var(--hover); box-shadow:inset 3px 0 0 var(--blue); }
+    .burger { display:block; }
+    .footin { flex-direction:column; align-items:flex-start; }
   }
-  const userBadges = USER_BADGES.get(uid);
-  if (userBadges.has(badgeId)) return false; // Already has this badge
-  
-  userBadges.set(badgeId, { badgeId, earnedAt: Date.now() });
-  return true;
-}
+</style>
+<style>
+  /* ===== fitur baru: label rilis (beta/alpha/wip), changelog, preview marketplace ===== */
+  .glabel { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.08em; padding:2px 7px; vertical-align:3px; margin-left:8px; color:#fff; }
+  .glabel.beta { background:#b45309; } .glabel.alpha { background:#6d28d9; } .glabel.wip { background:#475569; }
+  .gc .glabel, .trend .glabel { font-size:9px; padding:1px 5px; vertical-align:2px; margin-left:6px; }
+  .clrow { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .clrow:last-child { border-bottom:0; }
+  .clrow b { color:var(--link); min-width:52px; flex:none; }
+  .clrow span { display:block; color:var(--soft); line-height:1.5; }
+  .clrow small { color:var(--dim); display:block; margin-top:2px; }
+  .cat-ic { width:36px; height:36px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:16px; }
+  .pact { display:flex; gap:6px; flex:none; align-items:center; }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap topin">
+  <a class="logo" href="#/" aria-label="Voxely - home"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4d8dff" d="M12 1.8 21.4 7v10L12 22.2 2.6 17V7z"/><path fill="#8fb7ff" d="M12 1.8 21.4 7 12 12.2 2.6 7z"/><path fill="#1254d6" d="M12 12.2v10L21.4 17V7z"/></svg>VOXELY</a>
+  <nav class="sub" id="nav" aria-label="Main navigation"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a></nav>
+  <div class="tright"><div class="user" id="me"></div><button class="burger" aria-label="Open navigation menu" onclick="document.getElementById('nav').classList.toggle('on')">☰</button></div>
+</div></header>
+<main><div class="wrap" id="view"></div></main>
+<footer class="foot"><div class="wrap footin">
+  <div class="fbrand"><b>VOXELY</b><small>© 2026 Voxely. Built for game creators.</small></div>
+  <nav aria-label="Footer links"><a href="#/">Games</a><a href="#/forum">Forum</a><a href="#/marketplace">Marketplace</a><a href="#/dev">Developer Portal</a></nav>
+</div></footer>
 
-function getUserBadges(uid) {
-  const userBadges = USER_BADGES.get(uid) || new Map();
-  return [...userBadges.values()].map(ub => {
-    const badge = BADGES.get(ub.badgeId);
-    return badge ? { ...badge, earnedAt: ub.earnedAt } : null;
-  }).filter(Boolean);
-}
+<div class="veil" id="login"><div class="box">
+  <h3>Sign in to Voxely</h3>
+  <p>Sign in with Google, or jump straight in as a guest — no sign-up needed.</p>
+  <button class="btn gbtn" id="googleBtn"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google</button><div class="or">or continue as a guest</div>
+  <input id="nick" maxlength="16" placeholder="Your name (leave empty = random)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
+  <button class="btn" id="guestBtn">Continue as Guest</button>
+</div></div>
+<div class="veil" id="launch"><div class="box">
+  <h3 id="lTitle"></h3><p id="lText"></p>
+  <button class="btn" id="lDl" style="display:none;margin-bottom:8px" onclick="download()">Download Voxely Client</button>
+  <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Close</button>
+</div></div>
+<div id="toast"></div>
 
-function getBadgeDefinition(badgeId) {
-  return BADGES.get(badgeId);
-}
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<script>
+const S = window.VOXELY.server.replace(/\/$/, '');
+const mobileGame = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+const sb = window.supabase && VOXELY.supabaseUrl ? supabase.createClient(VOXELY.supabaseUrl, VOXELY.supabaseKey, { auth: { flowType: 'pkce' } }) : null;
+const $ = s => document.querySelector(s);
+let games = [], session = JSON.parse(localStorage.getItem('voxely') || 'null'), idx = 0, timer = null, hist = [0, 0, 0, 0, 0, 0];
 
-function listAllBadges() {
-  return [...BADGES.values()];
-}
-
-// ---------- Games (each one is just a list of boxes) ----------
-const B = (x, y, z, w, h, d, c) => ({ x, y, z, w, h, d, c });
-const L = (x, y, z, w, h, d, c) => ({ x, y, z, w, h, d, c, l: 1 }); // climbable ladder
-const GAMES = {
-  plaza: {
-    title: 'Block Plaza', tagline: 'Hang out, chat and jump around.',
-    desc: 'A big open plaza with a few blocks to climb. The best place to meet other players and test chat.',
-    tags: ['Social', 'Chill', 'Multiplayer'], sky: '#7ec8ff', art: ['#2b6cb0', '#63b3ed'],
-    spawn: [0, 2, 0],
-    boxes: [B(0, -0.5, 0, 80, 1, 80, '#5cb85c'), B(6, 1, 4, 4, 2, 4, '#e0a040'), B(10, 2, 8, 4, 4, 4, '#d9534f'), L(10, 2, 5.85, 1.4, 4, 0.3, '#c8903c'), B(-8, 0.75, -6, 6, 1.5, 3, '#8e6bd0')]
-  },
-  obby: {
-    title: 'Sky Obby', tagline: 'Jump your way up to the top.',
-    desc: 'An obstacle course floating in the sky. Fall off and you respawn at the start.',
-    tags: ['Obby', 'Parkour', 'Multiplayer'], sky: '#1b2a49', art: ['#6b21a8', '#f97316'],
-    spawn: [0, 2, 0],
-    boxes: [B(0, -0.5, 0, 10, 1, 10, '#3b82f6'), B(0, 1, 11, 4, 1, 4, '#f97316'), B(5, 2.5, 17, 4, 1, 4, '#eab308'), B(11, 4, 20, 4, 1, 4, '#22c55e'), B(17, 5.5, 14, 3, 1, 3, '#ec4899'), B(20, 7, 7, 3, 1, 3, '#8b5cf6'), B(20, 8.5, -1, 8, 1, 8, '#ffffff')]
-  },
-  hills: {
-    title: 'Candy Hills', tagline: 'Climb the sweetest staircase.',
-    desc: 'Colorful stairs and hills made of candy blocks. Race your friends to the summit.',
-    tags: ['Casual', 'Climbing', 'Multiplayer'], sky: '#ffd6e8', art: ['#db2777', '#fcd34d'],
-    spawn: [0, 2, -10],
-    boxes: [B(0, -0.5, 0, 60, 1, 60, '#f9a8d4'), ...Array.from({ length: 10 }, (_, i) => B(0, i * 0.8 + 0.4, i * 3, 8, 0.8, 3, i % 2 ? '#a7f3d0' : '#fde68a'))]
-  }
+const art = (g, seed = 0) => {
+  let b = ''; for (let i = 0; i < 8; i++) b += `<i style="left:${i*13-2}%;width:12%;height:${18+((i*37+seed*23+g.title.length*9)%50)}%"></i>`;
+  return `<div class="art" style="--a:${g.art[0]};--b:${g.art[1]}">${g.thumb ? `<img src="${S}/api/thumb/${g.id}?v=${g.thumb}" alt="">` : b}</div>`;
 };
-// ---------- Servers (instances): every game can run several rooms ----------
-const MAX_PLAYERS = Number(process.env.MAX_PLAYERS) || 12;
-const instances = new Map(); // id -> { id, game, max, ts, players: Map(socketId -> player) }
-const instOf = gid => [...instances.values()].filter(i => i.game === gid);
-const online = gid => instOf(gid).reduce((n, i) => n + i.players.size, 0);
-function pickInstance(gid, want) {
-  if (want && want !== 'new') { const i = instances.get(want); if (i && i.game === gid && i.players.size < i.max) return i; }
-  if (want !== 'new') { // best open server = the fullest one that still has room
-    const open = instOf(gid).filter(i => i.players.size < i.max).sort((a, b) => b.players.size - a.players.size)[0];
-    if (open) return open;
-  }
-  const inst = { id: crypto.randomBytes(4).toString('hex'), game: gid, max: MAX_PLAYERS, ts: Date.now(), players: new Map() };
-  instances.set(inst.id, inst);
-  return inst;
+const E = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const tags = g => g.tags.map(t => `<span class="tag">${E(t)}</span>`).join('');
+const total = () => games.reduce((n, g) => n + g.online, 0);
+function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1800); }
+function soon() { toast('Coming soon'); }
+function verifiedBadge(u) { return Number(u?.followers || 0) >= 1000 ? '<img class="verified" src="/assets/images/checkmark.svg" alt="Verified" title="Verified creator · 1,000+ followers">' : ''; }
+function avatar(u, n) {
+  const st = `width:${n}px;height:${n}px;flex:none`;
+  return u.av ? `<img class="av" style="${st}" src="${S}/api/avatar/${u.uid}?v=${u.av}" alt="">` : `<span class="av" style="${st};background:${u.color}"></span>`;
 }
-
-// ---------- Guest login ----------
-const sessions = new Map();
-const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
-app.use((req, res, next) => {
-  res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS' });
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
-app.use(express.json({ limit: '1mb' }));
-const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
-const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
-const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid, followers: u.followers?.size || 0, following: u.following?.size || 0 });
-const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
-const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
-const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
-
-app.get('/api/me', (req, res) => {
-  const u = sessions.get((req.headers.authorization || '').replace('Bearer ', ''));
-  u ? res.json(pubUser(u)) : res.sendStatus(401);
-});
-app.post('/api/guest', (req, res) => {
-  const raw = String(req.body?.name || '').trim();
-  let name = cleanName(raw);
-  if (raw) {
-    if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 characters (letters/numbers)' });
-    if (nameTaken(name)) return res.status(400).json({ error: 'That name is already taken, try another' });
-  } else {
-    do { name = 'Guest' + Math.floor(1000 + Math.random() * 9000); } while (nameTaken(name));
-  }
-  const token = crypto.randomBytes(16).toString('hex');
-  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [] };
-  if (sessions.size > 5000) sessions.delete(sessions.keys().next().value);
-  sessions.set(token, user);
-  res.json({ token, user: pubUser(user) });
-});
-// ---------- Google login (Supabase Auth) ----------
-// Only the public (publishable) key is needed: Supabase itself verifies the access token.
-const SUPA_URL = process.env.SUPABASE_URL || 'https://kleqnciieeouapaxpora.supabase.co';
-const SUPA_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_Wmi1NDV2tMoDe7cZKwGsZg_V0fsK8OE';
-const byGoogle = new Map(); // google user id -> user object (same account across devices)
-app.post('/api/login/google', async (req, res) => {
-  const at = String(req.body?.access_token || '');
-  if (!at) return res.status(400).json({ error: 'Missing token' });
-  let info;
-  try {
-    const r = await fetch(SUPA_URL + '/auth/v1/user', { headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + at } });
-    if (!r.ok) return res.status(401).json({ error: 'Google login invalid or expired' });
-    info = await r.json();
-  } catch (e) { return res.status(502).json({ error: 'Could not reach Supabase' }); }
-  if (!info?.id) return res.status(401).json({ error: 'Invalid Google login' });
-  let user = byGoogle.get(info.id);
-  if (!user) {
-    const m = info.user_metadata || {};
-    let base = cleanName(m.full_name || m.name || String(info.email || '').split('@')[0]);
-    if (base.length < 2) base = 'Player';
-    let name = base;
-    while (nameTaken(name)) name = base.slice(0, 12) + Math.floor(100 + Math.random() * 900);
-    user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.createHash('sha256').update(info.id).digest('hex').slice(0, 8),
-      game: null, gid: info.id, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [] };
-    byGoogle.set(info.id, user);
-  }
-  const token = crypto.randomBytes(16).toString('hex');
-  sessions.set(token, user);
-  res.json({ token, user: pubUser(user) });
-});
-app.get('/api/avatar/:uid', (req, res) => sendImg([...sessions.values()].find(x => x.uid === req.params.uid)?.avatar, res));
-app.post('/api/profile', (req, res) => {
-  const tok = (req.headers.authorization || '').replace('Bearer ', ''), user = sessions.get(tok);
-  if (!user) return res.sendStatus(401);
-  const b = req.body || {};
-  if (b.name !== undefined) {
-    const name = cleanName(b.name);
-    if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 characters (letters/numbers)' });
-    if (nameTaken(name, tok)) return res.status(400).json({ error: 'Name already taken' });
-    user.name = name;
-    Object.entries(GAMES).forEach(([gid, g]) => { if (g.ownerUid === user.uid) { g.owner = name; saveGame(gid); } });
-  }
-  if (b.avatar === null) { user.avatar = null; user.av = 0; }
-  else if (b.avatar !== undefined) {
-    const img = parseImg(b.avatar, 60 * 1024);
-    if (!img) return res.status(400).json({ error: 'Invalid image or file too large' });
-    if (!user.avatar && [...sessions.values()].filter(x => x.avatar).length >= 300) return res.status(400).json({ error: 'Photo storage is full' });
-    user.avatar = img; user.av = Date.now();
-  }
-  res.json(pubUser(user));
-});
-
-const bearer = req => (req.headers.authorization || '').replace('Bearer ', '');
-const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, visits: g.stats?.visits || 0, thumb: g.thumb ? g.thumbV : 0, status: g.status || '', changelog: (g.changelog || []).slice(0, 12), mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: online(id) });
-app.get('/api/games', (req, res) => res.json(Object.entries(GAMES).map(([id, g]) => pub(id, g, bearer(req)))));
-
-app.get('/api/people', (_req, res) => {
-  const list = [...sessions.values()].map(u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null }));
-  list.sort((a, b) => !!b.game - !!a.game);
-  res.json(list.slice(0, 200));
-});
-
-// ---------- Developer Portal: users publish their own games ----------
-const HEX = /^#[0-9a-f]{6}$/i;
-const num = (v, lo, hi, d) => { v = parseFloat(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
-const txt = (v, n) => String(v || '').replace(/[<>]/g, '').trim().slice(0, n);
-const MAX_PARTS = 300, MAX_SCRIPTS = 8, MAX_CODE = 30000;
-const cleanPart = x => ({
-  x: num(x?.x, -2000, 2000, 0), y: num(x?.y, -100, 1000, 0), z: num(x?.z, -2000, 2000, 0),
-  w: num(x?.w, 0.2, 2000, 4), h: num(x?.h, 0.2, 500, 1), d: num(x?.d, 0.2, 2000, 4),
-  c: HEX.test(x?.c) ? x.c : '#888888', l: x?.l ? 1 : 0,
-  n: txt(x?.n, 30), r: num(x?.r, -360, 360, 0), t: num(x?.t, 0, 0.95, 0),
-  cc: x?.cc === 0 || x?.cc === false ? 0 : 1, k: x?.k ? 1 : 0, sp: x?.sp ? 1 : 0
-});
-// Release label shown on game cards: '', 'beta', 'alpha' or 'wip'
-const LABELS = ['', 'beta', 'alpha', 'wip'];
-// ex = existing game: fields that are missing from the request keep their old value (partial update)
-const buildGame = (b, ex) => {
-  const has = k => b[k] !== undefined;
-  const title = has('title') || !ex ? txt(b.title, 30) : ex.title;
-  if (title.length < 3) return { error: 'Title must be at least 3 letters' };
-  const boxes = Array.isArray(b.boxes) ? b.boxes.slice(0, MAX_PARTS).map(cleanPart) : ex ? ex.boxes : [];
-  if (!boxes.length) return { error: 'Add at least 1 platform' };
-  const f = boxes.find(x => x.sp) || boxes[0];
-  const tags = Array.isArray(b.tags) ? b.tags.map(t => txt(t, 14)).filter(Boolean).slice(0, 3) : ex ? ex.tags : [];
-  return { game: {
-    title, tagline: has('tagline') ? txt(b.tagline, 60) || 'A community-made game.' : ex?.tagline || 'A community-made game.',
-    desc: has('desc') ? txt(b.desc, 400) || 'No description yet.' : ex?.desc || 'No description yet.',
-    tags: tags && tags.length ? tags : ['Community'],
-    sky: HEX.test(b.sky) ? b.sky : ex?.sky || '#7ec8ff',
-    art: [HEX.test(b.art?.[0]) ? b.art[0] : ex?.art?.[0] || '#1463ff', HEX.test(b.art?.[1]) ? b.art[1] : ex?.art?.[1] || '#0a0f1a'],
-    spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes,
-    status: has('status') ? (LABELS.includes(String(b.status || '')) ? String(b.status) : '') : ex ? ex.status || '' : '',
-    scripts: Array.isArray(b.scripts) ? b.scripts.slice(0, MAX_SCRIPTS).map(s => ({ name: txt(s?.name, 30) || 'Script', code: String(s?.code || '').slice(0, MAX_CODE) })) : ex?.scripts || []
-  } };
-};
-app.post('/api/games', (req, res) => {
-  const tok = bearer(req), user = sessions.get(tok);
-  if (!user) return res.sendStatus(401);
-  const b = req.body || {};
-  const all = Object.values(GAMES).filter(g => g.ownerUid);
-  if (all.filter(g => g.ownerUid === user.uid).length >= 5) return res.status(400).json({ error: 'Maksimal 5 game per akun' });
-  if (all.length >= 50) return res.status(400).json({ error: 'Server is full, try again later' });
-  const built = buildGame(b);
-  if (built.error) return res.status(400).json({ error: built.error });
-  const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
-  if (b.thumb && !thumb) return res.status(400).json({ error: 'Invalid thumbnail or file too large' });
-  const id = 'u' + crypto.randomBytes(4).toString('hex');
-  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, ownerGoogle: !!user.gid, thumb, thumbV: thumb ? Date.now() : 0, changelog: [] };
-  saveGame(id);
-  res.json({ id });
-});
-const mineGame = req => { const g = GAMES[req.params.id]; return g && g.ownerUid && g.ownerUid === sessions.get(bearer(req))?.uid ? g : null; };
-app.get('/api/games/:id/source', (req, res) => {
-  const g = mineGame(req); if (!g) return res.sendStatus(403);
-  res.json({ title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, boxes: g.boxes, status: g.status || '', changelog: g.changelog || [], scripts: g.scripts || [], hasThumb: !!g.thumb });
-});
-app.put('/api/games/:id', (req, res) => {
-  const g = mineGame(req); if (!g) return res.sendStatus(403);
-  const b = req.body || {}, built = buildGame(b, g);
-  if (built.error) return res.status(400).json({ error: built.error });
-  const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
-  if (b.thumb && !thumb) return res.status(400).json({ error: 'Invalid thumbnail or file too large' });
-  Object.assign(g, built.game);
-  if (thumb) { g.thumb = thumb; g.thumbV = Date.now(); }
-  saveGame(req.params.id);
-  res.json({ ok: true });
-});
-app.delete('/api/games/:id', (req, res) => {
-  const g = GAMES[req.params.id];
-  if (!g || !g.ownerUid || g.ownerUid !== sessions.get(bearer(req))?.uid) return res.sendStatus(403);
-  delete GAMES[req.params.id]; dropGame(req.params.id);
-  res.sendStatus(204);
-});
-app.get('/api/thumb/:id', (req, res) => sendImg(GAMES[req.params.id]?.thumb, res));
-app.post('/api/games/:id/thumb', (req, res) => {
-  const g = GAMES[req.params.id];
-  if (!g || !g.ownerUid || g.ownerUid !== sessions.get(bearer(req))?.uid) return res.sendStatus(403);
-  const thumb = parseImg(req.body?.image, 400 * 1024);
-  if (!thumb) return res.status(400).json({ error: 'Invalid thumbnail or file too large' });
-  g.thumb = thumb; g.thumbV = Date.now();
-  saveGame(req.params.id);
-  res.json({ ok: true });
-});
-// ---------- Changelog (update notes written by the game's developer) ----------
-const clText = s => String(s || '').replace(/\r/g, '').replace(/[<>]/g, '').trim().slice(0, 400);
-app.get('/api/games/:id/changelog', (req, res) => {
-  const g = GAMES[req.params.id];
-  if (!g) return res.sendStatus(404);
-  res.json({ changelog: g.changelog || [] });
-});
-app.post('/api/games/:id/changelog', (req, res) => {
-  const g = mineGame(req); if (!g) return res.sendStatus(403);
-  const ver = txt(req.body?.ver, 10) || 'v1', text = clText(req.body?.text);
-  if (!text) return res.status(400).json({ error: 'Write the update notes first' });
-  g.changelog = g.changelog || [];
-  g.changelog.unshift({ id: crypto.randomBytes(4).toString('hex'), ver, text, ts: Date.now() });
-  g.changelog = g.changelog.slice(0, 20);
-  saveGame(req.params.id);
-  res.json({ ok: true, changelog: g.changelog });
-});
-app.delete('/api/games/:id/changelog/:cid', (req, res) => {
-  const g = mineGame(req); if (!g) return res.sendStatus(403);
-  g.changelog = (g.changelog || []).filter(e => e.id !== req.params.cid);
-  saveGame(req.params.id);
-  res.json({ ok: true });
-});
-// ---------- Reviews (any logged-in user, one per game) ----------
-const plain = (v, n) => String(v || '').replace(/\r/g, '').trim().slice(0, n);
-const uidMap = () => new Map([...sessions.values()].map(u => [u.uid, u]));
-const reviewsOf = g => (g.reviews = g.reviews || []);
-
-app.get('/api/games/:id/reviews', (req, res) => {
-  const g = GAMES[req.params.id];
-  if (!g) return res.sendStatus(404);
-  const tok = bearer(req), me = sessions.get(tok), users = uidMap();
-  const items = reviewsOf(g).filter(r => r.reports.size < 3).map(r => {
-    const u = users.get(r.uid);
-    return {
-      id: r.id, uid: r.uid, name: u?.name || r.name, av: u?.avatar ? u.av : 0, color: u?.color || '#1463ff',
-      up: r.up, text: r.text, ts: r.ts, yes: r.yes.size, no: r.no.size,
-      mine: me ? (r.yes.has(me.uid) ? 'yes' : r.no.has(me.uid) ? 'no' : null) : null, own: me?.uid === r.uid
+function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small JPEG data URL
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp';
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const k = Math.max(w / img.width, h / img.height), dw = img.width * k, dh = img.height * k;
+      c.getContext('2d').drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg', 0.85));
     };
-  });
-  items.sort(req.query.sort === 'helpful' ? (a, b) => b.yes - a.yes || b.ts - a.ts : (a, b) => b.ts - a.ts);
-  const isOwner = !!me && g.ownerUid === me.uid;
-  res.json({ isOwner, canReview: !!me && !isOwner, mine: items.find(x => x.own) || null, total: items.length, up: items.filter(x => x.up).length, reviews: items.slice(0, 100) });
-});
-app.post('/api/games/:id/reviews', (req, res) => {
-  const g = GAMES[req.params.id], tok = bearer(req), me = sessions.get(tok);
-  if (!me) return res.sendStatus(401);
-  if (!g) return res.sendStatus(404);
-  if (g.ownerUid === me.uid) return res.status(400).json({ error: 'You cannot review your own game' });
-  const text = plain(req.body?.text, 500);
-  if (!text) return res.status(400).json({ error: 'Write your review first' });
-  const list = reviewsOf(g), up = !!req.body?.up, ex = list.find(r => r.uid === me.uid);
-  if (ex) Object.assign(ex, { up, text, ts: Date.now() });
-  else if (list.length >= 500) return res.status(400).json({ error: 'Review limit reached for this game' });
-  else list.push({ id: crypto.randomBytes(4).toString('hex'), uid: me.uid, name: me.name, up, text, ts: Date.now(), yes: new Set(), no: new Set(), reports: new Set() });
-  res.json({ ok: true });
-});
-app.delete('/api/games/:id/reviews', (req, res) => {
-  const g = GAMES[req.params.id], me = sessions.get(bearer(req));
-  if (!me || !g) return res.sendStatus(403);
-  g.reviews = reviewsOf(g).filter(r => r.uid !== me.uid);
-  res.sendStatus(204);
-});
-const findReview = (req) => { const g = GAMES[req.params.id]; return g && reviewsOf(g).find(x => x.id === req.params.rid); };
-app.post('/api/games/:id/reviews/:rid/vote', (req, res) => {
-  const me = sessions.get(bearer(req)), r = findReview(req);
-  if (!me) return res.sendStatus(401);
-  if (!r) return res.sendStatus(404);
-  if (r.uid === me.uid) return res.status(400).json({ error: 'You cannot vote on your own review' });
-  r.yes.delete(me.uid); r.no.delete(me.uid);
-  if (req.body?.v === 'yes') r.yes.add(me.uid); else if (req.body?.v === 'no') r.no.add(me.uid);
-  res.json({ yes: r.yes.size, no: r.no.size });
-});
-app.post('/api/games/:id/reviews/:rid/report', (req, res) => {
-  const me = sessions.get(bearer(req)), r = findReview(req);
-  if (!me) return res.sendStatus(401);
-  if (!r) return res.sendStatus(404);
-  if (r.uid !== me.uid) r.reports.add(me.uid); // 3 different reports hide a review
-  res.json({ ok: true });
-});
-
-// ---------- Forum ----------
-const CATS = [
-  { id: 'general', name: 'General Discussion', desc: 'Talk about anything and everything related to Voxely!', color: '#5b8def' },
-  { id: 'games', name: 'Game Discussion', desc: 'Discuss your favorite games, share strategies, and find teammates.', color: '#6cc04a' },
-  { id: 'dev', name: 'Game Development', desc: 'Share tips, tutorials, and get help building games in the Developer Portal.', color: '#d08b5b' },
-  { id: 'suggest', name: 'Suggestions & Feedback', desc: 'Share your ideas to help improve Voxely!', color: '#d45d8a' },
-  { id: 'bugs', name: 'Bug Reports', desc: 'Report bugs and technical issues you encounter.', color: '#6b8fb5' },
-  { id: 'off', name: 'Off-Topic', desc: 'Discuss topics unrelated to Voxely and gaming.', color: '#a9b05b' }
-];
-const threads = []; let tid = 0;
-const byLast = (a, b) => b.last - a.last;
-const author = (users, uid, name) => { const u = users.get(uid); return { name: u?.name || name, uid, av: u?.avatar ? u.av : 0, color: u?.color || '#1463ff' }; };
-const item = (users, t) => ({ id: t.id, title: t.title, ts: t.ts, replies: t.posts.length, views: t.views, author: author(users, t.uid, t.name) });
-const meOf = req => sessions.get(bearer(req));
-
-app.get('/api/forum', (_req, res) => {
-  const cats = CATS.map(c => { const ts = threads.filter(t => t.cat === c.id); return { ...c, threads: ts.length, posts: ts.reduce((n, t) => n + 1 + t.posts.length, 0) }; });
-  res.json({ cats, stats: { categories: cats.length, threads: threads.length, posts: cats.reduce((n, c) => n + c.posts, 0) } });
-});
-app.get('/api/forum/search', (req, res) => {
-  const q = String(req.query.q || '').toLowerCase().trim(), users = uidMap();
-  res.json(q.length < 2 ? [] : threads.filter(t => (t.title + ' ' + t.body + ' ' + t.posts.map(p => p.body).join(' ')).toLowerCase().includes(q)).sort(byLast).slice(0, 50).map(t => item(users, t)));
-});
-app.get('/api/forum/mine', (req, res) => {
-  const me = meOf(req); if (!me) return res.sendStatus(401);
-  const users = uidMap();
-  res.json(threads.filter(t => t.uid === me.uid || t.posts.some(p => p.uid === me.uid)).sort(byLast).slice(0, 100).map(t => item(users, t)));
-});
-app.get('/api/forum/cat/:cat', (req, res) => {
-  const cat = CATS.find(c => c.id === req.params.cat); if (!cat) return res.sendStatus(404);
-  const users = uidMap();
-  res.json({ cat, threads: threads.filter(t => t.cat === cat.id).sort(byLast).slice(0, 100).map(t => item(users, t)) });
-});
-app.post('/api/forum/cat/:cat', (req, res) => {
-  const me = meOf(req); if (!me) return res.sendStatus(401);
-  const cat = CATS.find(c => c.id === req.params.cat); if (!cat) return res.sendStatus(404);
-  const title = plain(req.body?.title, 100).replace(/\s+/g, ' '), body = plain(req.body?.body, 2000);
-  if (title.length < 3) return res.status(400).json({ error: 'Title must be at least 3 characters' });
-  if (!body) return res.status(400).json({ error: 'Thread body cannot be empty' });
-  const now = Date.now();
-  if (now - (me.lastThread || 0) < 30000) return res.status(400).json({ error: 'Wait 30 seconds before creating another thread' });
-  me.lastThread = now;
-  if (threads.length >= 500) threads.splice(threads.reduce((m, t, i, a) => (t.last < a[m].last ? i : m), 0), 1);
-  const t = { id: String(++tid), cat: cat.id, title, body, uid: me.uid, name: me.name, ts: now, last: now, views: 0, posts: [] };
-  threads.push(t);
-  res.json({ id: t.id });
-});
-app.get('/api/forum/thread/:id', (req, res) => {
-  const t = threads.find(x => x.id === req.params.id); if (!t) return res.sendStatus(404);
-  t.views++;
-  const users = uidMap(), me = meOf(req);
-  res.json({ ...item(users, t), category: CATS.find(c => c.id === t.cat), body: t.body, own: me?.uid === t.uid,
-    posts: t.posts.map(p => ({ id: p.id, body: p.body, ts: p.ts, own: me?.uid === p.uid, author: author(users, p.uid, p.name) })) });
-});
-app.post('/api/forum/thread/:id/reply', (req, res) => {
-  const me = meOf(req); if (!me) return res.sendStatus(401);
-  const t = threads.find(x => x.id === req.params.id); if (!t) return res.sendStatus(404);
-  const body = plain(req.body?.body, 2000);
-  if (!body) return res.status(400).json({ error: 'Reply cannot be empty' });
-  if (t.posts.length >= 300) return res.status(400).json({ error: 'This thread is full' });
-  const now = Date.now();
-  if (now - (me.lastReply || 0) < 5000) return res.status(400).json({ error: 'Wait a few seconds before replying again' });
-  me.lastReply = now;
-  t.posts.push({ id: crypto.randomBytes(3).toString('hex'), uid: me.uid, name: me.name, body, ts: now });
-  t.last = now;
-  res.json({ ok: true });
-});
-app.delete('/api/forum/thread/:id', (req, res) => {
-  const me = meOf(req), i = threads.findIndex(x => x.id === req.params.id);
-  if (!me || i < 0 || threads[i].uid !== me.uid) return res.sendStatus(403);
-  threads.splice(i, 1);
-  res.sendStatus(204);
-});
-app.delete('/api/forum/thread/:id/post/:pid', (req, res) => {
-  const me = meOf(req), t = threads.find(x => x.id === req.params.id);
-  if (!me || !t) return res.sendStatus(403);
-  const i = t.posts.findIndex(p => p.id === req.params.pid && p.uid === me.uid);
-  if (i < 0) return res.sendStatus(403);
-  t.posts.splice(i, 1);
-  res.sendStatus(204);
-});
-
-// ---------- Friends & notifications ----------
-const userCard = u => ({ uid: u.uid, name: u.name, color: u.color, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null, followers: u.followers?.size || 0, following: u.following?.size || 0 });
-const friendState = (me, o) => me.friends.has(o.uid) ? 'friends' : me.reqOut.has(o.uid) ? 'sent' : me.reqIn.has(o.uid) ? 'received' : 'none';
-const needMe = (req, res) => { const me = sessions.get(bearer(req)); if (!me) res.sendStatus(401); return me; };
-const other = (req, me) => { const o = uidMap().get(req.params.uid); return o && o.uid !== me.uid ? o : null; };
-function makeFriends(me, o) {
-  me.reqIn.delete(o.uid); me.reqOut.delete(o.uid); o.reqIn.delete(me.uid); o.reqOut.delete(me.uid);
-  me.friends.add(o.uid); o.friends.add(me.uid);
-  o.notes.unshift({ uid: me.uid, ts: Date.now(), read: false }); o.notes.length = Math.min(o.notes.length, 50);
+    img.onerror = () => alert('That file is not a valid image');
+    img.src = url;
+  };
+  inp.click();
 }
-app.get('/api/users/:uid', (req, res) => {
-  const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
-  const me = sessions.get(bearer(req));
-  const userBadges = getUserBadges(u.uid);
-  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', followed: !!me?.following?.has(u.uid), friends: u.friends.size,
-    games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))),
-    badges: userBadges.slice(0, 10) }); // Show up to 10 badges in profile
-});
-app.post('/api/users/:uid/follow', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const o = other(req, me); if (!o) return res.sendStatus(404);
-  me.following ||= new Set(); o.followers ||= new Set();
-  me.following.add(o.uid); o.followers.add(me.uid);
-  res.json({ ok: true, followers: o.followers.size, following: me.following.size });
-});
-app.delete('/api/users/:uid/follow', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const o = other(req, me); if (!o) return res.sendStatus(404);
-  me.following?.delete(o.uid); o.followers?.delete(me.uid);
-  res.json({ ok: true, followers: o.followers?.size || 0, following: me.following?.size || 0 });
-});
-app.get('/api/friends', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const users = uidMap();
-  res.json({ friends: [...me.friends].map(id => users.get(id)).filter(Boolean).map(userCard).sort((a, b) => !!b.game - !!a.game) });
-});
-app.post('/api/friends/:uid/request', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const o = other(req, me); if (!o) return res.sendStatus(404);
-  if (me.friends.has(o.uid)) return res.json({ ok: true, state: 'friends' });
-  if (me.reqOut.has(o.uid)) return res.json({ ok: true, state: 'sent' });
-  if (me.reqIn.has(o.uid)) { makeFriends(me, o); return res.json({ ok: true, state: 'accepted' }); } // they already asked me
-  if (me.friends.size >= 100 || me.reqOut.size >= 50) return res.status(400).json({ error: 'Friend / request limit reached' });
-  me.reqOut.add(o.uid); o.reqIn.set(me.uid, Date.now());
-  res.json({ ok: true, state: 'sent' });
-});
-app.post('/api/friends/:uid/accept', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const o = other(req, me); if (!o || !me.reqIn.has(o.uid)) return res.sendStatus(404);
-  if (me.friends.size >= 100) return res.status(400).json({ error: 'Friend list full' });
-  makeFriends(me, o); res.json({ ok: true });
-});
-app.post('/api/friends/:uid/decline', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const o = other(req, me); if (!o) return res.sendStatus(404);
-  me.reqIn.delete(o.uid); o.reqOut.delete(me.uid); res.json({ ok: true });
-});
-app.post('/api/friends/:uid/cancel', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const o = other(req, me); if (!o) return res.sendStatus(404);
-  me.reqOut.delete(o.uid); o.reqIn.delete(me.uid); res.json({ ok: true });
-});
-app.delete('/api/friends/:uid', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const o = other(req, me); if (!o) return res.sendStatus(404);
-  me.friends.delete(o.uid); o.friends.delete(me.uid); res.sendStatus(204);
-});
-app.get('/api/notifications', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  const users = uidMap(), card = id => (users.get(id) ? userCard(users.get(id)) : null);
-  const requests = [...me.reqIn].map(([id, ts]) => ({ ts, user: card(id) })).filter(x => x.user).sort((a, b) => b.ts - a.ts);
-  const accepted = me.notes.map(n => ({ ts: n.ts, read: n.read, user: card(n.uid) })).filter(x => x.user);
-  res.json({ requests, accepted, unread: requests.length + accepted.filter(x => !x.read).length });
-});
-app.post('/api/notifications/read', (req, res) => {
-  const me = needMe(req, res); if (!me) return;
-  me.notes.forEach(n => (n.read = true)); res.json({ ok: true });
-});
 
-// ---------- Avatar outfit (colors, face, hat) ----------
-const OUT_PARTS = ['head', 'torso', 'armL', 'armR', 'legL', 'legR'];
-const OUT_FACES = ['smile', 'cool', 'wink', 'surprised', 'sad', 'angry'];
-const OUT_HATS = ['none', 'cap', 'tophat', 'crown', 'headphones', 'horns'];
-const cleanOutfit = o => {
-  const shirt = String(o?.tshirt || '');
-  const out = { skin: {}, face: OUT_FACES.includes(o?.face) ? o.face : 'smile', hat: OUT_HATS.includes(o?.hat) ? o.hat : 'none', hatColor: HEX.test(o?.hatColor) ? o.hatColor : '#e63946', tshirt: /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(shirt) && shirt.length <= 180000 ? shirt : null };
-  for (const k of OUT_PARTS) out.skin[k] = HEX.test(o?.skin?.[k]) ? o.skin[k] : '#e6eaf2';
-  return out;
+async function guestLogin() {
+  const r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) });
+  const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Login failed'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
+  $('#login').classList.remove('on'); renderMe(); route(); syncOutfit();
+}
+function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
+function renderMe() {
+  if (!session) { $('#me').innerHTML = ''; return; }
+  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
+    <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>Guest account</small></div>
+    <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/settings">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
+}
+document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
+
+async function loadGames() { games = await (await fetch(S + '/api/games', { headers: session ? { Authorization: 'Bearer ' + session.token } : {} })).json(); hist.push(total()); hist = hist.slice(-20); }
+const spark = () => {
+  const mx = Math.max(1, ...hist), pts = hist.map((v, i) => `${(i / (hist.length - 1)) * 150},${44 - (v / mx) * 40}`).join(' ');
+  return `<svg viewBox="0 0 150 46"><polyline points="${pts}" fill="none" stroke="#22c55e" stroke-width="2"/></svg>`;
 };
-app.get('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); res.json({ outfit: me.outfit || null }); });
-app.post('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); me.outfit = cleanOutfit(req.body); res.json({ outfit: me.outfit }); });
 
-// ---------- Badge System API ----------
-// Get all badges (public list)
-app.get('/api/badges', (req, res) => {
-  const me = sessions.get(bearer(req));
-  const badges = listAllBadges().filter(b => !b.isHidden || (me && me.uid === b.createdBy));
-  res.json({ badges, total: badges.length });
-});
+function drawCar() {
+  const g = games[idx];
+  $('#car').innerHTML = `<button class="arr" style="left:0" aria-label="Previous game" onclick="go(-1)">‹</button><button class="arr" style="right:0" aria-label="Next game" onclick="go(1)">›</button>
+    <div class="l" onclick="location.hash='#/game/${g.id}'">${art(g)}</div>
+    <div class="r"><span class="ftag">FEATURED</span><h2>${E(g.title)}${lbl(g)}</h2><div class="meta">${E(g.tagline)}</div>
+    <div class="ctags">${tags(g)}</div><small style="color:var(--dim)">${g.online} players online</small>
+    <div class="shots">${(g.thumb ? [0] : [1, 2, 3]).map(n => art(g, n)).map(a => `<div>${a}</div>`).join('')}</div>
+    <a class="btn see" href="#/game/${g.id}">View game</a></div>`;
+  $('#dots').innerHTML = games.map((_, i) => `<b class="${i === idx ? 'on' : ''}" onclick="idx=${i};drawCar()"></b>`).join('');
+}
+function go(d) { idx = (idx + d + games.length) % games.length; drawCar(); }
 
-// Get badge details
-app.get('/api/badges/:id', (req, res) => {
-  const badge = getBadgeDefinition(req.params.id);
-  if (!badge) return res.sendStatus(404);
-  res.json(badge);
-});
+function home() {
+  const top = [...games].sort((a, b) => b.online - a.online)[0];
+  $('#view').innerHTML = `<span class="label">FEATURED &amp; RECOMMENDED</span>
+    <div class="cols"><div><div class="car" id="car"></div><div class="dots" id="dots"></div></div>
+    <div class="side">
+      <div class="card trend"><h4>TRENDING NOW</h4><a href="#/game/${top.id}">${art(top)}<div class="in"><b>${E(top.title)}${lbl(top)}</b><small>${top.online ? '<i class="on-dot"></i>' : ''}${top.online} online</small></div></a></div>
+      <div class="card act"><h4>COMMUNITY ACTIVITY</h4><div class="in">${spark()}<div class="n">${total()}<small>GAMERS ONLINE</small></div></div>
+      <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} games live right now</div></div>
+    </div></div>
+    <h3 class="sec">ALL GAMES</h3>
+    <div class="grid">${games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online ? '<i class="on-dot"></i>' : ''}${g.online} online · Free</small></div></a>`).join('')}</div>`;
+  idx = Math.min(idx, games.length - 1); drawCar();
+  timer = setInterval(() => $('#car') && go(1), 6000);
+}
 
-// Create a new badge (developer only - Google authenticated users)
-app.post('/api/badges', (req, res) => {
-  const me = sessions.get(bearer(req));
-  if (!me) return res.sendStatus(401);
-  if (!me.gid) return res.status(403).json({ error: 'Only verified accounts can create badges' });
-  
-  const b = req.body || {};
-  if (!b.name || String(b.name).trim().length < 2) {
-    return res.status(400).json({ error: 'Badge name must be at least 2 characters' });
+function gamePage(id) {
+  const g = games.find(x => x.id === id); if (!g) return (location.hash = '#/');
+  const cl = g.changelog || [];
+  $('#view').innerHTML = `<div class="crumb"><a href="#/">Games</a> &gt; ${E(g.title)}</div><div class="gtitle">${E(g.title)}${lbl(g)}</div>
+    <div class="gmain">${art(g)}<div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
+      <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>VISITS</dt><dd>${g.visits || 0}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
+    <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
+    <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Play right from your mobile browser, or use the Voxely Client on PC. <a onclick="download()">Download Voxely Client</a> is available for desktop.</div>
+    ${cl.length ? `<div class="card pad" style="margin-top:18px"><h3 class="ft">CHANGELOG — updates from the developer</h3>${cl.map(e => `<div class="clrow"><b>${E(e.ver)}</b><div><span>${E(e.text)}</span><small>${dateStr(e.ts)}</small></div></div>`).join('')}</div>` : ''}
+    <div id="servers"></div><div id="reviews"></div>`;
+  rvDraft = null; loadServers(id); loadReviews(id);
+}
+
+function download() {
+  if (!VOXELY.download) return alert('Download link not set up yet (CLIENT_DOWNLOAD_URL in Vercel).');
+  location.href = VOXELY.download;
+}
+function show(title, text, dl) {
+  $('#lTitle').textContent = title; $('#lText').textContent = text;
+  $('#lDl').style.display = dl ? 'block' : 'none'; $('#launch').classList.add('on');
+}
+async function play(id, room) {
+  const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
+  if (!ok) return logout();
+  if (mobileGame) {
+    show('Launching Voxely…', 'The game runs right in your mobile browser.', false);
+    location.href = `/game/?game=${encodeURIComponent(id)}&room=${encodeURIComponent(room || '')}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`;
+    return;
   }
-  
-  const badge = createBadge(b, me);
-  res.json({ badge, ok: true });
-});
+  show('Launching Voxely Client…', 'If your browser asks, choose "Open Voxely Client".', false);
+  location.href = `voxely://play?game=${id}&room=${room || ''}&token=${session.token}&server=${encodeURIComponent(S)}`;
+  setTimeout(() => {
+    if (document.hasFocus() && document.visibilityState === 'visible')
+      show('Client not installed yet', 'Download and install the Voxely Client first, then click Play again.', true);
+    else $('#launch').classList.remove('on');
+  }, 2500);
+}
 
-// Award badge to a user (developer or self)
-app.post('/api/badges/:id/award', (req, res) => {
-  const me = sessions.get(bearer(req));
-  if (!me) return res.sendStatus(401);
-  
-  const badge = getBadgeDefinition(req.params.id);
-  if (!badge) return res.sendStatus(404);
-  
-  const targetUid = req.body?.uid;
-  const targetUser = uidMap().get(targetUid);
-  
-  if (!targetUser) return res.status(404).json({ error: 'User not found' });
-  
-  // Only creator can award to others, or user can award to themselves
-  if (targetUid !== me.uid && badge.createdBy !== me.uid) {
-    return res.status(403).json({ error: 'This badge cannot be given' });
+const THEMES = {
+  'blue-dark': { n: "Dark Blue", d: "Default", l: 0, v: ["#04060b", "#0a0f1a", "#071127", "#050913", "#0d1524", "#101c33", "#0b1428", "#1b2a4a", "#15233f", "#1463ff", "#0a3fb8", "#3a82ff", "#6fa8ff", "#e6edf7", "#7d8aa3", "#b6c2d9", "#ffffff", "#ffffff", "#0f2a5c", "#0a1c3d"] },
+  'red-dark': { n: "Dark Red", d: "", l: 0, v: ["#0b0507", "#150b0e", "#1a0d11", "#0f0709", "#190d10", "#251318", "#1f1014", "#3b1b22", "#2e161b", "#e23b4b", "#a8212f", "#ff5a68", "#ff8a95", "#f3e7e8", "#a58a8d", "#d6bfc2", "#ffffff", "#ffffff", "#4a1219", "#2b0a0e"] },
+  'ayu-dark': { n: "Ayu Dark", d: "", l: 0, v: ["#0b0e14", "#11151c", "#0d1017", "#0a0d12", "#0e1218", "#171c26", "#161b24", "#232a36", "#232a36", "#ff8f40", "#cc6f26", "#ffa769", "#ffb454", "#bfbdb6", "#6c7380", "#a0a6b2", "#f0eee8", "#0b0e14", "#2a1d10", "#1a1209"] },
+  'blue-light': { n: "Light Blue", d: "", l: 1, v: ["#eef3fb", "#ffffff", "#e6edf8", "#ffffff", "#f5f8fd", "#e8f0fc", "#dbe5f4", "#dfe7f4", "#cfd9ea", "#1463ff", "#0a3fb8", "#3a82ff", "#1352d6", "#172033", "#5c6b85", "#3a4863", "#0b1530", "#ffffff", "#dbe8ff", "#c5d9fb"] },
+  'red-light': { n: "Light Red", d: "", l: 1, v: ["#faf2f2", "#ffffff", "#f6e6e7", "#ffffff", "#fcf6f6", "#f9e8e9", "#f0dcdd", "#f2dfe0", "#e7cfd1", "#d62839", "#a31d2c", "#ec4757", "#b3202f", "#2a1416", "#8a6468", "#5a3a3d", "#1f0c0e", "#ffffff", "#fbdfe2", "#f4c9ce"] },
+  'ayu-light': { n: "Ayu Light", d: "", l: 1, v: ["#fafafa", "#ffffff", "#f1f1f2", "#ffffff", "#f7f7f8", "#fdeedd", "#e9e9ea", "#ececed", "#dcdddf", "#fa8d3e", "#d9701f", "#ffa45e", "#c4600f", "#3d4148", "#8a9199", "#5c6166", "#1e2227", "#1f1306", "#ffe9d3", "#fcd9b6"] }
+};
+const TK = ["--bg", "--panel", "--panel3", "--input", "--row2", "--hover", "--track", "--alt", "--line", "--blue", "--blue2", "--blue-hover", "--link", "--text", "--dim", "--soft", "--strong", "--on", "--notice1", "--notice2"];
+function applyTheme(id) {
+  const t = THEMES[id] || THEMES['blue-dark'], v = {}, r = document.documentElement;
+  TK.forEach((k, i) => { v[k] = t.v[i]; r.style.setProperty(k, t.v[i]); });
+  r.style.colorScheme = t.l ? 'light' : 'dark';
+  localStorage.setItem('voxelyTheme', JSON.stringify({ id, l: t.l, v }));
+}
+function settingsPage() {
+  let cur = 'blue-dark'; try { cur = JSON.parse(localStorage.getItem('voxelyTheme')).id || cur; } catch (e) {}
+  const card = ([id, t]) => `<button class="thm ${id === cur ? 'on' : ''}" onclick="applyTheme('${id}');settingsPage()"><span class="sw3">${[0, 1, 9, 13].map(i => `<i style="background:${t.v[i]}"></i>`).join('')}</span><b>${t.n}</b><small>${t.d || (t.l ? 'Light' : 'Dark')}</small></button>`;
+  $('#view').innerHTML = `<span class="label">SETTINGS</span><div class="card pad" style="max-width:780px"><h3 class="ft">Theme</h3>
+    <div class="hint">Pick a color theme for the Voxely website. Your choice is saved in this browser.</div>
+    <div class="thmgrid">${Object.entries(THEMES).map(card).join('')}</div></div>`;
+}
+
+/* ---------- 3D avatar preview — the exact same R6 character model the game client uses ---------- */
+const OUT0C = { skin: { head: '#e6eaf2', torso: '#e6eaf2', armL: '#e6eaf2', armR: '#e6eaf2', legL: '#e6eaf2', legR: '#e6eaf2' }, face: 'smile', hat: 'none', hatColor: '#e63946' };
+const V3D = (() => {
+  let loadP = null;
+  const items = new Map(); // canvas -> { engine, scene, char, offA, offB, drag }
+  const S = 0.34; // one "stud" — same scale as in-game
+  function loadBabylon() {
+    if (window.BABYLON) return Promise.resolve();
+    if (!loadP) loadP = new Promise((res, rej) => {
+      const add = (src, next) => { const s = document.createElement('script'); s.src = src; s.onload = next; s.onerror = next; document.head.appendChild(s); };
+      add('/game/vendor/babylon.js', () => window.BABYLON ? res() // local vendor copy (same file the game client uses)
+        : add('https://cdn.babylonjs.com/v9.33.0/babylon.js', () => window.BABYLON ? res() : (loadP = null, rej(new Error('babylon failed to load')))));
+    });
+    return loadP;
   }
-  
-  const success = awardBadge(targetUid, req.params.id);
-  if (!success) return res.status(400).json({ error: 'User already has this badge' });
-  
-  res.json({ ok: true });
-});
+  const c3 = h => BABYLON.Color3.FromHexString(h);
+  function headMat(scene, color, face) { // cylinder head with the face painted at u 0.75 — same as in-game
+    const W = 1024, H = 292, dt = new BABYLON.DynamicTexture('face', { width: W, height: H }, scene, true);
+    const g = dt.getContext(); g.fillStyle = color; g.fillRect(0, 0, W, H); drawFace(g, face, W * 0.75, H / 2, H); dt.update();
+    const m = new BABYLON.StandardMaterial('head', scene); m.diffuseTexture = dt; m.specularColor = BABYLON.Color3.Black();
+    return m;
+  }
+  function addHat(scene, body, o, mat) { // ported 1:1 from the game client
+    if (!o.hat || o.hat === 'none') return;
+    const m = mat(o.hatColor || '#e63946'), T = 5.3; // head top, in studs
+    const add = mesh => { mesh.parent = body; mesh.material = m; return mesh; };
+    const cyl = (d, h, x, y, z, dTop) => { const c = add(BABYLON.MeshBuilder.CreateCylinder('hat', { diameter: d * S, diameterTop: dTop === undefined ? undefined : dTop * S, height: h * S, tessellation: 24 }, scene)); c.position.set(x * S, y * S, z * S); return c; };
+    const bx = (w, h, d, x, y, z) => { const c = add(BABYLON.MeshBuilder.CreateBox('hat', { width: w * S, height: h * S, depth: d * S }, scene)); c.position.set(x * S, y * S, z * S); return c; };
+    if (o.hat === 'cap') { cyl(1.6, 0.5, 0, T + 0.1, 0); bx(1.2, 0.1, 0.8, 0, T - 0.1, 0.95); }
+    else if (o.hat === 'tophat') { cyl(2.1, 0.12, 0, T + 0.04, 0); cyl(1.35, 1.5, 0, T + 0.8, 0); }
+    else if (o.hat === 'crown') { cyl(1.5, 0.45, 0, T + 0.18, 0); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; cyl(0.34, 0.45, Math.cos(a) * 0.6, T + 0.63, Math.sin(a) * 0.6, 0); } }
+    else if (o.hat === 'headphones') { bx(1.85, 0.14, 0.3, 0, T + 0.1, 0); [-1, 1].forEach(s => { bx(0.14, 1.2, 0.3, s * 0.88, 4.75, 0); cyl(0.62, 0.32, s * 0.98, 4.65, 0).rotation.z = Math.PI / 2; }); }
+    else if (o.hat === 'horns') { [-1, 1].forEach(s => { cyl(0.4, 0.9, s * 0.45, T + 0.35, 0, 0).rotation.z = -s * 0.45; }); }
+  }
+  function buildChar(scene, outfit) { // ported from the game client's makeChar() (name tag removed)
+    const o = outfit || OUT0C, sk = o.skin || OUT0C.skin;
+    const matCache = {};
+    const mat = hex => matCache[hex] || (matCache[hex] = (() => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = c3(hex); m.specularColor = BABYLON.Color3.Black(); return m; })());
+    const root = new BABYLON.TransformNode('p', scene), body = new BABYLON.TransformNode('b', scene); body.parent = root;
+    const box = (w, h, d, x, y, hex) => { const m = BABYLON.MeshBuilder.CreateBox('part', { width: w * S, height: h * S, depth: d * S }, scene); m.parent = body; m.position.set(x * S, y * S, 0); m.material = mat(hex); return m; };
+    const legL = box(1, 2, 1, -0.5, 1, sk.legL), legR = box(1, 2, 1, 0.5, 1, sk.legR);
+    const torso = box(2, 2, 1, 0, 3, sk.torso);
+    if (o.tshirt) { const shirt = new BABYLON.StandardMaterial('shirt', scene); shirt.diffuseTexture = new BABYLON.Texture(o.tshirt, scene); shirt.useAlphaFromDiffuseTexture = true; shirt.specularColor = BABYLON.Color3.Black(); torso.material = shirt; }
+    const armL = box(1, 2, 1, -1.5, 3, sk.armL), armR = box(1, 2, 1, 1.5, 3, sk.armR);
+    [legL, legR, armL, armR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, S, 0))); // rotate from hip / shoulder
+    const head = BABYLON.MeshBuilder.CreateCylinder('head', { diameter: 1.45 * S, height: 1.3 * S, tessellation: 40,
+      faceUV: [new BABYLON.Vector4(0, 0, 0.04, 0.04), new BABYLON.Vector4(0, 0, 1, 1), new BABYLON.Vector4(0, 0, 0.04, 0.04)] }, scene);
+    head.parent = body; head.position.y = 4.65 * S; head.material = headMat(scene, sk.head, o.face || 'smile');
+    addHat(scene, body, o, mat);
+    return { root, body, legL, legR, torso, armL, armR, head, ph: Math.random() * 6 };
+  }
+  function groundBlob(scene) { // soft contact shadow so the character feels planted
+    const dt = new BABYLON.DynamicTexture('sh', { width: 256, height: 256 }, scene, false); dt.hasAlpha = true;
+    const g = dt.getContext(), gr = g.createRadialGradient(128, 128, 8, 128, 128, 120);
+    gr.addColorStop(0, 'rgba(0,0,0,0.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 256); dt.update();
+    const pl = BABYLON.MeshBuilder.CreateGround('gb', { width: 5.6 * S, height: 5.6 * S }, scene);
+    pl.position.y = 0.002;
+    const m = new BABYLON.StandardMaterial('shm', scene);
+    m.diffuseTexture = dt; m.useAlphaFromDiffuseTexture = true; m.disableLighting = true; m.emissiveColor = BABYLON.Color3.Black();
+    pl.material = m;
+    return pl;
+  }
+  function buildScene(canvas, outfit) { // engine + scene + camera + lights, same look as the client
+    const engine = new BABYLON.Engine(canvas, true, { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true, powerPreference: 'low-power' }, true);
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparent — the page background shows through
+    const hemi = new BABYLON.HemisphericLight('h', new BABYLON.Vector3(0.3, 1, 0.2), scene); hemi.intensity = 0.75; hemi.groundColor = new BABYLON.Color3(0.32, 0.32, 0.36);
+    const sun = new BABYLON.DirectionalLight('d', new BABYLON.Vector3(-0.4, -1, -0.3), scene); sun.intensity = 0.45;
+    const cam = new BABYLON.ArcRotateCamera('cam', Math.PI / 2, 1.32, 3, new BABYLON.Vector3(0, 2.55 * S, 0), scene);
+    cam.minZ = 0.05; cam.fov = 0.85;
+    groundBlob(scene);
+    const char = buildChar(scene, outfit);
+    return { engine, scene, cam, char };
+  }
+  function attachOrbit(canvas, it) { // light drag-to-orbit without hijacking scroll
+    let px = 0, py = 0, on = false;
+    canvas.style.cursor = 'grab';
+    canvas.onpointerdown = e => { on = true; px = e.clientX; py = e.clientY; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; };
+    canvas.onpointermove = e => { if (!on) return; it.offA -= (e.clientX - px) * 0.012; it.offB = Math.max(0.9, Math.min(1.5, it.offB + (e.clientY - py) * 0.006)); px = e.clientX; py = e.clientY; };
+    const up = () => { on = false; canvas.style.cursor = 'grab'; };
+    canvas.onpointerup = up; canvas.onpointercancel = up;
+  }
+  function start(canvas, outfit) { // full (re)build on a canvas
+    stop(canvas);
+    const it = { offA: 0, offB: 1.32 };
+    try { Object.assign(it, buildScene(canvas, outfit)); }
+    catch (e) { drawAvatar(canvas, outfit); return; } // no WebGL? keep the 2D fallback
+    it.scene.registerBeforeRender(() => { // one animation observer per scene, reads it.char each frame
+      const ch = it.char; if (!ch) return;
+      const t = performance.now() / 1000;
+      it.cam.alpha = Math.PI / 2 + it.offA + Math.sin(t * 0.55) * 0.42; // gentle turntable sway, face stays visible
+      it.cam.beta = it.offB + Math.sin(t * 0.4) * 0.02;
+      const s = Math.sin(ch.ph += it.scene.getEngine().getDeltaTime() / 1000 * 1.6);
+      ch.armL.rotation.z = -0.1 - s * 0.03; ch.armR.rotation.z = 0.1 + s * 0.03; // idle pose, like in-game
+      ch.armL.rotation.x = s * 0.05; ch.armR.rotation.x = -s * 0.05;
+      ch.body.position.y = Math.abs(Math.sin(t * 1.1)) * 0.012; // subtle breathing
+    });
+    it.engine.runRenderLoop(() => { if (canvas.isConnected) it.scene.render(); else stop(canvas); });
+    attachOrbit(canvas, it);
+    items.set(canvas, it);
+  }
+  function rebuild(it, outfit) { // swap the outfit on a live preview without tearing down the scene
+    it.char.root.dispose(false, true); // dispose meshes + materials + textures recursively
+    it.char = buildChar(it.scene, outfit);
+  }
+  function stop(canvas) { // free the WebGL context of one canvas
+    const it = items.get(canvas); if (!it) return;
+    items.delete(canvas);
+    try { it.engine.stopRenderLoop(); it.scene.dispose(); it.engine.dispose(); } catch (e) {}
+  }
+  function disposeAll() { [...items.keys()].forEach(stop); }
+  async function render(canvas, outfit) {
+    if (!canvas || !canvas.isConnected) return;
+    try { await loadBabylon(); } catch (e) { drawAvatar(canvas, outfit); return; }
+    if (!canvas.isConnected) return; // page changed while babylon was loading
+    start(canvas, outfit);
+  }
+  async function refresh(canvas, outfit) { // fast path used by the avatar editor color pickers
+    if (!canvas || !canvas.isConnected) return;
+    if (!window.BABYLON) return render(canvas, outfit);
+    const it = items.get(canvas);
+    if (it) { try { rebuild(it, outfit); return; } catch (e) {} start(canvas, outfit); return; }
+    return render(canvas, outfit);
+  }
+  return { render, refresh, stop, disposeAll };
+})();
 
-// Get user's badges
-app.get('/api/users/:uid/badges', (req, res) => {
-  const targetUser = uidMap().get(req.params.uid);
-  if (!targetUser) return res.sendStatus(404);
-  
-  const badges = getUserBadges(req.params.uid);
-  res.json({ badges, total: badges.length });
-});
+/* ---------- Avatar editor ---------- */
+const AVP = ['head', 'torso', 'armL', 'armR', 'legL', 'legR'];
+const AV_PARTS = [['all', 'All'], ['head', 'Head'], ['torso', 'Torso'], ['armL', 'Left arm'], ['armR', 'Right arm'], ['legL', 'Left leg'], ['legR', 'Right leg']];
+const AV_FACES = [['smile', 'Smile'], ['cool', 'Cool'], ['wink', 'Wink'], ['surprised', 'Surprised'], ['sad', 'Sad'], ['angry', 'Angry']];
+const AV_HATS = [['none', 'No hat'], ['cap', 'Cap'], ['tophat', 'Top hat'], ['crown', 'Crown'], ['headphones', 'Headphones'], ['horns', 'Horns']];
+const AV_PAL = ['#f5cd2f', '#f2c14e', '#e6eaf2', '#ffffff', '#9ca3af', '#374151', '#111111', '#0d69ac', '#1463ff', '#06b6d4', '#a4bd47', '#22c55e', '#2e7d32', '#d62839', '#ef4444', '#f97316', '#ec4899', '#8b5cf6', '#8b5a2b', '#c68642', '#e0ac69', '#f1c27d', '#ffdbac', '#614335'];
+const avBase = c => ({ skin: Object.fromEntries(AVP.map(k => [k, c])), face: 'smile', hat: 'none', hatColor: '#e63946' });
+const AV_PRESETS = {
+  Default: () => avBase('#e6eaf2'),
+  Noob: () => ({ skin: { head: '#f5cd2f', torso: '#0d69ac', armL: '#f5cd2f', armR: '#f5cd2f', legL: '#a4bd47', legR: '#a4bd47' }, face: 'smile', hat: 'none', hatColor: '#e63946' }),
+  Ninja: () => ({ ...avBase('#1f2530'), face: 'cool' }),
+  Zombie: () => ({ skin: { head: '#7fb069', torso: '#5b7ea8', armL: '#7fb069', armR: '#7fb069', legL: '#4a5568', legR: '#4a5568' }, face: 'sad', hat: 'none', hatColor: '#e63946' }),
+  Gold: () => ({ ...avBase('#f2c14e'), hat: 'crown', hatColor: '#ffd700' })
+};
+let outfit = (() => { try { const o = JSON.parse(localStorage.getItem('voxelyOutfit')); if (o && o.skin) return o; } catch (e) {} return avBase('#e6eaf2'); })();
+let avTab = 'color', avPart = 'all', avTimer = null;
 
-// Get my badges
-app.get('/api/me/badges', (req, res) => {
-  const me = sessions.get(bearer(req));
-  if (!me) return res.sendStatus(401);
-  
-  const badges = getUserBadges(me.uid);
-  res.json({ badges, total: badges.length });
-});
-
-// Delete a badge (creator only)
-app.delete('/api/badges/:id', (req, res) => {
-  const me = sessions.get(bearer(req));
-  if (!me) return res.sendStatus(401);
-  
-  const badge = getBadgeDefinition(req.params.id);
-  if (!badge) return res.sendStatus(404);
-  if (badge.createdBy !== me.uid) return res.sendStatus(403);
-  
-  BADGES.delete(req.params.id);
-  res.sendStatus(204);
-});
-
-// ---------- Game stats (owner dashboard) ----------
-const dayKey = t => new Date(t || Date.now()).toISOString().slice(0, 10);
-const statsOf = g => (g.stats = g.stats || { visits: 0, uniq: [], peak: 0, secs: 0, sessions: 0, daily: {} });
-const dirtyGames = new Set();
-function touchGame(id) { if (!dirtyGames.size) setTimeout(() => { dirtyGames.forEach(saveGame); dirtyGames.clear(); }, 30000); dirtyGames.add(id); }
-function trackJoin(gid, user) {
-  const g = GAMES[gid]; if (!g || !g.ownerUid) return;
-  const s = statsOf(g); s.visits++; s.sessions++;
-  if (s.uniq.length < 5000 && !s.uniq.includes(user.uid)) s.uniq.push(user.uid);
-  const d = dayKey(); s.daily[d] = (s.daily[d] || 0) + 1;
-  Object.keys(s.daily).sort().slice(0, -30).forEach(k => delete s.daily[k]);
-  s.peak = Math.max(s.peak, online(gid)); touchGame(gid);
+function drawFace(g, face, cx, cy, h) { // same drawing as the in-game head texture
+  g.fillStyle = g.strokeStyle = '#111'; g.lineCap = 'round';
+  const eye = (x, y, rx, ry) => { g.beginPath(); g.ellipse(cx + x * h, cy + y * h, rx * h, ry * h, 0, 0, Math.PI * 2); g.fill(); };
+  const arc = (x, y, r, a, b, w) => { g.lineWidth = w * h; g.beginPath(); g.arc(cx + x * h, cy + y * h, r * h, a * Math.PI, b * Math.PI); g.stroke(); };
+  const line = (x1, y1, x2, y2, w) => { g.lineWidth = w * h; g.beginPath(); g.moveTo(cx + x1 * h, cy + y1 * h); g.lineTo(cx + x2 * h, cy + y2 * h); g.stroke(); };
+  if (face === 'cool') { g.fillRect(cx - 0.27 * h, cy - 0.15 * h, 0.54 * h, 0.11 * h); line(-0.27, -0.12, -0.34, -0.15, 0.03); line(0.27, -0.12, 0.34, -0.15, 0.03); arc(0, -0.055, 0.19, 0.17, 0.83, 0.031); }
+  else if (face === 'wink') { eye(-0.137, -0.083, 0.031, 0.058); line(0.09, -0.08, 0.185, -0.08, 0.03); arc(0, -0.055, 0.19, 0.17, 0.83, 0.031); }
+  else if (face === 'surprised') { eye(-0.137, -0.083, 0.04, 0.07); eye(0.137, -0.083, 0.04, 0.07); g.beginPath(); g.ellipse(cx, cy + 0.14 * h, 0.05 * h, 0.07 * h, 0, 0, Math.PI * 2); g.fill(); }
+  else if (face === 'sad') { eye(-0.137, -0.083, 0.031, 0.058); eye(0.137, -0.083, 0.031, 0.058); arc(0, 0.24, 0.17, 1.17, 1.83, 0.031); }
+  else if (face === 'angry') { eye(-0.137, -0.06, 0.028, 0.045); eye(0.137, -0.06, 0.028, 0.045); line(-0.21, -0.17, -0.07, -0.11, 0.035); line(0.07, -0.11, 0.21, -0.17, 0.035); arc(0, 0.2, 0.12, 1.2, 1.8, 0.03); }
+  else { eye(-0.137, -0.083, 0.031, 0.058); eye(0.137, -0.083, 0.031, 0.058); arc(0, -0.055, 0.19, 0.17, 0.83, 0.031); }
 }
-function trackLeave(gid, secs) { const g = GAMES[gid]; if (!g || !g.ownerUid) return; statsOf(g).secs += Math.max(0, secs); touchGame(gid); }
-app.get('/api/games/:id/stats', (req, res) => {
-  const g = mineGame(req); if (!g) return res.sendStatus(403);
-  const s = statsOf(g), id = req.params.id, rv = (g.reviews || []).filter(r => r.reports.size < 3), daily = [];
-  for (let i = 13; i >= 0; i--) { const d = dayKey(Date.now() - i * 864e5); daily.push({ d, n: s.daily[d] || 0 }); }
-  res.json({ visits: s.visits, unique: s.uniq.length, online: online(id), peak: s.peak, secs: Math.round(s.secs), avg: s.sessions ? Math.round(s.secs / s.sessions) : 0,
-    servers: instOf(id).length, reviews: rv.length, up: rv.filter(r => r.up).length, daily });
-});
-
-// ---------- Server list ----------
-app.get('/api/games/:id/servers', (req, res) => {
-  if (!GAMES[req.params.id]) return res.sendStatus(404);
-  res.json(instOf(req.params.id).map(i => ({
-    id: i.id, players: i.players.size, max: i.max, full: i.players.size >= i.max,
-    names: [...i.players.values()].slice(0, 5).map(p => p.name), age: Math.floor((Date.now() - i.ts) / 1000)
-  })).sort((a, b) => b.players - a.players));
-});
-
-// ---------- Persistence: games made by Google users are stored in Supabase ----------
-// Needs the SECRET key as an environment variable (never put it in the code).
-const SUPA_SECRET = process.env.SUPABASE_SECRET_KEY || '';
-async function db(path, opts = {}) {
-  const r = await fetch(SUPA_URL + '/rest/v1/' + path, { ...opts, headers: { apikey: SUPA_SECRET, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
-  if (!r.ok) throw new Error(r.status + ' ' + (await r.text()).slice(0, 200));
-  return r.status === 204 ? null : r.json().catch(() => null);
+function drawHat(g, hat, color, cx, ht) { // ht = y of the top of the head
+  if (!hat || hat === 'none') return;
+  g.fillStyle = color; g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2;
+  const R = (x, y, w, h) => { g.fillRect(x, y, w, h); g.strokeRect(x, y, w, h); };
+  const P = pts => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill(); g.stroke(); };
+  if (hat === 'cap') { g.beginPath(); g.ellipse(cx, ht + 6, 35, 26, 0, Math.PI, 2 * Math.PI); g.fill(); g.stroke(); R(cx - 40, ht + 6, 80, 9); }
+  else if (hat === 'tophat') { R(cx - 27, ht - 62, 54, 66); g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(cx - 27, ht - 12, 54, 9); g.fillStyle = color; R(cx - 44, ht + 2, 88, 9); }
+  else if (hat === 'crown') { R(cx - 33, ht - 20, 66, 22); for (let i = 0; i < 5; i++) { const x = cx - 33 + i * 16.5 + 8; P([[x - 9, ht - 20], [x, ht - 44], [x + 9, ht - 20]]); } }
+  else if (hat === 'headphones') { g.lineWidth = 8; g.strokeStyle = color; g.beginPath(); g.arc(cx, ht + 28, 38, Math.PI, 2 * Math.PI); g.stroke(); g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2; R(cx - 48, ht + 20, 14, 30); R(cx + 34, ht + 20, 14, 30); }
+  else if (hat === 'horns') { P([[cx - 34, ht + 8], [cx - 18, ht + 8], [cx - 40, ht - 32]]); P([[cx + 18, ht + 8], [cx + 34, ht + 8], [cx + 40, ht - 32]]); }
 }
-const rowOf = (id, g) => ({
-  id, owner_uid: g.ownerUid, owner_name: g.owner || null,
-  data: { title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, spawn: g.spawn, boxes: g.boxes, status: g.status || null, changelog: g.changelog || [], scripts: g.scripts || [], stats: g.stats || null },
-  thumb_type: g.thumb ? g.thumb.type : null, thumb_b64: g.thumb ? g.thumb.buf.toString('base64') : null, thumb_v: g.thumbV || 0, updated_at: new Date().toISOString()
-});
-function saveGame(id) {
-  const g = GAMES[id];
-  if (!SUPA_SECRET || !g || !g.ownerGoogle) return; // guests' games stay in memory only
-  db('games?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rowOf(id, g)) })
-    .catch(e => console.error('save game failed:', e.message));
+function drawAvatar(cv, o) { // front view, drawn on a 320x400 grid
+  if (!cv) return; const g = cv.getContext('2d'), k = cv.width / 320;
+  g.setTransform(k, 0, 0, k, 0, 0); g.clearRect(0, 0, 320, 400);
+  const st = 44, cx = 160, gy = 372, s = o.skin;
+  const rect = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 2; g.strokeRect(x, y, w, h); };
+  rect(cx - st, gy - 2 * st, st, 2 * st, s.legL); rect(cx, gy - 2 * st, st, 2 * st, s.legR);
+  rect(cx - st, gy - 4 * st, 2 * st, 2 * st, s.torso);
+  rect(cx - 2 * st, gy - 4 * st, st, 2 * st, s.armL); rect(cx + st, gy - 4 * st, st, 2 * st, s.armR);
+  if (o.tshirt) { const shirt = new Image(); shirt.onload = () => { g.save(); g.globalAlpha = .92; g.drawImage(shirt, cx - st + 3, gy - 4 * st + 3, 2 * st - 6, 2 * st - 6); g.restore(); }; shirt.src = o.tshirt; }
+  const hw = 1.45 * st, hh = 1.3 * st, hy = gy - 4 * st - hh;
+  g.fillStyle = s.head; g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 2; g.beginPath();
+  if (g.roundRect) g.roundRect(cx - hw / 2, hy, hw, hh, 14); else g.rect(cx - hw / 2, hy, hw, hh);
+  g.fill(); g.stroke();
+  drawFace(g, o.face, cx, hy + hh / 2, hh); drawHat(g, o.hat, o.hatColor, cx, hy);
 }
-function dropGame(id) {
-  if (!SUPA_SECRET) return;
-  db('games?id=eq.' + encodeURIComponent(id), { method: 'DELETE' }).catch(e => console.error('delete game failed:', e.message));
+function pickTshirt() { const i=document.createElement('input'); i.type='file'; i.accept='image/png,image/jpeg,image/webp'; i.onchange=()=>{const f=i.files[0]; if(!f||f.size>120*1024)return alert('File must be 120 KB or smaller'); const r=new FileReader(); r.onload=()=>{outfit.tshirt=r.result; saveOutfit(); avatarPage();}; r.readAsDataURL(f);}; i.click(); }
+function removeTshirt() { outfit.tshirt=null; saveOutfit(); avatarPage(); }
+function saveOutfit() {
+  localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); V3D.refresh($('#avc'), outfit);
+  clearTimeout(avTimer);
+  avTimer = setTimeout(() => { if (session) rq('POST', '/api/outfit', outfit).then(r => r.ok && toast('Avatar saved')).catch(() => {}); }, 700);
 }
-async function loadGames() {
-  if (!SUPA_SECRET) { console.log('SUPABASE_SECRET_KEY not set -> user games are kept in memory only'); return; }
+async function syncOutfit() { // local copy wins; otherwise pull the one saved on the server
+  if (!session) return;
+  const d = await gj('/api/outfit');
+  if (d && d.outfit) { outfit = d.outfit; localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); return; }
   try {
-    const rows = (await db('games?select=*')) || [];
-    for (const r of rows) {
-      if (GAMES[r.id]) continue;
-      GAMES[r.id] = { ...r.data, owner: r.owner_name, ownerUid: r.owner_uid, ownerGoogle: true,
-        thumb: r.thumb_b64 ? { type: r.thumb_type, buf: Buffer.from(r.thumb_b64, 'base64') } : null, thumbV: Number(r.thumb_v) || 0 };
-    }
-    console.log('Loaded ' + rows.length + ' game(s) from Supabase');
-  } catch (e) { console.error('load games failed:', e.message); }
+    const saved = JSON.parse(localStorage.getItem('voxelyOutfit'));
+    if (saved) await rq('POST', '/api/outfit', saved);
+  } catch (e) {}
+}
+const swatches = (cur, fn) => `<div class="avpal">${AV_PAL.map(c => `<button class="swb ${c.toLowerCase() === String(cur).toLowerCase() ? 'on' : ''}" style="background:${c}" onclick="${fn}('${c}')"></button>`).join('')}<input type="color" value="${cur}" oninput="${fn}(this.value,true)"></div>`;
+function avatarPage() {
+  $('#view').innerHTML = `<span class="label">AVATAR</span><div class="avgrid">
+    <div class="card pad avprev"><canvas id="avc" width="320" height="400"></canvas>
+      <div class="acts" style="justify-content:center"><button class="btn sm alt" onclick="avRandom()">Randomize</button><button class="btn sm alt" onclick="avPreset('Default')">Reset</button></div>
+      <label>Presets</label><div class="tpl" style="margin:6px 0 0">${Object.keys(AV_PRESETS).map(n => `<button class="vb" onclick="avPreset('${n}')">${n}</button>`).join('')}</div></div>
+    <div class="card pad"><div class="avtabs">${[['color', 'Body color'], ['face', 'Face'], ['hat', 'Hat']].map(([k, n]) => `<button class="vb ${avTab === k ? 'on' : ''}" onclick="avTab='${k}';avatarPage()">${n}</button>`).join('')}</div>
+      <div id="avbody"></div><div class="shirt-upload"><button class="btn sm alt" onclick="pickTshirt()">Upload T-shirt</button><button class="x" onclick="removeTshirt()">Remove T-shirt</button><small style="color:var(--dim)">PNG/JPG/WEBP, 120 KB max</small></div><div class="hint" style="margin-top:16px">Your avatar saves automatically and is used whenever you play. Other players see it when you join a server.</div></div></div>`;
+  V3D.render($('#avc'), outfit); drawAvBody();
+}
+function drawAvBody() {
+  const b = $('#avbody'); if (!b) return;
+  if (avTab === 'color') {
+    const cur = avPart === 'all' ? outfit.skin.head : outfit.skin[avPart];
+    b.innerHTML = `<label>Body part</label><div class="tpl" style="margin:6px 0 14px">${AV_PARTS.map(([k, n]) => `<button class="vb ${avPart === k ? 'on' : ''}" onclick="avPart='${k}';drawAvBody()">${n}</button>`).join('')}</div><label>Color</label>${swatches(cur, 'avColor')}`;
+  } else if (avTab === 'face') {
+    b.innerHTML = `<div class="avtiles">${AV_FACES.map(([k, n]) => `<button class="tile ${outfit.face === k ? 'on' : ''}" onclick="avFace('${k}')"><canvas width="90" height="90" data-face="${k}"></canvas><small>${n}</small></button>`).join('')}</div>`;
+    b.querySelectorAll('canvas').forEach(c => { const g = c.getContext('2d'); g.fillStyle = outfit.skin.head; g.fillRect(0, 0, 90, 90); drawFace(g, c.dataset.face, 45, 45, 75); });
+  } else {
+    b.innerHTML = `<div class="avtiles">${AV_HATS.map(([k, n]) => `<button class="tile ${outfit.hat === k ? 'on' : ''}" onclick="avHat('${k}')"><canvas width="90" height="90" data-hat="${k}"></canvas><small>${n}</small></button>`).join('')}</div>${outfit.hat !== 'none' ? `<label style="margin-top:14px">Hat color</label>${swatches(outfit.hatColor, 'avHatColor')}` : ''}`;
+    b.querySelectorAll('canvas').forEach(c => {
+      const g = c.getContext('2d'); g.fillStyle = outfit.skin.head; g.fillRect(45 - 18, 62, 36, 28);
+      g.save(); g.scale(0.55, 0.55); drawHat(g, c.dataset.hat, outfit.hatColor, 45 / 0.55, 62 / 0.55); g.restore();
+    });
+  }
+}
+function avColor(c, keep) { if (avPart === 'all') AVP.forEach(k => (outfit.skin[k] = c)); else outfit.skin[avPart] = c; saveOutfit(); if (!keep) drawAvBody(); }
+function avFace(k) { outfit.face = k; saveOutfit(); drawAvBody(); }
+function avHat(k) { outfit.hat = k; saveOutfit(); drawAvBody(); }
+function avHatColor(c, keep) { outfit.hatColor = c; saveOutfit(); if (!keep) drawAvBody(); }
+function avPreset(n) { outfit = { ...AV_PRESETS[n](), tshirt: outfit.tshirt || null }; saveOutfit(); drawAvBody(); }
+
+/* ---------- Free Marketplace ---------- */
+const MARKET_ITEMS = [
+  { id:'hat-cap-blue', name:'Skyline Cap', type:'hat', value:'cap', color:'#1463ff', desc:'A classic blue cap for everyday avatar looks.' },
+  { id:'hat-crown-gold', name:'Starter Crown', type:'hat', value:'crown', color:'#ffd700', desc:'A free golden crown to stand out from the crowd.' },
+  { id:'hat-headphones', name:'Pulse Headphones', type:'hat', value:'headphones', color:'#8b5cf6', desc:'Neon headphones for long play sessions.' },
+  { id:'face-cool', name:'Cool Face', type:'face', value:'cool', color:'#06b6d4', desc:'A chill expression behind sunglasses.' },
+  { id:'face-wink', name:'Wink Face', type:'face', value:'wink', color:'#ec4899', desc:'A playful winking expression.' },
+  { id:'skin-ocean', name:'Ocean Suit', type:'skin', value:'#0d69ac', color:'#0d69ac', desc:'Ocean-blue body color for your character.' },
+  { id:'skin-lime', name:'Lime Suit', type:'skin', value:'#a4bd47', color:'#a4bd47', desc:'A bright lime color for your avatar.' },
+  { id:'bundle-noob', name:'Classic Noob Bundle', type:'preset', value:'Noob', color:'#f5cd2f', desc:'Starter bundle in yellow, blue, and green.' },
+  { id:'bundle-ninja', name:'Midnight Ninja Bundle', type:'preset', value:'Ninja', color:'#1f2530', desc:'A dark bundle with a cool face.' }
+];
+let marketFilter = 'all';
+function ownedMarket() { try { return new Set(JSON.parse(localStorage.getItem('voxelyMarketOwned') || '[]')); } catch (e) { return new Set(); } }
+function saveMarketOwned(set) { localStorage.setItem('voxelyMarketOwned', JSON.stringify([...set])); }
+function marketPreview(item) { // preview = the full 3D avatar wearing the item, same model as in-game
+  setTimeout(() => {
+    const c = document.getElementById('market-canvas-' + item.id); if (!c) return;
+    let o2 = JSON.parse(JSON.stringify(outfit));
+    if (item.type === 'hat') { o2.hat = item.value; o2.hatColor = item.color; }
+    else if (item.type === 'face') o2.face = item.value;
+    else if (item.type === 'skin') AVP.forEach(k => (o2.skin[k] = item.value));
+    else if (item.type === 'preset') o2 = { ...AV_PRESETS[item.value](), tshirt: null };
+    V3D.render(c, o2);
+  }, 0);
+}
+function buyMarket(id) {
+  const item=MARKET_ITEMS.find(x=>x.id===id); if(!item) return;
+  const owned=ownedMarket(); owned.add(id); saveMarketOwned(owned); equipMarket(item); toast(item.name + ' added to your collection'); marketplacePage();
+}
+function equipMarket(item) {
+  if(item.type==='hat') { outfit.hat=item.value; outfit.hatColor=item.color; }
+  if(item.type==='face') outfit.face=item.value;
+  if(item.type==='skin') AVP.forEach(k => outfit.skin[k]=item.value);
+  if(item.type==='preset') outfit={ ...AV_PRESETS[item.value](), tshirt: outfit.tshirt || null };
+  saveOutfit();
+}
+function marketplacePage() {
+  const owned=ownedMarket(), list=MARKET_ITEMS.filter(x=>marketFilter==='all'||x.type===marketFilter);
+  $('#view').innerHTML=`<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Free items — pick your style.</h1><p>Every item here is free. Claim it once, then equip it on your avatar in games.</p></div><div class="market-filter">${[['all','All'],['hat','Hats'],['face','Faces'],['skin','Colors'],['preset','Bundles']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div><div class="hint">Your collection: <b>${owned.size}</b> / ${MARKET_ITEMS.length} free items · your outfit is saved in this browser and synced when you sign in.</div><div class="market-grid">${list.map(item=>{const has=owned.has(item.id);return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="320" height="400"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc)}</p><div class="market-meta"><span>FREE</span><span class="${has?'owned':''}">${has?'✓ Owned':'Free'}</span></div><button class="btn ${has?'alt':''}" onclick="${has?`equipMarket(MARKET_ITEMS.find(x=>x.id==='${item.id}'));toast('Avatar updated')`:`buyMarket('${item.id}')`} ">${has?'Equip':'Claim'}</button></div>`}).join('')}</div>`;
+  list.forEach(marketPreview);
 }
 
-app.get('/', (_req, res) => res.send('Voxely game server is running'));
+function avRandom() {
+  const r = a => a[Math.floor(Math.random() * a.length)];
+  AVP.forEach(k => (outfit.skin[k] = r(AV_PAL))); outfit.face = r(AV_FACES)[0]; outfit.hat = r(AV_HATS)[0]; outfit.hatColor = r(AV_PAL);
+  saveOutfit(); drawAvBody();
+}
 
-// ---------- Multiplayer ----------
-io.use((socket, next) => {
-  const user = sessions.get(socket.handshake.auth?.token);
-  if (!user) return next(new Error('unauthorized'));
-  socket.user = user; next();
-});
-io.on('connection', socket => {
-  let inst = null, lastChat = 0, lastEv = 0, lastEmote = 0, joinedAt = 0;
-  socket.on('join', arg => {
-    const gid = typeof arg === 'string' ? arg : arg?.game;
-    if (!GAMES[gid] || inst) return;
-    const g = GAMES[gid];
-    inst = pickInstance(gid, arg?.room);
-    socket.join(inst.id); socket.user.game = gid;
-    const me = { id: socket.id, uid: socket.user.uid, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0, outfit: socket.user.outfit || null };
-    inst.players.set(socket.id, me);
-    trackJoin(gid, socket.user); joinedAt = Date.now();
-    socket.emit('init', { me, room: inst.id, now: Date.now(), start: inst.ts, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes, scripts: g.scripts || [] }, players: [...inst.players.values()] });
-    socket.to(inst.id).emit('join', me);
-    io.to(inst.id).emit('count', inst.players.size);
-  });
-  socket.on('move', m => {
-    const p = inst?.players.get(socket.id); if (!p) return;
-    Object.assign(p, { x: +m.x || 0, y: +m.y || 0, z: +m.z || 0, ry: +m.ry || 0, st: [0, 1, 2, 3, 4].includes(+m.st) ? +m.st : 0 });
-    socket.to(inst.id).volatile.emit('move', p);
-  });
-  socket.on('chat', text => {
-    if (!inst || Date.now() - lastChat < 400) return;
-    lastChat = Date.now();
-    io.to(inst.id).emit('chat', { id: socket.id, uid: socket.user.uid, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
-  });
-  socket.on('emote', e => { // /e wave, /e dance (and 'stop' when the player moves)
-    if (!inst || !['wave', 'dance', 'stop'].includes(e) || Date.now() - lastEmote < 200) return;
-    lastEmote = Date.now(); socket.to(inst.id).emit('emote', { id: socket.id, e });
-  });
-  socket.on('ev', (n, d) => { // custom events from game scripts, relayed to everyone else on the same server
-    if (!inst || typeof n !== 'string' || n.length > 32 || Date.now() - lastEv < 40) return;
-    lastEv = Date.now();
-    let j; try { j = JSON.stringify(d); } catch (e) { return; }
-    if (j && j.length > 1024) return;
-    socket.to(inst.id).emit('ev', { from: socket.user.name, n, d });
-  });
-  socket.on('disconnect', () => {
-    if (!inst) return;
-    trackLeave(inst.game, (Date.now() - joinedAt) / 1000);
-    socket.user.game = null;
-    inst.players.delete(socket.id);
-    io.to(inst.id).emit('leave', socket.id);
-    io.to(inst.id).emit('count', inst.players.size);
-    if (!inst.players.size) instances.delete(inst.id); // empty servers disappear from the list
-  });
-});
+/* ---------- shared helpers ---------- */
+let nCount = 0;
+const AGO = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['min', 60]];
+function ago(ts) {
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  for (const [u, n] of AGO) if (s >= n) { const v = Math.floor(s / n); return v + ' ' + u + (v > 1 ? 's' : '') + ' ago'; }
+  return 'just now';
+}
+const dateStr = ts => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+async function rq(method, path, body) {
+  const r = await fetch(S + path, { method, headers: AH(), body: body === undefined ? undefined : JSON.stringify(body) });
+  if (r.status === 401) { logout(); throw new Error('login'); }
+  return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
+}
+const AH = () => session ? { Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+const gj = async path => { try { const d = await rq('GET', path); return d.ok ? d.data : null; } catch (e) { return null; } };
 
-loadGames().finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
+/* ---------- release labels (beta / alpha / wip) ---------- */
+const LBL = { beta: ['BETA', 'glabel beta'], alpha: ['ALPHA', 'glabel alpha'], wip: ['WIP', 'glabel wip'] };
+const lbl = g => { const l = LBL[g?.status]; return l ? `<span class="${l[1]}">${l[0]}</span>` : ''; };
+
+/* ---------- server list on the game page ---------- */
+async function loadServers(id) {
+  const el = $('#servers'); if (!el) return;
+  const list = await gj('/api/games/' + id + '/servers');
+  if (!el || !list || !list.length) return;
+  el.innerHTML = `<h3 class="sec">SERVERS</h3><div class="ftable">${list.map(s => `<div class="srv"><div class="sinfo"><b>Server #${E(String(s.id).slice(0, 4))}</b><small>${s.players}/${s.max} players · created ${s.age < 60 ? 'just now' : Math.floor(s.age / 60) + ' minutes ago'}${s.names && s.names.length ? ' · ' + E(s.names.join(', ')) : ''}</small><div class="sbar"><i style="width:${Math.round(100 * s.players / s.max)}%"></i></div></div><button class="btn sm ${s.full ? 'alt' : ''}" ${s.full ? 'disabled' : `onclick="play('${id}','${s.id}')"`}>${s.full ? 'Full' : 'Join'}</button></div>`).join('')}</div>`;
+}
+
+/* ---------- reviews di game page ---------- */
+let rvDraft = null, rvVote = true, rvSort = 'recent', rvGame = null;
+function rvForm() {
+  return `<div class="rform"><b style="color:var(--strong)">Write a review</b>
+    <div class="tg"><button class="vb ${rvVote ? 'on' : ''}" onclick="rvVote=true;loadReviews(rvGame)">👍 Recommend</button><button class="vb ${!rvVote ? 'on' : ''}" onclick="rvVote=false;loadReviews(rvGame)">👎 Not really</button></div>
+    <textarea id="rvText" oninput="rvDraft=this.value" placeholder="Share your experience playing this game…">${E(rvDraft || '')}</textarea>
+    <button class="btn sm" onclick="sendReview()">Post review</button> <small style="color:var(--dim)">One review per game — you can edit it anytime.</small></div>`;
+}
+function rvRow(r, gid) {
+  return `<div class="rv"><div class="au">${avatar({ uid: r.uid, av: r.av, color: r.color }, 44)}<a href="#/user/${r.uid}" style="font-size:11px;color:var(--link);word-break:break-word">${E(r.name)}</a></div>
+    <div><div class="rvh"><b style="color:${r.up ? '#22c55e' : '#ff5c6c'}">${r.up ? '👍 Recommended' : '👎 Not recommended'}</b> <span>· ${ago(r.ts)}</span></div>
+    <div class="rvr"><p>${E(r.text)}</p></div>
+    <div class="rvf">${r.own
+      ? `<button class="vb" onclick="delReview('${gid}')">Delete my review</button>`
+      : `<button class="vb ${r.mine === 'yes' ? 'on' : ''}" onclick="voteReview('${gid}','${r.id}','yes')">👍 ${r.yes}</button><button class="vb ${r.mine === 'no' ? 'on' : ''}" onclick="voteReview('${gid}','${r.id}','no')">👎 ${r.no}</button><button class="flag" title="Report review" onclick="reportReview('${gid}','${r.id}')">⚑</button>`}</div></div></div>`;
+}
+async function loadReviews(id) {
+  const el = $('#reviews'); if (!el) return;
+  rvGame = id;
+  const d = await gj('/api/games/' + id + '/reviews?sort=' + (rvSort === 'helpful' ? 'helpful' : 'recent'));
+  if (!el) return;
+  if (!d) { el.innerHTML = ''; return; }
+  const pct = d.total ? Math.round(100 * d.up / d.total) : 0;
+  el.innerHTML = `<h3 class="sec">REVIEWS</h3>
+    ${d.total ? `<div class="rec ${pct < 50 ? 'neg' : ''}"><svg class="ic" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg><span><b>${pct}% positive</b><small>${d.total} reviews</small></span></div>` : ''}
+    ${d.canReview ? rvForm() : ''}
+    <div class="sortbar">Sort: <button class="vb ${rvSort !== 'helpful' ? 'on' : ''}" onclick="rvSort='recent';loadReviews(rvGame)">Most recent</button><button class="vb ${rvSort === 'helpful' ? 'on' : ''}" onclick="rvSort='helpful';loadReviews(rvGame)">Most helpful</button></div>
+    ${d.reviews.map(r => rvRow(r, id)).join('') || '<div class="empty">No reviews yet. Be the first!</div>'}`;
+}
+async function sendReview() {
+  const text = ($('#rvText')?.value || '').trim();
+  const r = await rq('POST', '/api/games/' + rvGame + '/reviews', { up: rvVote, text });
+  if (!r.ok) return toast(r.data.error || 'Failed to post review');
+  rvDraft = null; toast('Review saved'); loadReviews(rvGame);
+}
+async function delReview(gid) { await rq('DELETE', '/api/games/' + gid + '/reviews'); toast('Review deleted'); loadReviews(gid); }
+async function voteReview(gid, rid, v) { const r = await rq('POST', `/api/games/${gid}/reviews/${rid}/vote`, { v }); if (!r.ok) return toast(r.data.error || 'Vote failed'); loadReviews(gid); }
+async function reportReview(gid, rid) { await rq('POST', `/api/games/${gid}/reviews/${rid}/report`); toast('Review reported. Thank you!'); }
+
+/* ---------- People ---------- */
+let peopleQ = '';
+async function peoplePage() {
+  $('#view').innerHTML = `<span class="label">PEOPLE</span><h1 class="ftitle">Voxely Players</h1>
+    <div class="fsearch"><input class="search" id="pq" placeholder="Search players…" value="${E(peopleQ)}" oninput="peopleQ=this.value;renderPeople()"></div><div id="plistEl"></div>`;
+  renderPeople();
+}
+async function renderPeople() {
+  const el = $('#plistEl'); if (!el) return;
+  const list = await gj('/api/people');
+  if (!el) return;
+  const q = (peopleQ || '').toLowerCase();
+  const items = (list || []).filter(u => !q || u.name.toLowerCase().includes(q));
+  el.innerHTML = items.map(u => `<a class="pc" href="#/user/${u.uid}" style="margin-bottom:8px">${avatar(u, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)">${E(u.name)}</b>${verifiedBadge(u)}<small>${u.game ? 'Playing ' + E(u.game) : 'In lobby'}</small></div><small style="color:var(--link)">View profile →</small></a>`).join('') || '<div class="empty">No players found.</div>';
+}
+
+/* ---------- other player profiles ---------- */
+async function userPage(uid) {
+  $('#view').innerHTML = '<span class="label">PROFILE</span><div class="hint">Loading profile…</div>';
+  const u = await gj('/api/users/' + encodeURIComponent(uid));
+  if (!$('#view')) return;
+  if (!u) { $('#view').innerHTML = '<span class="label">PROFILE</span><div class="empty">Player not found.</div>'; return; }
+  const fb = {
+    none: `<button class="btn sm" onclick="friendAction('${u.uid}','request')">＋ Add Friend</button>`,
+    sent: `<button class="btn sm alt" onclick="friendAction('${u.uid}','cancel')">Cancel request</button>`,
+    received: `<button class="btn sm" onclick="friendAction('${u.uid}','accept')">Accept request</button>`,
+    friends: `<button class="btn sm alt" onclick="friendAction('${u.uid}','remove')">Remove friend</button>`
+  }[u.friend] || '';
+  $('#view').innerHTML = `<span class="label">PROFIL</span>
+    <div class="card pad"><div class="prof">${avatar(u, 96)}<div style="min-width:0">
+      <h2 class="ftitle" style="margin:0">${E(u.name)}${verifiedBadge(u)}</h2>
+      <div class="follow-stat"><b>${u.followers}</b> followers · <b>${u.following}</b> following · <b>${u.friends}</b> friends${u.game ? ' · playing <b>' + E(u.game) + '</b>' : ''}</div>
+      <div class="acts">${session && session.user.uid !== u.uid ? fb + `<button class="btn sm alt" onclick="followAction('${u.uid}')">${u.followed ? 'Unfollow' : 'Follow'}</button>` : ''}</div>
+    </div></div></div>
+    ${u.badges?.length ? `<h3 class="sec">BADGES</h3><div class="badge-grid">${u.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span></div>`).join('')}</div>` : ''}
+    ${u.outfit ? `<h3 class="sec">AVATAR</h3><div class="card pad" style="max-width:340px"><canvas id="uav" width="320" height="400"></canvas></div>` : ''}
+    <h3 class="sec">GAMES BY ${E(u.name).toUpperCase()}</h3>
+    ${u.games.length ? `<div class="grid">${u.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online} online · Free</small></div></a>`).join('')}</div>` : '<div class="empty">Hasn&#39;t created any games yet.</div>'}`;
+  if (u.outfit) V3D.render($('#uav'), u.outfit);
+}
+async function friendAction(uid, act) {
+  if (!session) return ($('#login').classList.add('on'));
+  if (act === 'remove') { await rq('DELETE', '/api/friends/' + uid); toast('Friend removed'); }
+  else {
+    const r = await rq('POST', '/api/friends/' + uid + '/' + act);
+    if (!r.ok) return toast(r.data.error || 'Something went wrong');
+    toast(act === 'accept' ? 'You are now friends!' : act === 'cancel' ? 'Request canceled' : 'Request sent');
+  }
+  userPage(uid);
+}
+async function followAction(uid) {
+  if (!session) return ($('#login').classList.add('on'));
+  const u = await gj('/api/users/' + uid);
+  if (!u) return;
+  await rq(u.followed ? 'DELETE' : 'POST', '/api/users/' + uid + '/follow');
+  userPage(uid);
+}
+
+/* ---------- own profile ---------- */
+async function profilePage() {
+  if (!session) return (location.hash = '#/');
+  const u = session.user;
+  const mine = await gj('/api/me/badges');
+  if (!$('#view')) return;
+  $('#view').innerHTML = `<span class="label">PROFILE</span>
+    <div class="card pad" style="max-width:640px">
+      <div class="prof">${avatar(u, 96)}<div><h2 class="ftitle" style="margin:0">${E(u.name)}</h2><small style="color:var(--dim)">Guest account${u.google ? ' · Google connected' : ''}</small></div></div>
+      <label style="margin-top:16px">Display name</label>
+      <div style="display:flex;gap:8px"><input id="pfName" value="${E(u.name)}" maxlength="16" style="flex:1"><button class="btn sm" onclick="saveName()">Save</button></div>
+      <div class="shirt-upload" style="margin-top:14px"><button class="btn sm alt" onclick="saveAvatar()">Change profile photo</button><button class="x" onclick="rmAvatar()">Remove photo</button><small style="color:var(--dim)">Used as the small avatar across the whole site</small></div>
+      <div class="sep2"></div>
+      <h3 class="ft">My badges</h3>
+      ${mine?.badges?.length ? `<div class="badge-grid" style="margin-top:10px">${mine.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name">${E(b.name)}</span></div>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No badges yet.</div>'}
+    </div>`;
+}
+async function saveName() {
+  const r = await rq('POST', '/api/profile', { name: $('#pfName').value });
+  if (!r.ok) return toast(r.data.error || 'Failed to save name');
+  session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); toast('Name saved'); profilePage();
+}
+async function saveAvatar() {
+  pickImage(256, 256, async d => {
+    const r = await rq('POST', '/api/profile', { avatar: d });
+    if (!r.ok) return toast(r.data.error || 'Failed to change photo');
+    session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); toast('Profile photo updated'); profilePage();
+  });
+}
+async function rmAvatar() {
+  const r = await rq('POST', '/api/profile', { avatar: null });
+  if (r.ok) { session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); profilePage(); }
+}
+
+/* ---------- Friends ---------- */
+async function friendsPage() {
+  if (!session) return (location.hash = '#/');
+  $('#view').innerHTML = '<span class="label">FRIENDS</span><div class="hint">Loading…</div>';
+  const [f, n] = await Promise.all([gj('/api/friends'), gj('/api/notifications')]);
+  if (!$('#view')) return;
+  const reqs = n?.requests || [];
+  $('#view').innerHTML = `<span class="label">FRIENDS</span>
+    <h3 class="sec">FRIEND REQUESTS</h3>
+    ${reqs.length ? reqs.map(x => `<div class="pc" style="margin-bottom:8px">${avatar(x.user, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)"><a href="#/user/${x.user.uid}">${E(x.user.name)}</a></b><small>${ago(x.ts)}</small></div><div class="pact"><button class="btn sm" onclick="reqAction('${x.user.uid}','accept')">Accept</button><button class="x" onclick="reqAction('${x.user.uid}','decline')">Decline</button></div></div>`).join('') : '<div class="empty">No incoming requests.</div>'}
+    <h3 class="sec">FRIEND LIST (${f?.friends.length || 0})</h3>
+    ${f?.friends.length ? f.friends.map(u => `<div class="pc" style="margin-bottom:8px"><a href="#/user/${u.uid}" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">${avatar(u, 40)}<div style="min-width:0"><b style="color:var(--strong)">${E(u.name)}</b><small>${u.game ? 'Playing ' + E(u.game) : 'Offline'}</small></div></a><button class="x" onclick="unfriend('${u.uid}')">Remove</button></div>`).join('') : '<div class="empty">No friends yet. Tap another player&#39;s username inside a game, or open the People page to add friends!</div>'}`;
+}
+async function reqAction(uid, act, back) {
+  if (!session) return ($('#login').classList.add('on'));
+  await rq('POST', '/api/friends/' + uid + '/' + act);
+  toast(act === 'accept' ? 'New friend added!' : 'Request declined');
+  back === 'notif' ? notificationsPage() : friendsPage();
+}
+async function unfriend(uid) { await rq('DELETE', '/api/friends/' + uid); toast('Friend removed'); friendsPage(); }
+
+/* ---------- Notifications ---------- */
+async function notificationsPage() {
+  if (!session) return (location.hash = '#/');
+  const d = await gj('/api/notifications');
+  if (!$('#view')) return;
+  nCount = 0; renderMe(); rq('POST', '/api/notifications/read').catch(() => {});
+  const row = (u, text, ts, extra = '') => u ? `<div class="nr">${avatar(u, 40)}<div class="nt"><a href="#/user/${u.uid}">${E(u.name)}</a> <span style="color:var(--soft)">${text}</span><small>${ago(ts)}</small>${extra}</div></div>` : '';
+  $('#view').innerHTML = `<span class="label">NOTIFICATIONS</span>
+    ${(d?.requests || []).map(x => row(x.user, 'wants to be your friend.', x.ts, `<div class="acts" style="margin-top:8px"><button class="btn sm" onclick="reqAction('${x.user.uid}','accept','notif')">Accept</button><button class="x" onclick="reqAction('${x.user.uid}','decline','notif')">Decline</button></div>`)).join('')}
+    ${(d?.accepted || []).map(x => row(x.user, 'accepted your friend request.', x.ts)).join('')}
+    ${!d || (!d.requests.length && !d.accepted.length) ? '<div class="empty">No notifications yet.</div>' : ''}`;
+}
+
+/* ---------- Forum ---------- */
+const catIc = c => `<span class="cat-ic" style="background:${c.color}">${E((c.name || '?')[0])}</span>`;
+const threadRow = t => `<div class="fr tt" style="cursor:pointer" onclick="location.hash='#/forum/thread/${t.id}'"><span class="au">${avatar(t.author, 44)}<small style="color:var(--dim);font-size:11px;word-break:break-all">${E(t.author.name)}</small></span><span style="text-align:left;min-width:0"><span class="tl">${E(t.title)}</span><small style="color:var(--dim)">${t.replies} replies · ${t.views} views · ${ago(t.ts)}</small></span></div>`;
+function threadList(title, list, back) {
+  $('#view').innerHTML = `<span class="label">FORUM</span><div class="fhead"><h1 class="ftitle">${E(title)}</h1>${back ? `<button class="btn sm alt" onclick="location.hash='#/forum'">← Back</button>` : ''}</div>
+    ${list.length ? `<div class="ftable tt">${list.map(threadRow).join('')}</div>` : '<div class="empty">No threads.</div>'}`;
+}
+async function forumPage() {
+  const d = await gj('/api/forum');
+  if (!$('#view')) return;
+  $('#view').innerHTML = `<span class="label">FORUM</span><h1 class="ftitle">Voxely Community</h1>
+    <div class="fsearch"><input class="search" id="fq" placeholder="Search threads…" onkeydown="if(event.key==='Enter')forumSearch()"><button class="btn" onclick="forumSearch()">Search</button></div>
+    <div class="ftable"><div class="fh"><span>Category</span><span>Threads</span><span>Posts</span></div>
+    ${(d?.cats || []).map(c => `<a class="fr" href="#/forum/cat/${c.id}"><span class="fc" style="text-align:left">${catIc(c)}<span style="min-width:0"><b>${E(c.name)}</b><small>${E(c.desc)}</small></span></span><span>${c.threads}</span><span>${c.posts}</span></a>`).join('')}</div>
+    <div class="fstat"><div>Threads: <b>${d?.stats?.threads || 0}</b> · Posts: <b>${d?.stats?.posts || 0}</b> · <a style="color:var(--link)" href="#/forum/mine">My threads</a></div></div>`;
+}
+function forumSearch() { const q = $('#fq')?.value?.trim(); if (q) location.hash = '#/forum/search/' + encodeURIComponent(q); }
+async function forumSearchPage(q) {
+  const list = await gj('/api/forum/search?q=' + encodeURIComponent(q));
+  if (!$('#view')) return;
+  threadList('Search results: "' + q + '"', list || [], true);
+}
+async function forumCatPage(id) {
+  const d = await gj('/api/forum/cat/' + id);
+  if (!d) return (location.hash = '#/forum');
+  $('#view').innerHTML = `<span class="label">FORUM</span><div class="fhead"><h1 class="ftitle">${E(d.cat.name)}</h1><div class="acts" style="margin:0">${session ? `<button class="btn sm" onclick="location.hash='#/forum/new/${d.cat.id}'">＋ New Thread</button>` : ''}<button class="btn sm alt" onclick="location.hash='#/forum'">← Back</button></div></div>
+    <p style="color:var(--soft);margin-bottom:12px">${E(d.cat.desc)}</p>
+    ${d.threads.length ? `<div class="ftable tt">${d.threads.map(threadRow).join('')}</div>` : '<div class="empty">No threads in this category yet.</div>'}`;
+}
+async function forumNewPage(cat) {
+  if (!session) return (location.hash = '#/');
+  $('#view').innerHTML = `<span class="label">FORUM</span><div class="card pad" style="max-width:640px"><h3 class="ft">New thread</h3><div class="err" id="ferr"></div>
+    <label>Title</label><input id="ftTitle" maxlength="100">
+    <label>Body</label><textarea id="ftBody" style="height:120px"></textarea>
+    <div class="acts"><button class="btn" onclick="postThread('${cat}')">Post</button><button class="btn alt" onclick="location.hash='#/forum/cat/${cat}'">Cancel</button></div></div>`;
+}
+async function postThread(cat) {
+  const r = await rq('POST', '/api/forum/cat/' + cat, { title: $('#ftTitle').value, body: $('#ftBody').value });
+  if (!r.ok) return ($('#ferr').textContent = r.data.error || 'Failed to create thread');
+  location.hash = '#/forum/thread/' + r.data.id;
+}
+async function forumThreadPage(id) {
+  const t = await gj('/api/forum/thread/' + id);
+  if (!$('#view')) return;
+  if (!t) return (location.hash = '#/forum');
+  const post = (p, own) => `<div class="post"><div class="pa">${avatar(p.author, 48)}<b style="color:var(--link);font-size:13px;word-break:break-word">${E(p.author.name)}</b><small style="color:var(--dim)">${ago(p.ts)}</small>${own ? `<button class="x" style="margin-top:4px" onclick="delPost('${id}','${p.id}')">Delete</button>` : ''}</div><div class="pb"><div class="ptext">${E(p.body)}</div></div></div>`;
+  $('#view').innerHTML = `<div class="crumb"><a href="#/forum">Forum</a> &gt; <a href="#/forum/cat/${t.category.id}">${E(t.category.name)}</a></div>
+    <div class="fhead"><h1 class="ftitle" style="word-break:break-word">${E(t.title)}</h1>${t.own ? `<button class="x" onclick="delThread('${id}')">Delete thread</button>` : ''}</div>
+    ${post({ author: t.author, body: t.body, ts: t.ts }, false)}
+    <h3 class="sec">${t.replies} REPLIES</h3>
+    ${t.posts.map(p => post(p, p.own)).join('') || '<div class="empty">No replies yet.</div>'}
+    ${session ? `<div class="card pad" style="margin-top:14px"><label>Reply</label><textarea id="frBody" style="height:90px"></textarea><div class="acts"><button class="btn" onclick="replyThread('${id}')">Send</button></div></div>` : '<div class="hint" style="margin-top:14px">Sign in to reply to this thread.</div>'}`;
+}
+async function replyThread(id) { const r = await rq('POST', '/api/forum/thread/' + id + '/reply', { body: $('#frBody').value }); if (!r.ok) return toast(r.data.error || 'Failed to reply'); forumThreadPage(id); }
+async function delPost(tid, pid) { await rq('DELETE', `/api/forum/thread/${tid}/post/${pid}`); forumThreadPage(tid); }
+async function delThread(tid) { if (!confirm('Delete this thread?')) return; await rq('DELETE', '/api/forum/thread/' + tid); location.hash = '#/forum'; }
+async function forumMinePage() { if (!session) return (location.hash = '#/'); const list = await gj('/api/forum/mine'); if (!$('#view')) return; threadList('My threads', list || [], true); }
+
+/* ---------- Developer Portal ---------- */
+const MAXP = 300;
+let ED = null, EDsel = 0;
+async function devPage() {
+  if (!session) {
+    $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="notice"><b style="color:var(--strong);font-size:18px">Become a Developer on Voxely</b>
+      <small>Create your own games with Voxely Studio, add Beta / Alpha / WIP labels, write changelogs, and track their stats.</small>
+      <div class="acts" style="justify-content:center;margin-top:14px"><button class="btn" onclick="$('#login').classList.add('on')">Sign in first</button></div></div>`;
+    return;
+  }
+  const mine = Object.entries(games).filter(([, g]) => g.mine);
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
+    <div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
+    <div class="hint">You can create up to 5 games. Build the world in Voxely Studio, set a release label (WIP / ALPHA / BETA), then log every update in the changelog so players know what's new.</div>
+    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b><small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Edit</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
+}
+async function delGame(id) { if (!confirm('Delete this game permanently?')) return; await rq('DELETE', '/api/games/' + id); await loadGames(); devPage(); toast('Game deleted'); }
+
+async function editPage(id) {
+  if (!session) return (location.hash = '#/');
+  if (id) {
+    const src = await gj('/api/games/' + id + '/source');
+    if (!src) return (location.hash = '#/dev');
+    ED = { id, ...src, boxes: (src.boxes || []).map(b => ({ ...b })), scripts: (src.scripts || []).map(s => ({ ...s })), thumb: null, hasThumb: src.hasThumb };
+  } else {
+    ED = { id: null, title: '', tagline: '', desc: '', tags: [], sky: '#7ec8ff', art: ['#1463ff', '#0a0f1a'], status: '',
+      boxes: [{ x: 0, y: -0.5, z: 0, w: 20, h: 1, d: 20, c: '#5cb85c', n: 'Ground', l: 0, r: 0, t: 0, cc: 1, k: 0, sp: 0 }], scripts: [], thumb: null, hasThumb: false };
+  }
+  EDsel = 0;
+  renderEditor();
+}
+function renderEditor() {
+  const isNew = !ED.id;
+  $('#view').innerHTML = `<span class="label">VOXELY STUDIO</span><div class="fhead"><h1 class="ftitle">${isNew ? 'Create new game' : 'Edit game'}</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="saveGameEd()">💾 Save</button><button class="btn sm alt" onclick="location.hash='#/dev'">Cancel</button></div></div>
+  <div class="card pad"><h3 class="ft">1 · Game info</h3>
+    <div class="row2">
+      <div><label>Title</label><input id="edTitle" maxlength="30" value="${E(ED.title)}"></div>
+      <div><label>Release label</label><select id="edStatus">
+        <option value="" ${ED.status === '' ? 'selected' : ''}>— No label —</option>
+        <option value="wip" ${ED.status === 'wip' ? 'selected' : ''}>WIP · Work in Progress</option>
+        <option value="alpha" ${ED.status === 'alpha' ? 'selected' : ''}>ALPHA · early testing</option>
+        <option value="beta" ${ED.status === 'beta' ? 'selected' : ''}>BETA · almost finished</option>
+      </select></div>
+      <div><label>Tagline</label><input id="edTag" maxlength="60" value="${E(ED.tagline)}"></div>
+      <div><label>Tags (comma separated, max 3)</label><input id="edTags" value="${E((ED.tags || []).join(', '))}"></div>
+      <div><label>Sky color</label><input type="color" id="edSky" value="${ED.sky}"></div>
+      <div><label>Card colors (2)</label><div style="display:flex;gap:8px"><input type="color" id="edArt1" value="${ED.art[0]}" style="flex:1"><input type="color" id="edArt2" value="${ED.art[1]}" style="flex:1"></div></div>
+    </div>
+    <label>Description</label><textarea id="edDesc">${E(ED.desc)}</textarea>
+    <div class="shirt-upload"><button class="btn sm alt" onclick="edThumb()">Upload thumbnail</button>${ED.hasThumb || ED.thumb ? '<small style="color:#22c55e">Thumbnail attached</small>' : '<small style="color:var(--dim)">Optional — used on the home page &amp; carousel</small>'}</div>
+  </div>
+  <div class="card pad" style="margin-top:14px"><h3 class="ft">2 · Build the world</h3>
+    <div class="tools"><button class="btn sm" onclick="edAdd()">＋ Platform</button><button class="btn sm alt" onclick="edDup()">Duplicate</button><button class="btn sm alt" onclick="edDel()">Delete selected</button><small style="color:var(--dim)"><span class="num">${ED.boxes.length}</span> parts · drag on the canvas (top view) to move · S = spawn, ☠ = kill, ≡ = stairs</small></div>
+    <canvas id="cv" height="420"></canvas>
+    <div class="selp" id="selp2"></div>
+    <div id="partsList" style="margin-top:10px"></div>
+  </div>
+  <div class="card pad" style="margin-top:14px"><h3 class="ft">3 · Preview &amp; scripts</h3>
+    <canvas id="pv" height="300"></canvas>
+    <div class="tools" style="margin-top:10px"><button class="btn sm" onclick="edAddScript()">＋ Script</button><small style="color:var(--dim)">Max 8 scripts · API: player, game, ui, net, parts, wait, console</small></div>
+    <div id="scriptList"></div>
+  </div>
+  <div class="acts" style="margin:14px 0 40px"><button class="btn" onclick="saveGameEd()">💾 Save game</button></div>`;
+  renderParts(); renderSelp(); renderScripts(); drawCv(); drawPv(); bindCv();
+}
+function edThumb() { pickImage(460, 215, d => { ED.thumb = d; toast('Thumbnail ready — don’t forget to click Save'); }); }
+function renderParts() {
+  const el = $('#partsList'); if (!el) return;
+  el.innerHTML = ED.boxes.map((b, i) => `<div class="mrow" style="cursor:pointer;background:${i === EDsel ? 'var(--hover)' : 'transparent'}" onclick="EDsel=${i};renderParts();renderSelp();drawCv()"><input type="color" value="${b.c}" style="width:40px;height:30px;padding:2px;background:var(--input);border:1px solid var(--line)" oninput="event.stopPropagation();ED.boxes[${i}].c=this.value;drawCv();drawPv()"><span style="flex:1;min-width:0;font-size:12px;color:var(--soft)">${E(b.n || 'Part')} <small style="color:var(--dim)" class="num">· ${b.x}, ${b.y}, ${b.z} · ${b.w}x${b.h}x${b.d}</small>${b.sp ? ' <b style="color:var(--link)">SP</b>' : ''}${b.k ? ' <b style="color:#ff5c6c">☠</b>' : ''}${b.l ? ' <b style="color:#22c55e">≡</b>' : ''}</span><button class="x" onclick="event.stopPropagation();EDsel=${i};edDel()">✕</button></div>`).join('');
+}
+function renderSelp() {
+  const el = $('#selp2'); if (!el) return;
+  const b = ED.boxes[EDsel];
+  if (!b) { el.innerHTML = '<div class="empty" style="padding:4px 0">Click a platform on the canvas to edit it.</div>'; return; }
+  const N = (k, v, step, extra) => `<input id="ps_${k}" type="number" step="${step || 0.5}" value="${v}" ${extra || ''} oninput="edNum('${k}',this.value)">`;
+  el.innerHTML = `<div class="row2">
+    <div><label>Name</label><input value="${E(b.n || '')}" maxlength="30" oninput="ED.boxes[${EDsel}].n=this.value;renderParts()"></div>
+    <div><label>Color</label><input type="color" value="${b.c}" oninput="ED.boxes[${EDsel}].c=this.value;drawCv();drawPv();renderParts()"></div>
+    <div><label>Position X</label>${N('x', b.x)}</div><div><label>Position Z</label>${N('z', b.z)}</div>
+    <div><label>Height (Y position)</label>${N('y', b.y)}</div><div><label>Thickness (H)</label>${N('h', b.h)}</div>
+    <div><label>Length (W)</label>${N('w', b.w)}</div><div><label>Width (D)</label>${N('d', b.d)}</div>
+    <div><label>Rotation (°)</label>${N('r', b.r || 0, 15)}</div><div><label>Transparency (0–0.95)</label>${N('t', b.t || 0, 0.05)}</div></div>
+    <div class="chk"><input type="checkbox" ${b.l ? 'checked' : ''} onchange="edFlag('l',this.checked)"> Stairs (climbable)</div>
+    <div class="chk"><input type="checkbox" ${b.k ? 'checked' : ''} onchange="edFlag('k',this.checked)"> Kill brick (respawns on touch)</div>
+    <div class="chk"><input type="checkbox" ${b.sp ? 'checked' : ''} onchange="edFlag('sp',this.checked)"> Player spawn point</div>
+    <div class="chk"><input type="checkbox" ${b.cc === 0 ? '' : 'checked'} onchange="edFlag('cc',this.checked)"> Collidable (collider)</div>`;
+}
+function edNum(k, v) {
+  const b = ED.boxes[EDsel]; if (!b) return;
+  let n = parseFloat(v);
+  if (Number.isFinite(n)) { b[k] = k === 't' ? Math.min(0.95, Math.max(0, n)) : n; }
+  drawCv(); drawPv();
+}
+function edFlag(k, v) {
+  const b = ED.boxes[EDsel]; if (!b) return;
+  b[k] = v ? 1 : 0;
+  if (k === 'sp' && v) ED.boxes.forEach((x, i) => { if (i !== EDsel) x.sp = 0; });
+  if (k === 'cc' && !v) b.cc = 0;
+  renderParts(); drawCv(); drawPv();
+}
+function edAdd() {
+  if (ED.boxes.length >= MAXP) return toast('Max ' + MAXP + ' platforms');
+  ED.boxes.push({ x: 0, y: 1, z: 0, w: 4, h: 1, d: 4, c: '#e0a040', n: 'Part' + (ED.boxes.length + 1), l: 0, r: 0, t: 0, cc: 1, k: 0, sp: 0 });
+  EDsel = ED.boxes.length - 1; renderParts(); renderSelp(); drawCv(); drawPv();
+}
+function edDel() {
+  if (ED.boxes.length <= 1) return toast('At least 1 platform is required');
+  ED.boxes.splice(EDsel, 1); EDsel = 0; renderParts(); renderSelp(); drawCv(); drawPv();
+}
+function edDup() {
+  if (ED.boxes.length >= MAXP) return toast('Max ' + MAXP + ' platforms');
+  const b = { ...ED.boxes[EDsel] }; b.x += (b.w || 4) + 1; b.n = (b.n || 'Part') + ' copy'; b.sp = 0;
+  ED.boxes.push(b); EDsel = ED.boxes.length - 1; renderParts(); renderSelp(); drawCv(); drawPv();
+}
+function drawCv() {
+  const cv = $('#cv'); if (!cv) return;
+  const U = 10, W = cv.clientWidth || 600;
+  cv.width = W; cv.height = 420;
+  const g = cv.getContext('2d'), ox = W / 2, oz = 210;
+  g.fillStyle = '#050913'; g.fillRect(0, 0, W, 420);
+  g.strokeStyle = 'rgba(120,160,255,.09)'; g.lineWidth = 1;
+  for (let x = ox % U; x < W; x += U) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 420); g.stroke(); }
+  for (let y = oz % U; y < 420; y += U) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  g.strokeStyle = 'rgba(120,160,255,.25)'; g.beginPath(); g.moveTo(ox, 0); g.lineTo(ox, 420); g.moveTo(0, oz); g.lineTo(W, oz); g.stroke();
+  ED.boxes.forEach((b, i) => {
+    const x = ox + b.x * U - (b.w * U) / 2, y = oz + b.z * U - (b.d * U) / 2;
+    g.globalAlpha = b.t > 0 ? 0.55 : 1;
+    g.fillStyle = b.c; g.fillRect(x, y, b.w * U, b.d * U);
+    g.globalAlpha = 1;
+    g.strokeStyle = i === EDsel ? '#ffffff' : 'rgba(0,0,0,.55)'; g.lineWidth = i === EDsel ? 2 : 1; g.strokeRect(x, y, b.w * U, b.d * U);
+    const marks = (b.sp ? 'S' : '') + (b.k ? '☠' : '') + (b.l ? '≡' : '');
+    if (marks) { g.fillStyle = '#fff'; g.font = 'bold 11px Arial'; g.fillText(marks, x + 4, y + 13); }
+  });
+}
+function bindCv() {
+  const cv = $('#cv'); if (!cv) return;
+  const U = 10;
+  const hit = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left - r.width / 2) / U, z: (e.clientY - r.top - r.height / 2) / U }; };
+  const inBox = (b, p) => Math.abs(p.x - b.x) <= b.w / 2 + 0.2 && Math.abs(p.z - b.z) <= b.d / 2 + 0.2;
+  let drag = -1;
+  cv.onpointerdown = e => {
+    const p = hit(e); drag = -1;
+    for (let i = ED.boxes.length - 1; i >= 0; i--) if (inBox(ED.boxes[i], p)) { drag = i; break; }
+    if (drag >= 0) { EDsel = drag; renderParts(); renderSelp(); drawCv(); cv.setPointerCapture(e.pointerId); }
+  };
+  cv.onpointermove = e => {
+    if (drag < 0 || !(e.buttons & 1)) return;
+    const p = hit(e), b = ED.boxes[drag]; if (!b) return;
+    b.x = Math.round(p.x * 2) / 2; b.z = Math.round(p.z * 2) / 2;
+    drawCv(); drawPv();
+    ['x', 'z'].forEach(k => { const inp = $('#ps_' + k); if (inp) inp.value = b[k]; });
+  };
+  cv.onpointerup = () => (drag = -1);
+  cv.onpointerleave = () => (drag = -1);
+}
+const shadeHex = (hex, f) => {
+  const n = parseInt(String(hex).slice(1), 16);
+  const r = Math.min(255, Math.round(((n >> 16) & 255) * f)), g = Math.min(255, Math.round(((n >> 8) & 255) * f)), b = Math.min(255, Math.round((n & 255) * f));
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+};
+function drawPv() {
+  const cv = $('#pv'); if (!cv) return;
+  const W = cv.clientWidth || 600; cv.width = W; cv.height = 300;
+  const g = cv.getContext('2d');
+  g.fillStyle = ED.sky || '#7ec8ff'; g.fillRect(0, 0, W, 300);
+  const S2 = 7, cx = W / 2, cy = 150;
+  const P2 = (x, y, z) => [cx + (x - z) * S2 * 0.87, cy + (x + z) * S2 * 0.5 - y * S2];
+  const poly = (pts, fill) => { g.beginPath(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py) : g.moveTo(px, py))); g.closePath(); g.fillStyle = fill; g.fill(); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 1; g.stroke(); };
+  [...ED.boxes].sort((a, b) => (a.x + a.z + a.y) - (b.x + b.z + b.y)).forEach(b => {
+    const w = (b.w || 4) / 2, d = (b.d || 4) / 2, hh = (b.h || 1) / 2;
+    const c = b.c || '#888888';
+    poly([P2(b.x - w, b.y + hh, b.z - d), P2(b.x + w, b.y + hh, b.z - d), P2(b.x + w, b.y + hh, b.z + d), P2(b.x - w, b.y + hh, b.z + d)], shadeHex(c, 1.06));
+    poly([P2(b.x + w, b.y + hh, b.z - d), P2(b.x + w, b.y + hh, b.z + d), P2(b.x + w, b.y - hh, b.z + d), P2(b.x + w, b.y - hh, b.z - d)], shadeHex(c, 0.72));
+    poly([P2(b.x - w, b.y - hh, b.z + d), P2(b.x + w, b.y - hh, b.z + d), P2(b.x + w, b.y + hh, b.z + d), P2(b.x - w, b.y + hh, b.z + d)], shadeHex(c, 0.86));
+  });
+}
+function renderScripts() {
+  const el = $('#scriptList'); if (!el) return;
+  el.innerHTML = ED.scripts.map((s, i) => `<div class="card pad" style="margin-top:8px;background:var(--input)"><div class="tools"><input value="${E(s.name)}" oninput="ED.scripts[${i}].name=this.value" style="flex:1;background:var(--panel);border:1px solid var(--line);color:var(--strong);padding:7px;font:inherit"><button class="x" onclick="ED.scripts.splice(${i},1);renderScripts()">✕</button></div><textarea style="width:100%;height:110px;background:var(--panel);border:1px solid var(--line);color:var(--strong);padding:8px;font:12px monospace" oninput="ED.scripts[${i}].code=this.value">${E(s.code)}</textarea></div>`).join('');
+}
+function edAddScript() {
+  if (ED.scripts.length >= 8) return toast('Max 8 scripts');
+  ED.scripts.push({ name: 'Script' + (ED.scripts.length + 1), code: '// Example: floating platform\n// const p = part("Part2");\n// game.onTick(() => { p.position.y = 2 + Math.sin(game.time()) * 2; });\n' });
+  renderScripts();
+}
+async function saveGameEd() {
+  const b = {
+    title: $('#edTitle').value, tagline: $('#edTag').value, desc: $('#edDesc').value,
+    tags: $('#edTags').value.split(',').map(s => s.trim()).filter(Boolean),
+    sky: $('#edSky').value, art: [$('#edArt1').value, $('#edArt2').value],
+    status: $('#edStatus').value,
+    boxes: ED.boxes,
+    scripts: ED.scripts.filter(s => (s.code || '').trim())
+  };
+  if (ED.thumb) b.thumb = ED.thumb;
+  const r = ED.id ? await rq('PUT', '/api/games/' + ED.id, b) : await rq('POST', '/api/games', b);
+  if (!r.ok) return toast(r.data.error || 'Failed to save game');
+  if (!ED.id) ED.id = r.data.id;
+  await loadGames();
+  toast('Game saved');
+  location.hash = '#/dev';
+}
+
+/* ---------- Changelog manager (dev portal) ---------- */
+async function changelogPage(id) {
+  if (!session) return (location.hash = '#/');
+  const src = await gj('/api/games/' + id + '/source');
+  if (!$('#view')) return;
+  if (!src) return (location.hash = '#/dev');
+  renderChangelog(id, src.title, src.changelog || []);
+}
+function renderChangelog(id, title, list) {
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Changelog — ${E(title)}</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div>
+    <div class="hint">Every entry appears instantly on the game page. Players see it in the "Changelog" section right below the game description.</div>
+    <div class="card pad" style="max-width:640px"><h3 class="ft">Add update</h3><div class="err" id="clerr"></div>
+      <label>Version (e.g. v1.1)</label><input id="clVer" maxlength="10" placeholder="v1.0">
+      <label>What’s new?</label><textarea id="clText" placeholder="Example: Added 3 new checkpoints and fixed a jumping bug."></textarea>
+      <div class="acts"><button class="btn" onclick="addChangelog('${id}')">Add to changelog</button></div></div>
+    <h3 class="sec">UPDATE HISTORY (${list.length})</h3>
+    ${list.length ? list.map(e => `<div class="mrow"><b style="color:var(--link);min-width:56px" class="num">${E(e.ver)}</b><div style="flex:1;min-width:0"><span style="color:var(--soft)">${E(e.text)}</span><small style="display:block;color:var(--dim)">${dateStr(e.ts)}</small></div><button class="x" onclick="delChangelog('${id}','${e.id}')">Delete</button></div>`).join('') : '<div class="empty">No updates recorded yet. Add the first entry with the form above!</div>'}`;
+}
+async function addChangelog(id) {
+  const r = await rq('POST', '/api/games/' + id + '/changelog', { ver: $('#clVer').value, text: $('#clText').value });
+  if (!r.ok) return ($('#clerr').textContent = r.data.error || 'Failed to add changelog');
+  toast('Changelog added'); await loadGames();
+  renderChangelog(id, games.find(g => g.id === id)?.title || '', r.data.changelog || []);
+}
+async function delChangelog(id, cid) { await rq('DELETE', `/api/games/${id}/changelog/${cid}`); await loadGames(); changelogPage(id); }
+
+/* ---------- Statistik game (dev portal) ---------- */
+async function statsPage(id) {
+  const s = await gj('/api/games/' + id + '/stats');
+  if (!$('#view')) return;
+  if (!s) return (location.hash = '#/dev');
+  const g = games.find(x => x.id === id);
+  const mmss = v => Math.floor(v / 60) + 'm ' + (v % 60) + 's';
+  const mx = Math.max(1, ...(s.daily || []).map(d => d.n));
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Stats — ${E(g?.title || 'Game')}</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div>
+    <div class="stgrid">
+      <div class="stc"><b class="num">${s.visits}</b><small>VISITS</small></div>
+      <div class="stc"><b class="num">${s.unique}</b><small>Unique players</small></div>
+      <div class="stc"><b class="num">${s.online}</b><small>Online now</small></div>
+      <div class="stc"><b class="num">${s.peak}</b><small>Peak online</small></div>
+      <div class="stc"><b class="num">${mmss(s.avg)}</b><small>Avg. playtime</small></div>
+      <div class="stc"><b class="num">${s.servers}</b><small>Active servers</small></div>
+      <div class="stc"><b class="num">${s.reviews}</b><small>Reviews (${s.up} 👍)</small></div>
+    </div>
+    <h3 class="sec">VISITS — LAST 14 DAYS</h3>
+    <div class="card pad"><div class="chart">${(s.daily || []).map(d => `<div class="cb"><i style="height:${Math.round(100 * d.n / mx)}%"></i>${d.n}</div>`).join('')}</div></div>`;
+}
+
+/* ---------- Badge manager (dev portal) ---------- */
+async function badgesPage() {
+  if (!session) return (location.hash = '#/');
+  const d = await gj('/api/badges');
+  if (!$('#view')) return;
+  const list = d?.badges || [];
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Badges</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div>
+    <div class="hint">Badges are a way to reward players. Creating badges is limited to verified Google accounts; players who earn them show them off on their profile.</div>
+    <div class="badge-form" style="max-width:520px"><h3 class="ft">Create new badge</h3><div class="err" id="berr"></div>
+      <label>Name</label><input id="bdName" maxlength="40" placeholder="Contoh: Champion Obby">
+      <label>Icon (emoji)</label><input id="bdIcon" maxlength="4" placeholder="🏆">
+      <label>Color</label><input type="color" id="bdColor" value="#ffd700">
+      <label>Description</label><textarea id="bdDesc" maxlength="200"></textarea>
+      <div class="acts"><button class="btn" onclick="createBadge()">Create badge</button></div></div>
+    <h3 class="sec">ALL BADGES (${list.length})</h3>
+    ${list.length ? `<div class="badge-grid">${list.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span><div class="acts" style="justify-content:center;margin-top:6px">${b.createdBy === session.user.uid ? `<button class="x" onclick="delBadge('${b.id}')">Delete</button>` : ''}</div></div>`).join('')}</div>` : '<div class="empty">No badges yet.</div>'}
+    <div class="card pad" style="max-width:520px;margin-top:14px"><h3 class="ft">Give a badge to a player</h3><div class="err" id="baerr"></div>
+      <label>Badge</label><select id="bdSel">${list.map(b => `<option value="${b.id}">${E(b.name)}</option>`).join('')}</select>
+      <label>Player UID</label><input id="bdUid" placeholder="player UID (see their profile page)">
+      <div class="acts"><button class="btn" onclick="awardBadge()">Give badge</button></div></div>`;
+}
+async function createBadge() {
+  const r = await rq('POST', '/api/badges', { name: $('#bdName').value, icon: $('#bdIcon').value || '⭐', color: $('#bdColor').value, description: $('#bdDesc').value });
+  if (!r.ok) return ($('#berr').textContent = r.data.error || 'Failed to create badge');
+  toast('Badge created'); badgesPage();
+}
+async function delBadge(id) { await rq('DELETE', '/api/badges/' + id); badgesPage(); }
+async function awardBadge() {
+  const r = await rq('POST', '/api/badges/' + $('#bdSel').value + '/award', { uid: $('#bdUid').value.trim() });
+  if (!r.ok) return ($('#baerr').textContent = r.data.error || 'Failed to give badge');
+  toast('Badge awarded!');
+}
+
+/* ---------- router ---------- */
+function route() {
+  clearInterval(timer); timer = null;
+  V3D.disposeAll(); // free the WebGL previews of the previous page
+  const h = location.hash.replace(/^#\/?/, '');
+  const p = h.split('/');
+  ['nGames', 'nPeople', 'nForum', 'nAvatar', 'nMarket'].forEach(id => document.getElementById(id)?.classList.remove('on'));
+  document.getElementById('nav')?.classList.remove('on');
+  const nav = { '': 'nGames', game: 'nGames', people: 'nPeople', user: 'nPeople', forum: 'nForum', avatar: 'nAvatar', marketplace: 'nMarket' }[p[0] || ''];
+  if (nav) document.getElementById(nav)?.classList.add('on');
+  if (!p[0]) return home();
+  if (p[0] === 'game') return gamePage(p[1]);
+  if (p[0] === 'people') return peoplePage();
+  if (p[0] === 'user') return userPage(p[1]);
+  if (p[0] === 'avatar') return avatarPage();
+  if (p[0] === 'marketplace') return marketplacePage();
+  if (p[0] === 'settings') return settingsPage();
+  if (p[0] === 'friends') return friendsPage();
+  if (p[0] === 'notifications') return notificationsPage();
+  if (p[0] === 'profile') return profilePage();
+  if (p[0] === 'forum') {
+    if (p[1] === 'cat') return forumCatPage(p[2]);
+    if (p[1] === 'new') return forumNewPage(p[2]);
+    if (p[1] === 'thread') return forumThreadPage(p[2]);
+    if (p[1] === 'mine') return forumMinePage();
+    if (p[1] === 'search') return forumSearchPage(decodeURIComponent(p[2] || ''));
+    return forumPage();
+  }
+  if (p[0] === 'dev') {
+    if (p[1] === 'new') return editPage(null);
+    if (p[1] === 'edit') return editPage(p[2]);
+    if (p[1] === 'changelog') return changelogPage(p[2]);
+    if (p[1] === 'stats') return statsPage(p[2]);
+    if (p[1] === 'badges') return badgesPage();
+    return devPage();
+  }
+  location.hash = '#/';
+}
+addEventListener('hashchange', route);
+
+/* ---------- login google (supabase) & boot ---------- */
+async function googleLogin(at) {
+  try {
+    const r = await fetch(S + '/api/login/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ access_token: at }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return;
+    session = d; localStorage.setItem('voxely', JSON.stringify(session));
+    renderMe(); syncOutfit(); pollNotifs();
+  } catch (e) {}
+}
+$('#googleBtn').onclick = async () => {
+  if (!sb) return ($('#loginErr').textContent = 'Google login is not configured on the server yet');
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google' });
+  if (error) $('#loginErr').textContent = error.message;
+};
+$('#guestBtn').onclick = guestLogin;
+
+async function pollNotifs() {
+  if (!session) return;
+  const d = await gj('/api/notifications');
+  if (d) { nCount = d.unread || 0; renderMe(); }
+}
+(async function boot() {
+  renderMe();
+  if (!session) $('#login').classList.add('on');
+  if (sb) { try { const { data } = await sb.auth.getSession(); if (data?.session && !session) await googleLogin(data.session.access_token); } catch (e) {} }
+  if (session) { syncOutfit(); pollNotifs(); }
+  try { await loadGames(); } catch (e) { games = []; }
+  if (!games.length) $('#view').innerHTML = '<div class="hint">Failed to load the game list. Make sure the Voxely server is running, then refresh the page.</div>';
+  else route();
+  setInterval(() => { loadGames().catch(() => {}); if (session) pollNotifs(); }, 30000);
+})();
+</script>
+</body>
+</html>
