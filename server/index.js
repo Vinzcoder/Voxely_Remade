@@ -112,7 +112,7 @@ app.use((req, res, next) => { const u = sessions.get((req.headers.authorization 
 app.use(express.json({ limit: '1mb' }));
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
-const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid, followers: u.followers?.size || 0, following: u.following?.size || 0 });
+const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid, about: u.about || '', level: levelOf(u), followers: u.followers?.size || 0, following: u.following?.size || 0 });
 const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
 const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
@@ -178,6 +178,7 @@ app.post('/api/profile', (req, res) => {
     user.name = name;
     Object.entries(GAMES).forEach(([gid, g]) => { if (g.ownerUid === user.uid) { g.owner = name; saveGame(gid); } });
   }
+  if (b.about !== undefined) user.about = String(b.about).replace(/[<>]/g, '').trim().slice(0, 200);
   if (b.avatar === null) { user.avatar = null; user.av = 0; }
   else if (b.avatar !== undefined) {
     const img = parseImg(b.avatar, 60 * 1024);
@@ -457,7 +458,8 @@ app.get('/api/users/:uid', (req, res) => {
   const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
   const me = sessions.get(bearer(req));
   const userBadges = getUserBadges(u.uid);
-  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', followed: !!me?.following?.has(u.uid), friends: u.friends.size, joined: u.joined || null, lastSeen: u.lastSeen || null,
+  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', followed: !!me?.following?.has(u.uid), friends: u.friends.size, joined: u.joined || null, lastSeen: u.lastSeen || null, about: u.about || '', level: levelOf(u),
+    friendList: (() => { const m = uidMap(); return [...u.friends].map(id => m.get(id)).filter(Boolean).slice(0, 12).map(userCard); })(),
     games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))),
     badges: userBadges.slice(0, 10) }); // Show up to 10 badges in profile
 });
@@ -520,6 +522,42 @@ app.get('/api/notifications', (req, res) => {
 app.post('/api/notifications/read', (req, res) => {
   const me = needMe(req, res); if (!me) return;
   me.notes.forEach(n => (n.read = true)); res.json({ ok: true });
+});
+
+// ---------- Level, games friends played, My T-Shirts / My Accessories ----------
+const levelOf = u => 1 + Math.floor(Math.sqrt((u.xp || 0) / 5));
+app.get('/api/friends/played', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const users = uidMap(), map = new Map();
+  for (const id of me.friends) {
+    const f = users.get(id); if (!f || !f.played) continue;
+    for (const [gid, ts] of f.played) if (GAMES[gid]) { const e = map.get(gid) || { ts: 0, friends: [] }; e.ts = Math.max(e.ts, ts); e.friends.push(userCard(f)); map.set(gid, e); }
+  }
+  res.json({ games: [...map].sort((a, b) => b[1].ts - a[1].ts).map(([gid, e]) => ({ ...pub(gid, GAMES[gid], bearer(req)), friends: e.friends.slice(0, 8), friendCount: e.friends.length })) });
+});
+const ITEM_KINDS = new Map([['shirts', 8], ['accessories', 10]]);
+app.get('/api/me/items', (req, res) => { const me = needMe(req, res); if (!me) return; res.json({ shirts: me.shirts || [], accessories: me.accessories || [] }); });
+app.post('/api/me/items/:kind', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  const kind = req.params.kind, max = ITEM_KINDS.get(kind); if (!max) return res.sendStatus(404);
+  const list = (me[kind] = me[kind] || []), b = req.body || {}, name = txt(b.name, 30);
+  if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 characters' });
+  if (list.length >= max) return res.status(400).json({ error: 'You can have up to ' + max + ' items here' });
+  const it = { id: crypto.randomBytes(4).toString('hex'), name, ts: Date.now() };
+  if (kind === 'shirts') {
+    const s = String(b.image || '');
+    if (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s) || s.length > 180000) return res.status(400).json({ error: 'Choose a valid image (120 KB max)' });
+    it.image = s;
+  } else {
+    if (!OUT_HATS.includes(b.hat) || b.hat === 'none') return res.status(400).json({ error: 'Choose an accessory type' });
+    it.hat = b.hat; it.color = HEX.test(b.color) ? b.color : '#e63946';
+  }
+  list.unshift(it); res.json({ item: it });
+});
+app.delete('/api/me/items/:kind/:id', (req, res) => {
+  const me = needMe(req, res); if (!me) return;
+  if (!ITEM_KINDS.has(req.params.kind)) return res.sendStatus(404);
+  me[req.params.kind] = (me[req.params.kind] || []).filter(i => i.id !== req.params.id); res.sendStatus(204);
 });
 
 // ---------- Avatar outfit (colors, face, hat) ----------
@@ -709,6 +747,7 @@ io.on('connection', socket => {
     const g = GAMES[gid];
     inst = pickInstance(gid, arg?.room);
     socket.join(inst.id); socket.user.game = gid;
+    (socket.user.played = socket.user.played || new Map()).set(gid, Date.now()); socket.user.xp = (socket.user.xp || 0) + 5;
     const me = { id: socket.id, uid: socket.user.uid, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0, outfit: socket.user.outfit || null };
     inst.players.set(socket.id, me);
     trackJoin(gid, socket.user); joinedAt = Date.now();
@@ -740,7 +779,7 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     if (!inst) return;
     trackLeave(inst.game, (Date.now() - joinedAt) / 1000);
-    socket.user.game = null; socket.user.lastSeen = Date.now();
+    socket.user.game = null; socket.user.lastSeen = Date.now(); socket.user.xp = (socket.user.xp || 0) + Math.floor((Date.now() - joinedAt) / 60000);
     inst.players.delete(socket.id);
     io.to(inst.id).emit('leave', socket.id);
     io.to(inst.id).emit('count', inst.players.size);
