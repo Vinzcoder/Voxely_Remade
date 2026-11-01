@@ -90,7 +90,7 @@
   .free { border:1px solid var(--line); padding:6px 12px; color:var(--link); margin-right:10px; }
   /* modals */
   .veil { position:fixed; inset:0; background:rgba(0,0,0,.82); display:none; align-items:center; justify-content:center; z-index:60; } .veil.on { display:flex; }
-  .box { width:360px; background:var(--panel); border:1px solid var(--blue); padding:26px; }
+  .box { width:360px; max-width:92vw; background:var(--panel); border:1px solid var(--blue); padding:26px; }
   .box h3 { color:var(--strong); font-size:20px; margin-bottom:6px; } .box p { color:var(--dim); margin-bottom:16px; line-height:1.45; }
   .box input { width:100%; background:var(--input); border:1px solid var(--line); color:var(--strong); padding:11px; margin-bottom:12px; font:inherit; } .box .btn { width:100%; }
   #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--blue); color:var(--on); padding:10px 18px; display:none; z-index:70; }
@@ -236,10 +236,12 @@
   <button class="btn gbtn" id="googleBtn"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google</button><div class="or">or continue as a guest</div>
   <input id="nick" maxlength="16" placeholder="Your name (leave empty = random)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
   <button class="btn" id="guestBtn">Continue as Guest</button>
+  <button class="btn alt" id="skipBtn" style="margin-top:8px">Browse without signing in</button>
 </div></div>
 <div class="veil" id="launch"><div class="box">
   <h3 id="lTitle"></h3><p id="lText"></p>
   <button class="btn" id="lDl" style="display:none;margin-bottom:8px" onclick="download()">Download Voxely Client</button>
+  <button class="btn" id="lWeb" style="display:none;margin-bottom:8px" onclick="playInBrowser()">Play in browser instead</button>
   <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Close</button>
 </div></div>
 <div id="toast"></div>
@@ -247,11 +249,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
 <script>
-const S = window.VOXELY.server.replace(/\/$/, '');
+window.VOXELY = window.VOXELY || {}; VOXELY.server = VOXELY.server || location.origin;
+const S = VOXELY.server.replace(/\/$/, '');
 const mobileGame = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const sb = window.supabase && VOXELY.supabaseUrl ? supabase.createClient(VOXELY.supabaseUrl, VOXELY.supabaseKey, { auth: { flowType: 'pkce' } }) : null;
 const $ = s => document.querySelector(s);
 let games = [], session = JSON.parse(localStorage.getItem('voxely') || 'null'), idx = 0, timer = null, hist = [0, 0, 0, 0, 0, 0];
+addEventListener('unhandledrejection', e => { if (e.reason && e.reason.message === 'login') e.preventDefault(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') $('#login').classList.remove('on'); });
+const needLogin = () => { if (session) return false; toast('Please sign in first'); $('#login').classList.add('on'); return true; };
 
 const art = (g, seed = 0) => {
   let b = ''; for (let i = 0; i < 8; i++) b += `<i style="left:${i*13-2}%;width:12%;height:${18+((i*37+seed*23+g.title.length*9)%50)}%"></i>`;
@@ -260,14 +266,14 @@ const art = (g, seed = 0) => {
 const E = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const tags = g => g.tags.map(t => `<span class="tag">${E(t)}</span>`).join('');
 const total = () => games.reduce((n, g) => n + g.online, 0);
-function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1800); }
+let toastT; function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => (t.style.display = 'none'), 2200); }
 function soon() { toast('Coming soon'); }
-function verifiedBadge(u) { return Number(u?.followers || 0) >= 1000 ? '<img class="verified" src="/assets/images/checkmark.svg" alt="Verified" title="Verified creator · 1,000+ followers">' : ''; }
+function verifiedBadge(u) { return Number(u?.followers || 0) >= 1000 ? '<svg class="verified" viewBox="0 0 24 24" aria-label="Verified"><title>Verified creator · 1,000+ followers</title><path fill="#1463ff" d="M12 1l3 2.2 3.7-.2 1.2 3.5 3.1 2-1.1 3.5 1.1 3.5-3.1 2-1.2 3.5-3.7-.2L12 23l-3-2.2-3.7.2-1.2-3.5-3.1-2 1.1-3.5L1 8.5l3.1-2 1.2-3.5L9 3.2z"/><path d="M8 12.3l2.7 2.7L16 9.7" fill="none" stroke="#fff" stroke-width="2.2"/></svg>' : ''; }
 function avatar(u, n) {
   const st = `width:${n}px;height:${n}px;flex:none`;
   return u.av ? `<img class="av" style="${st}" src="${S}/api/avatar/${u.uid}?v=${u.av}" alt="">` : `<span class="av" style="${st};background:${u.color}"></span>`;
 }
-function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small JPEG data URL
+function pickImage(w, h, cb, maxB) { // choose a file, crop to w x h, return a small JPEG data URL
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/png,image/jpeg,image/webp';
   inp.onchange = () => {
     const f = inp.files[0]; if (!f) return;
@@ -276,7 +282,7 @@ function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small J
       const c = document.createElement('canvas'); c.width = w; c.height = h;
       const k = Math.max(w / img.width, h / img.height), dw = img.width * k, dh = img.height * k;
       c.getContext('2d').drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
-      URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg', 0.85));
+      URL.revokeObjectURL(url); let q = 0.85, d = c.toDataURL('image/jpeg', q); while (d.length * 0.75 > (maxB || 55000) && q > 0.3) { q -= 0.1; d = c.toDataURL('image/jpeg', q); } cb(d);
     };
     img.onerror = () => alert('That file is not a valid image');
     img.src = url;
@@ -287,13 +293,13 @@ function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small J
 async function guestLogin() {
   const r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) });
   const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Login failed'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
-  $('#login').classList.remove('on'); renderMe(); route(); syncOutfit();
+  $('#login').classList.remove('on'); renderMe(); if (sb) sb.auth.signOut().catch(() => {}); loadGames().catch(() => {}).then(route); syncOutfit(); pollNotifs();
 }
-function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
+function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); loadGames().catch(() => {}).then(route); }
 function renderMe() {
-  if (!session) { $('#me').innerHTML = ''; return; }
+  if (!session) { $('#me').innerHTML = '<button class="btn sm" onclick="document.getElementById(\'login\').classList.add(\'on\')">Sign in</button>'; return; }
   $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
-    <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>Guest account</small></div>
+    <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>${session.user.google ? 'Google account' : 'Guest account'}</small></div>
     <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/settings">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
 }
 document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
@@ -350,22 +356,23 @@ function download() {
 }
 function show(title, text, dl) {
   $('#lTitle').textContent = title; $('#lText').textContent = text;
-  $('#lDl').style.display = dl ? 'block' : 'none'; $('#launch').classList.add('on');
+  $('#lDl').style.display = dl ? 'block' : 'none'; $('#lWeb').style.display = dl ? 'block' : 'none'; $('#launch').classList.add('on');
 }
 async function play(id, room) {
-  const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
-  if (!ok) return logout();
-  if (mobileGame) {
-    show('Launching Voxely…', 'The game runs right in your mobile browser.', false);
-    location.href = `/game/?game=${encodeURIComponent(id)}&room=${encodeURIComponent(room || '')}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`;
-    return;
-  }
+  if (needLogin()) return;
+  const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => null);
+  if (ok === false) return logout();
+  if (ok === null) return toast('Cannot reach the Voxely server');
+  const q = `game=${encodeURIComponent(id)}&room=${encodeURIComponent(room || '')}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`;
+  window.playInBrowser = () => (location.href = '/game/?' + q);
+  if (mobileGame) { show('Launching Voxely…', 'The game runs right in your mobile browser.', false); return playInBrowser(); }
   show('Launching Voxely Client…', 'If your browser asks, choose "Open Voxely Client".', false);
-  location.href = `voxely://play?game=${id}&room=${room || ''}&token=${session.token}&server=${encodeURIComponent(S)}`;
+  let left = false; const mark = () => (left = true);
+  addEventListener('blur', mark, { once: true }); document.addEventListener('visibilitychange', mark, { once: true });
+  location.href = 'voxely://play?' + q;
   setTimeout(() => {
-    if (document.hasFocus() && document.visibilityState === 'visible')
-      show('Client not installed yet', 'Download and install the Voxely Client first, then click Play again.', true);
-    else $('#launch').classList.remove('on');
+    if (left || !document.hasFocus()) $('#launch').classList.remove('on');
+    else show('Client not installed yet', 'Download and install the Voxely Client, then click Play again — or play right now in your browser.', true);
   }, 2500);
 }
 
@@ -646,7 +653,7 @@ function marketPreview(item) { // preview = the full 3D avatar wearing the item,
     else if (item.type === 'face') o2.face = item.value;
     else if (item.type === 'skin') AVP.forEach(k => (o2.skin[k] = item.value));
     else if (item.type === 'preset') o2 = { ...AV_PRESETS[item.value](), tshirt: null };
-    V3D.render(c, o2);
+    drawAvatar(c, o2);
   }, 0);
 }
 function buyMarket(id) {
@@ -683,7 +690,7 @@ function ago(ts) {
 const dateStr = ts => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 async function rq(method, path, body) {
   const r = await fetch(S + path, { method, headers: AH(), body: body === undefined ? undefined : JSON.stringify(body) });
-  if (r.status === 401) { logout(); throw new Error('login'); }
+  if (r.status === 401) { if (session) logout(); else $('#login').classList.add('on'); throw new Error('login'); }
   return { ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) };
 }
 const AH = () => session ? { Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
@@ -697,13 +704,14 @@ const lbl = g => { const l = LBL[g?.status]; return l ? `<span class="${l[1]}">$
 async function loadServers(id) {
   const el = $('#servers'); if (!el) return;
   const list = await gj('/api/games/' + id + '/servers');
-  if (!el || !list || !list.length) return;
-  el.innerHTML = `<h3 class="sec">SERVERS</h3><div class="ftable">${list.map(s => `<div class="srv"><div class="sinfo"><b>Server #${E(String(s.id).slice(0, 4))}</b><small>${s.players}/${s.max} players · created ${s.age < 60 ? 'just now' : Math.floor(s.age / 60) + ' minutes ago'}${s.names && s.names.length ? ' · ' + E(s.names.join(', ')) : ''}</small><div class="sbar"><i style="width:${Math.round(100 * s.players / s.max)}%"></i></div></div><button class="btn sm ${s.full ? 'alt' : ''}" ${s.full ? 'disabled' : `onclick="play('${id}','${s.id}')"`}>${s.full ? 'Full' : 'Join'}</button></div>`).join('')}</div>`;
+  if (!el || !list) return;
+  el.innerHTML = `<h3 class="sec">SERVERS <button class="btn sm alt" style="margin-left:12px" onclick="play('${id}','new')">＋ New server</button></h3><div class="ftable">${list.length ? '' : '<div class="empty">No active servers right now — press Play to start one.</div>'}${list.map(s => `<div class="srv"><div class="sinfo"><b>Server #${E(String(s.id).slice(0, 4))}</b><small>${s.players}/${s.max} players · created ${s.age < 60 ? 'just now' : Math.floor(s.age / 60) + ' minutes ago'}${s.names && s.names.length ? ' · ' + E(s.names.join(', ')) : ''}</small><div class="sbar"><i style="width:${Math.round(100 * s.players / s.max)}%"></i></div></div><button class="btn sm ${s.full ? 'alt' : ''}" ${s.full ? 'disabled' : `onclick="play('${id}','${s.id}')"`}>${s.full ? 'Full' : 'Join'}</button></div>`).join('')}</div>`;
 }
 
 /* ---------- reviews di game page ---------- */
 let rvDraft = null, rvVote = true, rvSort = 'recent', rvGame = null;
-function rvForm() {
+function rvForm(m) {
+  if (m && rvDraft === null) { rvDraft = m.text; rvVote = m.up; }
   return `<div class="rform"><b style="color:var(--strong)">Write a review</b>
     <div class="tg"><button class="vb ${rvVote ? 'on' : ''}" onclick="rvVote=true;loadReviews(rvGame)">👍 Recommend</button><button class="vb ${!rvVote ? 'on' : ''}" onclick="rvVote=false;loadReviews(rvGame)">👎 Not really</button></div>
     <textarea id="rvText" oninput="rvDraft=this.value" placeholder="Share your experience playing this game…">${E(rvDraft || '')}</textarea>
@@ -726,7 +734,7 @@ async function loadReviews(id) {
   const pct = d.total ? Math.round(100 * d.up / d.total) : 0;
   el.innerHTML = `<h3 class="sec">REVIEWS</h3>
     ${d.total ? `<div class="rec ${pct < 50 ? 'neg' : ''}"><svg class="ic" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg><span><b>${pct}% positive</b><small>${d.total} reviews</small></span></div>` : ''}
-    ${d.canReview ? rvForm() : ''}
+    ${d.canReview ? rvForm(d.mine) : session ? '' : '<div class="hint">Sign in to write a review. <button class="btn sm" onclick="needLogin()">Sign in</button></div>'}
     <div class="sortbar">Sort: <button class="vb ${rvSort !== 'helpful' ? 'on' : ''}" onclick="rvSort='recent';loadReviews(rvGame)">Most recent</button><button class="vb ${rvSort === 'helpful' ? 'on' : ''}" onclick="rvSort='helpful';loadReviews(rvGame)">Most helpful</button></div>
     ${d.reviews.map(r => rvRow(r, id)).join('') || '<div class="empty">No reviews yet. Be the first!</div>'}`;
 }
@@ -736,20 +744,21 @@ async function sendReview() {
   if (!r.ok) return toast(r.data.error || 'Failed to post review');
   rvDraft = null; toast('Review saved'); loadReviews(rvGame);
 }
-async function delReview(gid) { await rq('DELETE', '/api/games/' + gid + '/reviews'); toast('Review deleted'); loadReviews(gid); }
-async function voteReview(gid, rid, v) { const r = await rq('POST', `/api/games/${gid}/reviews/${rid}/vote`, { v }); if (!r.ok) return toast(r.data.error || 'Vote failed'); loadReviews(gid); }
-async function reportReview(gid, rid) { await rq('POST', `/api/games/${gid}/reviews/${rid}/report`); toast('Review reported. Thank you!'); }
+async function delReview(gid) { if (!confirm('Delete your review?')) return; rvDraft = null; await rq('DELETE', '/api/games/' + gid + '/reviews'); toast('Review deleted'); loadReviews(gid); }
+async function voteReview(gid, rid, v) { if (needLogin()) return; const r = await rq('POST', `/api/games/${gid}/reviews/${rid}/vote`, { v }); if (!r.ok) return toast(r.data.error || 'Vote failed'); loadReviews(gid); }
+async function reportReview(gid, rid) { if (needLogin()) return; await rq('POST', `/api/games/${gid}/reviews/${rid}/report`); toast('Review reported. Thank you!'); }
 
 /* ---------- People ---------- */
-let peopleQ = '';
+let peopleQ = '', peopleCache = null;
 async function peoplePage() {
+  peopleCache = null;
   $('#view').innerHTML = `<span class="label">PEOPLE</span><h1 class="ftitle">Voxely Players</h1>
-    <div class="fsearch"><input class="search" id="pq" placeholder="Search players…" value="${E(peopleQ)}" oninput="peopleQ=this.value;renderPeople()"></div><div id="plistEl"></div>`;
+    <div class="fsearch"><input class="search" id="pq" placeholder="Search players…" value="${E(peopleQ)}" oninput="peopleQ=this.value;clearTimeout(window._pt);window._pt=setTimeout(renderPeople,200)"></div><div id="plistEl"></div>`;
   renderPeople();
 }
 async function renderPeople() {
   const el = $('#plistEl'); if (!el) return;
-  const list = await gj('/api/people');
+  const list = peopleCache && Date.now() - peopleCache.t < 5000 ? peopleCache.d : await gj('/api/people'); peopleCache = { t: Date.now(), d: list };
   if (!el) return;
   const q = (peopleQ || '').toLowerCase();
   const items = (list || []).filter(u => !q || u.name.toLowerCase().includes(q));
@@ -768,10 +777,11 @@ async function userPage(uid) {
     received: `<button class="btn sm" onclick="friendAction('${u.uid}','accept')">Accept request</button>`,
     friends: `<button class="btn sm alt" onclick="friendAction('${u.uid}','remove')">Remove friend</button>`
   }[u.friend] || '';
-  $('#view').innerHTML = `<span class="label">PROFIL</span>
+  $('#view').innerHTML = `<span class="label">PROFILE</span>
     <div class="card pad"><div class="prof">${avatar(u, 96)}<div style="min-width:0">
       <h2 class="ftitle" style="margin:0">${E(u.name)}${verifiedBadge(u)}</h2>
       <div class="follow-stat"><b>${u.followers}</b> followers · <b>${u.following}</b> following · <b>${u.friends}</b> friends${u.game ? ' · playing <b>' + E(u.game) + '</b>' : ''}</div>
+      <div class="follow-stat">${u.lastSeen && Date.now() - u.lastSeen < 120000 ? '<i class="on-dot"></i>Online now' : u.lastSeen ? 'Last online <b>' + ago(u.lastSeen) + '</b>' : ''}${u.joined ? ' · Joined <b>' + dateStr(u.joined) + '</b>' : ''}</div>
       <div class="acts">${session && session.user.uid !== u.uid ? fb + `<button class="btn sm alt" onclick="followAction('${u.uid}')">${u.followed ? 'Unfollow' : 'Follow'}</button>` : ''}</div>
     </div></div></div>
     ${u.badges?.length ? `<h3 class="sec">BADGES</h3><div class="badge-grid">${u.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span></div>`).join('')}</div>` : ''}
@@ -806,7 +816,7 @@ async function profilePage() {
   if (!$('#view')) return;
   $('#view').innerHTML = `<span class="label">PROFILE</span>
     <div class="card pad" style="max-width:640px">
-      <div class="prof">${avatar(u, 96)}<div><h2 class="ftitle" style="margin:0">${E(u.name)}</h2><small style="color:var(--dim)">Guest account${u.google ? ' · Google connected' : ''}</small></div></div>
+      <div class="prof">${avatar(u, 96)}<div><h2 class="ftitle" style="margin:0">${E(u.name)}</h2><small style="color:var(--dim)">${u.google ? 'Google account' : 'Guest account'}</small></div></div>
       <label style="margin-top:16px">Display name</label>
       <div style="display:flex;gap:8px"><input id="pfName" value="${E(u.name)}" maxlength="16" style="flex:1"><button class="btn sm" onclick="saveName()">Save</button></div>
       <div class="shirt-upload" style="margin-top:14px"><button class="btn sm alt" onclick="saveAvatar()">Change profile photo</button><button class="x" onclick="rmAvatar()">Remove photo</button><small style="color:var(--dim)">Used as the small avatar across the whole site</small></div>
@@ -907,8 +917,8 @@ async function postThread(cat) {
   if (!r.ok) return ($('#ferr').textContent = r.data.error || 'Failed to create thread');
   location.hash = '#/forum/thread/' + r.data.id;
 }
-async function forumThreadPage(id) {
-  const t = await gj('/api/forum/thread/' + id);
+async function forumThreadPage(id, nv) {
+  const t = await gj('/api/forum/thread/' + id + (nv ? '?nv=1' : ''));
   if (!$('#view')) return;
   if (!t) return (location.hash = '#/forum');
   const post = (p, own) => `<div class="post"><div class="pa">${avatar(p.author, 48)}<b style="color:var(--link);font-size:13px;word-break:break-word">${E(p.author.name)}</b><small style="color:var(--dim)">${ago(p.ts)}</small>${own ? `<button class="x" style="margin-top:4px" onclick="delPost('${id}','${p.id}')">Delete</button>` : ''}</div><div class="pb"><div class="ptext">${E(p.body)}</div></div></div>`;
@@ -919,8 +929,8 @@ async function forumThreadPage(id) {
     ${t.posts.map(p => post(p, p.own)).join('') || '<div class="empty">No replies yet.</div>'}
     ${session ? `<div class="card pad" style="margin-top:14px"><label>Reply</label><textarea id="frBody" style="height:90px"></textarea><div class="acts"><button class="btn" onclick="replyThread('${id}')">Send</button></div></div>` : '<div class="hint" style="margin-top:14px">Sign in to reply to this thread.</div>'}`;
 }
-async function replyThread(id) { const r = await rq('POST', '/api/forum/thread/' + id + '/reply', { body: $('#frBody').value }); if (!r.ok) return toast(r.data.error || 'Failed to reply'); forumThreadPage(id); }
-async function delPost(tid, pid) { await rq('DELETE', `/api/forum/thread/${tid}/post/${pid}`); forumThreadPage(tid); }
+async function replyThread(id) { const r = await rq('POST', '/api/forum/thread/' + id + '/reply', { body: $('#frBody').value }); if (!r.ok) return toast(r.data.error || 'Failed to reply'); forumThreadPage(id, 1); }
+async function delPost(tid, pid) { if (!confirm('Delete this reply?')) return; await rq('DELETE', `/api/forum/thread/${tid}/post/${pid}`); forumThreadPage(tid, 1); }
 async function delThread(tid) { if (!confirm('Delete this thread?')) return; await rq('DELETE', '/api/forum/thread/' + tid); location.hash = '#/forum'; }
 async function forumMinePage() { if (!session) return (location.hash = '#/'); const list = await gj('/api/forum/mine'); if (!$('#view')) return; threadList('My threads', list || [], true); }
 
@@ -934,7 +944,7 @@ async function devPage() {
       <div class="acts" style="justify-content:center;margin-top:14px"><button class="btn" onclick="$('#login').classList.add('on')">Sign in first</button></div></div>`;
     return;
   }
-  const mine = Object.entries(games).filter(([, g]) => g.mine);
+  const mine = games.filter(g => g.mine).map(g => [g.id, g]);
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
     <div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
     <div class="hint">You can create up to 5 games. Build the world in Voxely Studio, set a release label (WIP / ALPHA / BETA), then log every update in the changelog so players know what's new.</div>
@@ -1184,16 +1194,16 @@ async function badgesPage() {
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Badges</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div>
     <div class="hint">Badges are a way to reward players. Creating badges is limited to verified Google accounts; players who earn them show them off on their profile.</div>
     <div class="badge-form" style="max-width:520px"><h3 class="ft">Create new badge</h3><div class="err" id="berr"></div>
-      <label>Name</label><input id="bdName" maxlength="40" placeholder="Contoh: Champion Obby">
+      <label>Name</label><input id="bdName" maxlength="40" placeholder="Example: Obby Champion">
       <label>Icon (emoji)</label><input id="bdIcon" maxlength="4" placeholder="🏆">
       <label>Color</label><input type="color" id="bdColor" value="#ffd700">
       <label>Description</label><textarea id="bdDesc" maxlength="200"></textarea>
-      <div class="acts"><button class="btn" onclick="createBadge()">Create badge</button></div></div>
+      <div class="acts"><button class="btn" onclick="createBadge()" ${session.user.google ? '' : 'disabled title="Sign in with Google to create badges"'}>Create badge</button></div></div>
     <h3 class="sec">ALL BADGES (${list.length})</h3>
     ${list.length ? `<div class="badge-grid">${list.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span><div class="acts" style="justify-content:center;margin-top:6px">${b.createdBy === session.user.uid ? `<button class="x" onclick="delBadge('${b.id}')">Delete</button>` : ''}</div></div>`).join('')}</div>` : '<div class="empty">No badges yet.</div>'}
     <div class="card pad" style="max-width:520px;margin-top:14px"><h3 class="ft">Give a badge to a player</h3><div class="err" id="baerr"></div>
       <label>Badge</label><select id="bdSel">${list.map(b => `<option value="${b.id}">${E(b.name)}</option>`).join('')}</select>
-      <label>Player UID</label><input id="bdUid" placeholder="player UID (see their profile page)">
+      <label>Player name or UID</label><input id="bdUid" placeholder="Exact player name or UID">
       <div class="acts"><button class="btn" onclick="awardBadge()">Give badge</button></div></div>`;
 }
 async function createBadge() {
@@ -1203,6 +1213,7 @@ async function createBadge() {
 }
 async function delBadge(id) { await rq('DELETE', '/api/badges/' + id); badgesPage(); }
 async function awardBadge() {
+  if (!$('#bdSel')?.value) return ($('#baerr').textContent = 'Create a badge first');
   const r = await rq('POST', '/api/badges/' + $('#bdSel').value + '/award', { uid: $('#bdUid').value.trim() });
   if (!r.ok) return ($('#baerr').textContent = r.data.error || 'Failed to give badge');
   toast('Badge awarded!');
@@ -1210,6 +1221,7 @@ async function awardBadge() {
 
 /* ---------- router ---------- */
 function route() {
+  scrollTo(0, 0);
   clearInterval(timer); timer = null;
   V3D.disposeAll(); // free the WebGL previews of the previous page
   const h = location.hash.replace(/^#\/?/, '');
@@ -1255,15 +1267,15 @@ async function googleLogin(at) {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) return;
     session = d; localStorage.setItem('voxely', JSON.stringify(session));
-    renderMe(); syncOutfit(); pollNotifs();
+    renderMe(); syncOutfit(); pollNotifs(); $('#login').classList.remove('on'); loadGames().catch(() => {}).then(route);
   } catch (e) {}
 }
 $('#googleBtn').onclick = async () => {
   if (!sb) return ($('#loginErr').textContent = 'Google login is not configured on the server yet');
-  const { error } = await sb.auth.signInWithOAuth({ provider: 'google' });
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
   if (error) $('#loginErr').textContent = error.message;
 };
-$('#guestBtn').onclick = guestLogin;
+$('#guestBtn').onclick = guestLogin; $('#skipBtn').onclick = () => $('#login').classList.remove('on'); $('#nick').onkeydown = e => { if (e.key === 'Enter') guestLogin(); };
 
 async function pollNotifs() {
   if (!session) return;
@@ -1271,9 +1283,10 @@ async function pollNotifs() {
   if (d) { nCount = d.unread || 0; renderMe(); }
 }
 (async function boot() {
+  if (session) { const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => true); if (!ok) { localStorage.removeItem('voxely'); session = null; } }
   renderMe();
   if (!session) $('#login').classList.add('on');
-  if (sb) { try { const { data } = await sb.auth.getSession(); if (data?.session && !session) await googleLogin(data.session.access_token); } catch (e) {} }
+  if (sb) { try { const { data } = await sb.auth.getSession(); if (data?.session && !(session && session.user.google)) await googleLogin(data.session.access_token); } catch (e) {} }
   if (session) { syncOutfit(); pollNotifs(); }
   try { await loadGames(); } catch (e) { games = []; }
   if (!games.length) $('#view').innerHTML = '<div class="hint">Failed to load the game list. Make sure the Voxely server is running, then refresh the page.</div>';
