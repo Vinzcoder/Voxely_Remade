@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,7 +11,7 @@
   body { background:var(--bg); color:var(--text); font:14px "Segoe UI",Arial,sans-serif; min-height:100vh; display:flex; flex-direction:column; }
   a { color:inherit; text-decoration:none; cursor:pointer; }
   .wrap { max-width:1180px; margin:0 auto; padding:0 16px; }
-  /* header — satu bar gelap: logo, nav tengah, user (versi website final) */
+  /* header — single dark bar: logo, center nav, user area (final website) */
   .top { position:sticky; top:0; z-index:30; background:var(--panel3); border-bottom:1px solid var(--line); }
   .topin { height:54px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
   .logo { display:inline-flex; align-items:center; gap:9px; font-size:15px; font-weight:800; letter-spacing:5px; color:var(--strong); }
@@ -220,27 +220,27 @@
 </head>
 <body>
 <header class="top"><div class="wrap topin">
-  <a class="logo" href="#/" aria-label="Voxely - beranda"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4d8dff" d="M12 1.8 21.4 7v10L12 22.2 2.6 17V7z"/><path fill="#8fb7ff" d="M12 1.8 21.4 7 12 12.2 2.6 7z"/><path fill="#1254d6" d="M12 12.2v10L21.4 17V7z"/></svg>VOXELY</a>
-  <nav class="sub" id="nav" aria-label="Navigasi utama"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a></nav>
-  <div class="tright"><div class="user" id="me"></div><button class="burger" aria-label="Buka menu navigasi" onclick="document.getElementById('nav').classList.toggle('on')">☰</button></div>
+  <a class="logo" href="#/" aria-label="Voxely - home"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4d8dff" d="M12 1.8 21.4 7v10L12 22.2 2.6 17V7z"/><path fill="#8fb7ff" d="M12 1.8 21.4 7 12 12.2 2.6 7z"/><path fill="#1254d6" d="M12 12.2v10L21.4 17V7z"/></svg>VOXELY</a>
+  <nav class="sub" id="nav" aria-label="Main navigation"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a></nav>
+  <div class="tright"><div class="user" id="me"></div><button class="burger" aria-label="Open navigation menu" onclick="document.getElementById('nav').classList.toggle('on')">☰</button></div>
 </div></header>
 <main><div class="wrap" id="view"></div></main>
 <footer class="foot"><div class="wrap footin">
-  <div class="fbrand"><b>VOXELY</b><small>© 2026 Voxely. Dibuat untuk para pembuat game.</small></div>
-  <nav aria-label="Tautan footer"><a href="#/">Games</a><a href="#/forum">Forum</a><a href="#/marketplace">Marketplace</a><a href="#/dev">Developer Portal</a></nav>
+  <div class="fbrand"><b>VOXELY</b><small>© 2026 Voxely. Built for game creators.</small></div>
+  <nav aria-label="Footer links"><a href="#/">Games</a><a href="#/forum">Forum</a><a href="#/marketplace">Marketplace</a><a href="#/dev">Developer Portal</a></nav>
 </div></footer>
 
 <div class="veil" id="login"><div class="box">
-  <h3>Masuk ke Voxely</h3>
-  <p>Masuk dengan Google, atau langsung main sebagai guest tanpa daftar.</p>
-  <button class="btn gbtn" id="googleBtn"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Lanjut dengan Google</button><div class="or">atau sebagai guest</div>
-  <input id="nick" maxlength="16" placeholder="Nama kamu (boleh kosong = acak)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
-  <button class="btn" id="guestBtn">Lanjut sebagai Guest</button>
+  <h3>Sign in to Voxely</h3>
+  <p>Sign in with Google, or jump straight in as a guest — no sign-up needed.</p>
+  <button class="btn gbtn" id="googleBtn"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Continue with Google</button><div class="or">or continue as a guest</div>
+  <input id="nick" maxlength="16" placeholder="Your name (leave empty = random)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
+  <button class="btn" id="guestBtn">Continue as Guest</button>
 </div></div>
 <div class="veil" id="launch"><div class="box">
   <h3 id="lTitle"></h3><p id="lText"></p>
   <button class="btn" id="lDl" style="display:none;margin-bottom:8px" onclick="download()">Download Voxely Client</button>
-  <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Tutup</button>
+  <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Close</button>
 </div></div>
 <div id="toast"></div>
 
@@ -261,7 +261,7 @@ const E = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>
 const tags = g => g.tags.map(t => `<span class="tag">${E(t)}</span>`).join('');
 const total = () => games.reduce((n, g) => n + g.online, 0);
 function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => (t.style.display = 'none'), 1800); }
-function soon() { toast('Segera hadir'); }
+function soon() { toast('Coming soon'); }
 function verifiedBadge(u) { return Number(u?.followers || 0) >= 1000 ? '<img class="verified" src="/assets/images/checkmark.svg" alt="Verified" title="Verified creator · 1,000+ followers">' : ''; }
 function avatar(u, n) {
   const st = `width:${n}px;height:${n}px;flex:none`;
@@ -278,7 +278,7 @@ function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small J
       c.getContext('2d').drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
       URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg', 0.85));
     };
-    img.onerror = () => alert('File bukan gambar yang valid');
+    img.onerror = () => alert('That file is not a valid image');
     img.src = url;
   };
   inp.click();
@@ -286,7 +286,7 @@ function pickImage(w, h, cb) { // choose a file, crop to w x h, return a small J
 
 async function guestLogin() {
   const r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) });
-  const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Gagal login'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
+  const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Login failed'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
   $('#login').classList.remove('on'); renderMe(); route(); syncOutfit();
 }
 function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); }
@@ -306,12 +306,12 @@ const spark = () => {
 
 function drawCar() {
   const g = games[idx];
-  $('#car').innerHTML = `<button class="arr" style="left:0" aria-label="Game sebelumnya" onclick="go(-1)">‹</button><button class="arr" style="right:0" aria-label="Game berikutnya" onclick="go(1)">›</button>
+  $('#car').innerHTML = `<button class="arr" style="left:0" aria-label="Previous game" onclick="go(-1)">‹</button><button class="arr" style="right:0" aria-label="Next game" onclick="go(1)">›</button>
     <div class="l" onclick="location.hash='#/game/${g.id}'">${art(g)}</div>
     <div class="r"><span class="ftag">FEATURED</span><h2>${E(g.title)}${lbl(g)}</h2><div class="meta">${E(g.tagline)}</div>
     <div class="ctags">${tags(g)}</div><small style="color:var(--dim)">${g.online} players online</small>
     <div class="shots">${(g.thumb ? [0] : [1, 2, 3]).map(n => art(g, n)).map(a => `<div>${a}</div>`).join('')}</div>
-    <a class="btn see" href="#/game/${g.id}">Lihat game</a></div>`;
+    <a class="btn see" href="#/game/${g.id}">View game</a></div>`;
   $('#dots').innerHTML = games.map((_, i) => `<b class="${i === idx ? 'on' : ''}" onclick="idx=${i};drawCar()"></b>`).join('');
 }
 function go(d) { idx = (idx + d + games.length) % games.length; drawCar(); }
@@ -323,7 +323,7 @@ function home() {
     <div class="side">
       <div class="card trend"><h4>TRENDING NOW</h4><a href="#/game/${top.id}">${art(top)}<div class="in"><b>${E(top.title)}${lbl(top)}</b><small>${top.online ? '<i class="on-dot"></i>' : ''}${top.online} online</small></div></a></div>
       <div class="card act"><h4>COMMUNITY ACTIVITY</h4><div class="in">${spark()}<div class="n">${total()}<small>GAMERS ONLINE</small></div></div>
-      <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} game sedang aktif</div></div>
+      <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} games live right now</div></div>
     </div></div>
     <h3 class="sec">ALL GAMES</h3>
     <div class="grid">${games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online ? '<i class="on-dot"></i>' : ''}${g.online} online · Free</small></div></a>`).join('')}</div>`;
@@ -338,14 +338,14 @@ function gamePage(id) {
     <div class="gmain">${art(g)}<div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
       <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>VISITS</dt><dd>${g.visits || 0}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
     <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
-    <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Main langsung dari browser HP atau gunakan Voxely Client di PC. <a onclick="download()">Download Voxely Client</a> tersedia untuk desktop.</div>
-    ${cl.length ? `<div class="card pad" style="margin-top:18px"><h3 class="ft">CHANGELOG — update dari developer</h3>${cl.map(e => `<div class="clrow"><b>${E(e.ver)}</b><div><span>${E(e.text)}</span><small>${dateStr(e.ts)}</small></div></div>`).join('')}</div>` : ''}
+    <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Play right from your mobile browser, or use the Voxely Client on PC. <a onclick="download()">Download Voxely Client</a> is available for desktop.</div>
+    ${cl.length ? `<div class="card pad" style="margin-top:18px"><h3 class="ft">CHANGELOG — updates from the developer</h3>${cl.map(e => `<div class="clrow"><b>${E(e.ver)}</b><div><span>${E(e.text)}</span><small>${dateStr(e.ts)}</small></div></div>`).join('')}</div>` : ''}
     <div id="servers"></div><div id="reviews"></div>`;
   rvDraft = null; loadServers(id); loadReviews(id);
 }
 
 function download() {
-  if (!VOXELY.download) return alert('Link download belum diatur (CLIENT_DOWNLOAD_URL di Vercel).');
+  if (!VOXELY.download) return alert('Download link not set up yet (CLIENT_DOWNLOAD_URL in Vercel).');
   location.href = VOXELY.download;
 }
 function show(title, text, dl) {
@@ -356,26 +356,26 @@ async function play(id, room) {
   const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => false);
   if (!ok) return logout();
   if (mobileGame) {
-    show('Membuka Voxely…', 'Game berjalan langsung di browser HP.', false);
+    show('Launching Voxely…', 'The game runs right in your mobile browser.', false);
     location.href = `/game/?game=${encodeURIComponent(id)}&room=${encodeURIComponent(room || '')}&token=${encodeURIComponent(session.token)}&server=${encodeURIComponent(S)}`;
     return;
   }
-  show('Membuka Voxely Client…', 'Jika browser bertanya, pilih "Open Voxely Client".', false);
+  show('Launching Voxely Client…', 'If your browser asks, choose "Open Voxely Client".', false);
   location.href = `voxely://play?game=${id}&room=${room || ''}&token=${session.token}&server=${encodeURIComponent(S)}`;
   setTimeout(() => {
     if (document.hasFocus() && document.visibilityState === 'visible')
-      show('Client belum terpasang', 'Download dan install Voxely Client dulu, lalu klik Play lagi.', true);
+      show('Client not installed yet', 'Download and install the Voxely Client first, then click Play again.', true);
     else $('#launch').classList.remove('on');
   }, 2500);
 }
 
 const THEMES = {
-  'blue-dark': { n: "Biru Gelap", d: "Default", l: 0, v: ["#04060b", "#0a0f1a", "#071127", "#050913", "#0d1524", "#101c33", "#0b1428", "#1b2a4a", "#15233f", "#1463ff", "#0a3fb8", "#3a82ff", "#6fa8ff", "#e6edf7", "#7d8aa3", "#b6c2d9", "#ffffff", "#ffffff", "#0f2a5c", "#0a1c3d"] },
-  'red-dark': { n: "Merah Gelap", d: "", l: 0, v: ["#0b0507", "#150b0e", "#1a0d11", "#0f0709", "#190d10", "#251318", "#1f1014", "#3b1b22", "#2e161b", "#e23b4b", "#a8212f", "#ff5a68", "#ff8a95", "#f3e7e8", "#a58a8d", "#d6bfc2", "#ffffff", "#ffffff", "#4a1219", "#2b0a0e"] },
-  'ayu-dark': { n: "Ayu Gelap", d: "", l: 0, v: ["#0b0e14", "#11151c", "#0d1017", "#0a0d12", "#0e1218", "#171c26", "#161b24", "#232a36", "#232a36", "#ff8f40", "#cc6f26", "#ffa769", "#ffb454", "#bfbdb6", "#6c7380", "#a0a6b2", "#f0eee8", "#0b0e14", "#2a1d10", "#1a1209"] },
-  'blue-light': { n: "Biru Terang", d: "", l: 1, v: ["#eef3fb", "#ffffff", "#e6edf8", "#ffffff", "#f5f8fd", "#e8f0fc", "#dbe5f4", "#dfe7f4", "#cfd9ea", "#1463ff", "#0a3fb8", "#3a82ff", "#1352d6", "#172033", "#5c6b85", "#3a4863", "#0b1530", "#ffffff", "#dbe8ff", "#c5d9fb"] },
-  'red-light': { n: "Merah Terang", d: "", l: 1, v: ["#faf2f2", "#ffffff", "#f6e6e7", "#ffffff", "#fcf6f6", "#f9e8e9", "#f0dcdd", "#f2dfe0", "#e7cfd1", "#d62839", "#a31d2c", "#ec4757", "#b3202f", "#2a1416", "#8a6468", "#5a3a3d", "#1f0c0e", "#ffffff", "#fbdfe2", "#f4c9ce"] },
-  'ayu-light': { n: "Ayu Terang", d: "", l: 1, v: ["#fafafa", "#ffffff", "#f1f1f2", "#ffffff", "#f7f7f8", "#fdeedd", "#e9e9ea", "#ececed", "#dcdddf", "#fa8d3e", "#d9701f", "#ffa45e", "#c4600f", "#3d4148", "#8a9199", "#5c6166", "#1e2227", "#1f1306", "#ffe9d3", "#fcd9b6"] }
+  'blue-dark': { n: "Dark Blue", d: "Default", l: 0, v: ["#04060b", "#0a0f1a", "#071127", "#050913", "#0d1524", "#101c33", "#0b1428", "#1b2a4a", "#15233f", "#1463ff", "#0a3fb8", "#3a82ff", "#6fa8ff", "#e6edf7", "#7d8aa3", "#b6c2d9", "#ffffff", "#ffffff", "#0f2a5c", "#0a1c3d"] },
+  'red-dark': { n: "Dark Red", d: "", l: 0, v: ["#0b0507", "#150b0e", "#1a0d11", "#0f0709", "#190d10", "#251318", "#1f1014", "#3b1b22", "#2e161b", "#e23b4b", "#a8212f", "#ff5a68", "#ff8a95", "#f3e7e8", "#a58a8d", "#d6bfc2", "#ffffff", "#ffffff", "#4a1219", "#2b0a0e"] },
+  'ayu-dark': { n: "Ayu Dark", d: "", l: 0, v: ["#0b0e14", "#11151c", "#0d1017", "#0a0d12", "#0e1218", "#171c26", "#161b24", "#232a36", "#232a36", "#ff8f40", "#cc6f26", "#ffa769", "#ffb454", "#bfbdb6", "#6c7380", "#a0a6b2", "#f0eee8", "#0b0e14", "#2a1d10", "#1a1209"] },
+  'blue-light': { n: "Light Blue", d: "", l: 1, v: ["#eef3fb", "#ffffff", "#e6edf8", "#ffffff", "#f5f8fd", "#e8f0fc", "#dbe5f4", "#dfe7f4", "#cfd9ea", "#1463ff", "#0a3fb8", "#3a82ff", "#1352d6", "#172033", "#5c6b85", "#3a4863", "#0b1530", "#ffffff", "#dbe8ff", "#c5d9fb"] },
+  'red-light': { n: "Light Red", d: "", l: 1, v: ["#faf2f2", "#ffffff", "#f6e6e7", "#ffffff", "#fcf6f6", "#f9e8e9", "#f0dcdd", "#f2dfe0", "#e7cfd1", "#d62839", "#a31d2c", "#ec4757", "#b3202f", "#2a1416", "#8a6468", "#5a3a3d", "#1f0c0e", "#ffffff", "#fbdfe2", "#f4c9ce"] },
+  'ayu-light': { n: "Ayu Light", d: "", l: 1, v: ["#fafafa", "#ffffff", "#f1f1f2", "#ffffff", "#f7f7f8", "#fdeedd", "#e9e9ea", "#ececed", "#dcdddf", "#fa8d3e", "#d9701f", "#ffa45e", "#c4600f", "#3d4148", "#8a9199", "#5c6166", "#1e2227", "#1f1306", "#ffe9d3", "#fcd9b6"] }
 };
 const TK = ["--bg", "--panel", "--panel3", "--input", "--row2", "--hover", "--track", "--alt", "--line", "--blue", "--blue2", "--blue-hover", "--link", "--text", "--dim", "--soft", "--strong", "--on", "--notice1", "--notice2"];
 function applyTheme(id) {
@@ -386,17 +386,145 @@ function applyTheme(id) {
 }
 function settingsPage() {
   let cur = 'blue-dark'; try { cur = JSON.parse(localStorage.getItem('voxelyTheme')).id || cur; } catch (e) {}
-  const card = ([id, t]) => `<button class="thm ${id === cur ? 'on' : ''}" onclick="applyTheme('${id}');settingsPage()"><span class="sw3">${[0, 1, 9, 13].map(i => `<i style="background:${t.v[i]}"></i>`).join('')}</span><b>${t.n}</b><small>${t.d || (t.l ? 'Terang' : 'Gelap')}</small></button>`;
-  $('#view').innerHTML = `<span class="label">SETTINGS</span><div class="card pad" style="max-width:780px"><h3 class="ft">Tema tampilan</h3>
-    <div class="hint">Pilih tema warna untuk website Voxely. Pilihanmu tersimpan di browser ini.</div>
+  const card = ([id, t]) => `<button class="thm ${id === cur ? 'on' : ''}" onclick="applyTheme('${id}');settingsPage()"><span class="sw3">${[0, 1, 9, 13].map(i => `<i style="background:${t.v[i]}"></i>`).join('')}</span><b>${t.n}</b><small>${t.d || (t.l ? 'Light' : 'Dark')}</small></button>`;
+  $('#view').innerHTML = `<span class="label">SETTINGS</span><div class="card pad" style="max-width:780px"><h3 class="ft">Theme</h3>
+    <div class="hint">Pick a color theme for the Voxely website. Your choice is saved in this browser.</div>
     <div class="thmgrid">${Object.entries(THEMES).map(card).join('')}</div></div>`;
 }
 
+/* ---------- 3D avatar preview — the exact same R6 character model the game client uses ---------- */
+const OUT0C = { skin: { head: '#e6eaf2', torso: '#e6eaf2', armL: '#e6eaf2', armR: '#e6eaf2', legL: '#e6eaf2', legR: '#e6eaf2' }, face: 'smile', hat: 'none', hatColor: '#e63946' };
+const V3D = (() => {
+  let loadP = null;
+  const items = new Map(); // canvas -> { engine, scene, char, offA, offB, drag }
+  const S = 0.34; // one "stud" — same scale as in-game
+  function loadBabylon() {
+    if (window.BABYLON) return Promise.resolve();
+    if (!loadP) loadP = new Promise((res, rej) => {
+      const add = (src, next) => { const s = document.createElement('script'); s.src = src; s.onload = next; s.onerror = next; document.head.appendChild(s); };
+      add('/game/vendor/babylon.js', () => window.BABYLON ? res() // local vendor copy (same file the game client uses)
+        : add('https://cdn.babylonjs.com/v9.33.0/babylon.js', () => window.BABYLON ? res() : (loadP = null, rej(new Error('babylon failed to load')))));
+    });
+    return loadP;
+  }
+  const c3 = h => BABYLON.Color3.FromHexString(h);
+  function headMat(scene, color, face) { // cylinder head with the face painted at u 0.75 — same as in-game
+    const W = 1024, H = 292, dt = new BABYLON.DynamicTexture('face', { width: W, height: H }, scene, true);
+    const g = dt.getContext(); g.fillStyle = color; g.fillRect(0, 0, W, H); drawFace(g, face, W * 0.75, H / 2, H); dt.update();
+    const m = new BABYLON.StandardMaterial('head', scene); m.diffuseTexture = dt; m.specularColor = BABYLON.Color3.Black();
+    return m;
+  }
+  function addHat(scene, body, o, mat) { // ported 1:1 from the game client
+    if (!o.hat || o.hat === 'none') return;
+    const m = mat(o.hatColor || '#e63946'), T = 5.3; // head top, in studs
+    const add = mesh => { mesh.parent = body; mesh.material = m; return mesh; };
+    const cyl = (d, h, x, y, z, dTop) => { const c = add(BABYLON.MeshBuilder.CreateCylinder('hat', { diameter: d * S, diameterTop: dTop === undefined ? undefined : dTop * S, height: h * S, tessellation: 24 }, scene)); c.position.set(x * S, y * S, z * S); return c; };
+    const bx = (w, h, d, x, y, z) => { const c = add(BABYLON.MeshBuilder.CreateBox('hat', { width: w * S, height: h * S, depth: d * S }, scene)); c.position.set(x * S, y * S, z * S); return c; };
+    if (o.hat === 'cap') { cyl(1.6, 0.5, 0, T + 0.1, 0); bx(1.2, 0.1, 0.8, 0, T - 0.1, 0.95); }
+    else if (o.hat === 'tophat') { cyl(2.1, 0.12, 0, T + 0.04, 0); cyl(1.35, 1.5, 0, T + 0.8, 0); }
+    else if (o.hat === 'crown') { cyl(1.5, 0.45, 0, T + 0.18, 0); for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; cyl(0.34, 0.45, Math.cos(a) * 0.6, T + 0.63, Math.sin(a) * 0.6, 0); } }
+    else if (o.hat === 'headphones') { bx(1.85, 0.14, 0.3, 0, T + 0.1, 0); [-1, 1].forEach(s => { bx(0.14, 1.2, 0.3, s * 0.88, 4.75, 0); cyl(0.62, 0.32, s * 0.98, 4.65, 0).rotation.z = Math.PI / 2; }); }
+    else if (o.hat === 'horns') { [-1, 1].forEach(s => { cyl(0.4, 0.9, s * 0.45, T + 0.35, 0, 0).rotation.z = -s * 0.45; }); }
+  }
+  function buildChar(scene, outfit) { // ported from the game client's makeChar() (name tag removed)
+    const o = outfit || OUT0C, sk = o.skin || OUT0C.skin;
+    const matCache = {};
+    const mat = hex => matCache[hex] || (matCache[hex] = (() => { const m = new BABYLON.StandardMaterial('m', scene); m.diffuseColor = c3(hex); m.specularColor = BABYLON.Color3.Black(); return m; })());
+    const root = new BABYLON.TransformNode('p', scene), body = new BABYLON.TransformNode('b', scene); body.parent = root;
+    const box = (w, h, d, x, y, hex) => { const m = BABYLON.MeshBuilder.CreateBox('part', { width: w * S, height: h * S, depth: d * S }, scene); m.parent = body; m.position.set(x * S, y * S, 0); m.material = mat(hex); return m; };
+    const legL = box(1, 2, 1, -0.5, 1, sk.legL), legR = box(1, 2, 1, 0.5, 1, sk.legR);
+    const torso = box(2, 2, 1, 0, 3, sk.torso);
+    if (o.tshirt) { const shirt = new BABYLON.StandardMaterial('shirt', scene); shirt.diffuseTexture = new BABYLON.Texture(o.tshirt, scene); shirt.useAlphaFromDiffuseTexture = true; shirt.specularColor = BABYLON.Color3.Black(); torso.material = shirt; }
+    const armL = box(1, 2, 1, -1.5, 3, sk.armL), armR = box(1, 2, 1, 1.5, 3, sk.armR);
+    [legL, legR, armL, armR].forEach(m => m.setPivotPoint(new BABYLON.Vector3(0, S, 0))); // rotate from hip / shoulder
+    const head = BABYLON.MeshBuilder.CreateCylinder('head', { diameter: 1.45 * S, height: 1.3 * S, tessellation: 40,
+      faceUV: [new BABYLON.Vector4(0, 0, 0.04, 0.04), new BABYLON.Vector4(0, 0, 1, 1), new BABYLON.Vector4(0, 0, 0.04, 0.04)] }, scene);
+    head.parent = body; head.position.y = 4.65 * S; head.material = headMat(scene, sk.head, o.face || 'smile');
+    addHat(scene, body, o, mat);
+    return { root, body, legL, legR, torso, armL, armR, head, ph: Math.random() * 6 };
+  }
+  function groundBlob(scene) { // soft contact shadow so the character feels planted
+    const dt = new BABYLON.DynamicTexture('sh', { width: 256, height: 256 }, scene, false); dt.hasAlpha = true;
+    const g = dt.getContext(), gr = g.createRadialGradient(128, 128, 8, 128, 128, 120);
+    gr.addColorStop(0, 'rgba(0,0,0,0.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 256); dt.update();
+    const pl = BABYLON.MeshBuilder.CreateGround('gb', { width: 5.6 * S, height: 5.6 * S }, scene);
+    pl.position.y = 0.002;
+    const m = new BABYLON.StandardMaterial('shm', scene);
+    m.diffuseTexture = dt; m.useAlphaFromDiffuseTexture = true; m.disableLighting = true; m.emissiveColor = BABYLON.Color3.Black();
+    pl.material = m;
+    return pl;
+  }
+  function buildScene(canvas, outfit) { // engine + scene + camera + lights, same look as the client
+    const engine = new BABYLON.Engine(canvas, true, { alpha: true, premultipliedAlpha: false, preserveDrawingBuffer: true, powerPreference: 'low-power' }, true);
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparent — the page background shows through
+    const hemi = new BABYLON.HemisphericLight('h', new BABYLON.Vector3(0.3, 1, 0.2), scene); hemi.intensity = 0.75; hemi.groundColor = new BABYLON.Color3(0.32, 0.32, 0.36);
+    const sun = new BABYLON.DirectionalLight('d', new BABYLON.Vector3(-0.4, -1, -0.3), scene); sun.intensity = 0.45;
+    const cam = new BABYLON.ArcRotateCamera('cam', Math.PI / 2, 1.32, 3, new BABYLON.Vector3(0, 2.55 * S, 0), scene);
+    cam.minZ = 0.05; cam.fov = 0.85;
+    groundBlob(scene);
+    const char = buildChar(scene, outfit);
+    return { engine, scene, cam, char };
+  }
+  function attachOrbit(canvas, it) { // light drag-to-orbit without hijacking scroll
+    let px = 0, py = 0, on = false;
+    canvas.style.cursor = 'grab';
+    canvas.onpointerdown = e => { on = true; px = e.clientX; py = e.clientY; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; };
+    canvas.onpointermove = e => { if (!on) return; it.offA -= (e.clientX - px) * 0.012; it.offB = Math.max(0.9, Math.min(1.5, it.offB + (e.clientY - py) * 0.006)); px = e.clientX; py = e.clientY; };
+    const up = () => { on = false; canvas.style.cursor = 'grab'; };
+    canvas.onpointerup = up; canvas.onpointercancel = up;
+  }
+  function start(canvas, outfit) { // full (re)build on a canvas
+    stop(canvas);
+    const it = { offA: 0, offB: 1.32 };
+    try { Object.assign(it, buildScene(canvas, outfit)); }
+    catch (e) { drawAvatar(canvas, outfit); return; } // no WebGL? keep the 2D fallback
+    it.scene.registerBeforeRender(() => { // one animation observer per scene, reads it.char each frame
+      const ch = it.char; if (!ch) return;
+      const t = performance.now() / 1000;
+      it.cam.alpha = Math.PI / 2 + it.offA + Math.sin(t * 0.55) * 0.42; // gentle turntable sway, face stays visible
+      it.cam.beta = it.offB + Math.sin(t * 0.4) * 0.02;
+      const s = Math.sin(ch.ph += it.scene.getEngine().getDeltaTime() / 1000 * 1.6);
+      ch.armL.rotation.z = -0.1 - s * 0.03; ch.armR.rotation.z = 0.1 + s * 0.03; // idle pose, like in-game
+      ch.armL.rotation.x = s * 0.05; ch.armR.rotation.x = -s * 0.05;
+      ch.body.position.y = Math.abs(Math.sin(t * 1.1)) * 0.012; // subtle breathing
+    });
+    it.engine.runRenderLoop(() => { if (canvas.isConnected) it.scene.render(); else stop(canvas); });
+    attachOrbit(canvas, it);
+    items.set(canvas, it);
+  }
+  function rebuild(it, outfit) { // swap the outfit on a live preview without tearing down the scene
+    it.char.root.dispose(false, true); // dispose meshes + materials + textures recursively
+    it.char = buildChar(it.scene, outfit);
+  }
+  function stop(canvas) { // free the WebGL context of one canvas
+    const it = items.get(canvas); if (!it) return;
+    items.delete(canvas);
+    try { it.engine.stopRenderLoop(); it.scene.dispose(); it.engine.dispose(); } catch (e) {}
+  }
+  function disposeAll() { [...items.keys()].forEach(stop); }
+  async function render(canvas, outfit) {
+    if (!canvas || !canvas.isConnected) return;
+    try { await loadBabylon(); } catch (e) { drawAvatar(canvas, outfit); return; }
+    if (!canvas.isConnected) return; // page changed while babylon was loading
+    start(canvas, outfit);
+  }
+  async function refresh(canvas, outfit) { // fast path used by the avatar editor color pickers
+    if (!canvas || !canvas.isConnected) return;
+    if (!window.BABYLON) return render(canvas, outfit);
+    const it = items.get(canvas);
+    if (it) { try { rebuild(it, outfit); return; } catch (e) {} start(canvas, outfit); return; }
+    return render(canvas, outfit);
+  }
+  return { render, refresh, stop, disposeAll };
+})();
+
 /* ---------- Avatar editor ---------- */
 const AVP = ['head', 'torso', 'armL', 'armR', 'legL', 'legR'];
-const AV_PARTS = [['all', 'Semua'], ['head', 'Kepala'], ['torso', 'Badan'], ['armL', 'Lengan kiri'], ['armR', 'Lengan kanan'], ['legL', 'Kaki kiri'], ['legR', 'Kaki kanan']];
-const AV_FACES = [['smile', 'Senyum'], ['cool', 'Keren'], ['wink', 'Kedip'], ['surprised', 'Kaget'], ['sad', 'Sedih'], ['angry', 'Marah']];
-const AV_HATS = [['none', 'Tanpa topi'], ['cap', 'Topi'], ['tophat', 'Topi tinggi'], ['crown', 'Mahkota'], ['headphones', 'Headphone'], ['horns', 'Tanduk']];
+const AV_PARTS = [['all', 'All'], ['head', 'Head'], ['torso', 'Torso'], ['armL', 'Left arm'], ['armR', 'Right arm'], ['legL', 'Left leg'], ['legR', 'Right leg']];
+const AV_FACES = [['smile', 'Smile'], ['cool', 'Cool'], ['wink', 'Wink'], ['surprised', 'Surprised'], ['sad', 'Sad'], ['angry', 'Angry']];
+const AV_HATS = [['none', 'No hat'], ['cap', 'Cap'], ['tophat', 'Top hat'], ['crown', 'Crown'], ['headphones', 'Headphones'], ['horns', 'Horns']];
 const AV_PAL = ['#f5cd2f', '#f2c14e', '#e6eaf2', '#ffffff', '#9ca3af', '#374151', '#111111', '#0d69ac', '#1463ff', '#06b6d4', '#a4bd47', '#22c55e', '#2e7d32', '#d62839', '#ef4444', '#f97316', '#ec4899', '#8b5cf6', '#8b5a2b', '#c68642', '#e0ac69', '#f1c27d', '#ffdbac', '#614335'];
 const avBase = c => ({ skin: Object.fromEntries(AVP.map(k => [k, c])), face: 'smile', hat: 'none', hatColor: '#e63946' });
 const AV_PRESETS = {
@@ -404,10 +532,10 @@ const AV_PRESETS = {
   Noob: () => ({ skin: { head: '#f5cd2f', torso: '#0d69ac', armL: '#f5cd2f', armR: '#f5cd2f', legL: '#a4bd47', legR: '#a4bd47' }, face: 'smile', hat: 'none', hatColor: '#e63946' }),
   Ninja: () => ({ ...avBase('#1f2530'), face: 'cool' }),
   Zombie: () => ({ skin: { head: '#7fb069', torso: '#5b7ea8', armL: '#7fb069', armR: '#7fb069', legL: '#4a5568', legR: '#4a5568' }, face: 'sad', hat: 'none', hatColor: '#e63946' }),
-  Emas: () => ({ ...avBase('#f2c14e'), hat: 'crown', hatColor: '#ffd700' })
+  Gold: () => ({ ...avBase('#f2c14e'), hat: 'crown', hatColor: '#ffd700' })
 };
 let outfit = (() => { try { const o = JSON.parse(localStorage.getItem('voxelyOutfit')); if (o && o.skin) return o; } catch (e) {} return avBase('#e6eaf2'); })();
-let avTab = 'warna', avPart = 'all', avTimer = null;
+let avTab = 'color', avPart = 'all', avTimer = null;
 
 function drawFace(g, face, cx, cy, h) { // same drawing as the in-game head texture
   g.fillStyle = g.strokeStyle = '#111'; g.lineCap = 'round';
@@ -447,12 +575,12 @@ function drawAvatar(cv, o) { // front view, drawn on a 320x400 grid
   g.fill(); g.stroke();
   drawFace(g, o.face, cx, hy + hh / 2, hh); drawHat(g, o.hat, o.hatColor, cx, hy);
 }
-function pickTshirt() { const i=document.createElement('input'); i.type='file'; i.accept='image/png,image/jpeg,image/webp'; i.onchange=()=>{const f=i.files[0]; if(!f||f.size>120*1024)return alert('File maksimal 120 KB'); const r=new FileReader(); r.onload=()=>{outfit.tshirt=r.result; saveOutfit(); avatarPage();}; r.readAsDataURL(f);}; i.click(); }
+function pickTshirt() { const i=document.createElement('input'); i.type='file'; i.accept='image/png,image/jpeg,image/webp'; i.onchange=()=>{const f=i.files[0]; if(!f||f.size>120*1024)return alert('File must be 120 KB or smaller'); const r=new FileReader(); r.onload=()=>{outfit.tshirt=r.result; saveOutfit(); avatarPage();}; r.readAsDataURL(f);}; i.click(); }
 function removeTshirt() { outfit.tshirt=null; saveOutfit(); avatarPage(); }
 function saveOutfit() {
-  localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); drawAvatar($('#avc'), outfit);
+  localStorage.setItem('voxelyOutfit', JSON.stringify(outfit)); V3D.refresh($('#avc'), outfit);
   clearTimeout(avTimer);
-  avTimer = setTimeout(() => { if (session) rq('POST', '/api/outfit', outfit).then(r => r.ok && toast('Avatar tersimpan')).catch(() => {}); }, 700);
+  avTimer = setTimeout(() => { if (session) rq('POST', '/api/outfit', outfit).then(r => r.ok && toast('Avatar saved')).catch(() => {}); }, 700);
 }
 async function syncOutfit() { // local copy wins; otherwise pull the one saved on the server
   if (!session) return;
@@ -467,22 +595,22 @@ const swatches = (cur, fn) => `<div class="avpal">${AV_PAL.map(c => `<button cla
 function avatarPage() {
   $('#view').innerHTML = `<span class="label">AVATAR</span><div class="avgrid">
     <div class="card pad avprev"><canvas id="avc" width="320" height="400"></canvas>
-      <div class="acts" style="justify-content:center"><button class="btn sm alt" onclick="avRandom()">Acak</button><button class="btn sm alt" onclick="avPreset('Default')">Reset</button></div>
-      <label>Preset</label><div class="tpl" style="margin:6px 0 0">${Object.keys(AV_PRESETS).map(n => `<button class="vb" onclick="avPreset('${n}')">${n}</button>`).join('')}</div></div>
-    <div class="card pad"><div class="avtabs">${[['warna', 'Warna tubuh'], ['wajah', 'Wajah'], ['topi', 'Topi']].map(([k, n]) => `<button class="vb ${avTab === k ? 'on' : ''}" onclick="avTab='${k}';avatarPage()">${n}</button>`).join('')}</div>
-      <div id="avbody"></div><div class="shirt-upload"><button class="btn sm alt" onclick="pickTshirt()">Upload T-shirt</button><button class="x" onclick="removeTshirt()">Hapus T-shirt</button><small style="color:var(--dim)">PNG/JPG/WEBP, maksimal 120 KB</small></div><div class="hint" style="margin-top:16px">Avatar tersimpan otomatis dan dipakai saat kamu bermain. Pemain lain melihatnya saat kamu masuk ke server.</div></div></div>`;
-  drawAvatar($('#avc'), outfit); drawAvBody();
+      <div class="acts" style="justify-content:center"><button class="btn sm alt" onclick="avRandom()">Randomize</button><button class="btn sm alt" onclick="avPreset('Default')">Reset</button></div>
+      <label>Presets</label><div class="tpl" style="margin:6px 0 0">${Object.keys(AV_PRESETS).map(n => `<button class="vb" onclick="avPreset('${n}')">${n}</button>`).join('')}</div></div>
+    <div class="card pad"><div class="avtabs">${[['color', 'Body color'], ['face', 'Face'], ['hat', 'Hat']].map(([k, n]) => `<button class="vb ${avTab === k ? 'on' : ''}" onclick="avTab='${k}';avatarPage()">${n}</button>`).join('')}</div>
+      <div id="avbody"></div><div class="shirt-upload"><button class="btn sm alt" onclick="pickTshirt()">Upload T-shirt</button><button class="x" onclick="removeTshirt()">Remove T-shirt</button><small style="color:var(--dim)">PNG/JPG/WEBP, 120 KB max</small></div><div class="hint" style="margin-top:16px">Your avatar saves automatically and is used whenever you play. Other players see it when you join a server.</div></div></div>`;
+  V3D.render($('#avc'), outfit); drawAvBody();
 }
 function drawAvBody() {
   const b = $('#avbody'); if (!b) return;
-  if (avTab === 'warna') {
+  if (avTab === 'color') {
     const cur = avPart === 'all' ? outfit.skin.head : outfit.skin[avPart];
-    b.innerHTML = `<label>Bagian tubuh</label><div class="tpl" style="margin:6px 0 14px">${AV_PARTS.map(([k, n]) => `<button class="vb ${avPart === k ? 'on' : ''}" onclick="avPart='${k}';drawAvBody()">${n}</button>`).join('')}</div><label>Warna</label>${swatches(cur, 'avColor')}`;
-  } else if (avTab === 'wajah') {
+    b.innerHTML = `<label>Body part</label><div class="tpl" style="margin:6px 0 14px">${AV_PARTS.map(([k, n]) => `<button class="vb ${avPart === k ? 'on' : ''}" onclick="avPart='${k}';drawAvBody()">${n}</button>`).join('')}</div><label>Color</label>${swatches(cur, 'avColor')}`;
+  } else if (avTab === 'face') {
     b.innerHTML = `<div class="avtiles">${AV_FACES.map(([k, n]) => `<button class="tile ${outfit.face === k ? 'on' : ''}" onclick="avFace('${k}')"><canvas width="90" height="90" data-face="${k}"></canvas><small>${n}</small></button>`).join('')}</div>`;
     b.querySelectorAll('canvas').forEach(c => { const g = c.getContext('2d'); g.fillStyle = outfit.skin.head; g.fillRect(0, 0, 90, 90); drawFace(g, c.dataset.face, 45, 45, 75); });
   } else {
-    b.innerHTML = `<div class="avtiles">${AV_HATS.map(([k, n]) => `<button class="tile ${outfit.hat === k ? 'on' : ''}" onclick="avHat('${k}')"><canvas width="90" height="90" data-hat="${k}"></canvas><small>${n}</small></button>`).join('')}</div>${outfit.hat !== 'none' ? `<label style="margin-top:14px">Warna topi</label>${swatches(outfit.hatColor, 'avHatColor')}` : ''}`;
+    b.innerHTML = `<div class="avtiles">${AV_HATS.map(([k, n]) => `<button class="tile ${outfit.hat === k ? 'on' : ''}" onclick="avHat('${k}')"><canvas width="90" height="90" data-hat="${k}"></canvas><small>${n}</small></button>`).join('')}</div>${outfit.hat !== 'none' ? `<label style="margin-top:14px">Hat color</label>${swatches(outfit.hatColor, 'avHatColor')}` : ''}`;
     b.querySelectorAll('canvas').forEach(c => {
       const g = c.getContext('2d'); g.fillStyle = outfit.skin.head; g.fillRect(45 - 18, 62, 36, 28);
       g.save(); g.scale(0.55, 0.55); drawHat(g, c.dataset.hat, outfit.hatColor, 45 / 0.55, 62 / 0.55); g.restore();
@@ -497,36 +625,33 @@ function avPreset(n) { outfit = { ...AV_PRESETS[n](), tshirt: outfit.tshirt || n
 
 /* ---------- Free Marketplace ---------- */
 const MARKET_ITEMS = [
-  { id:'hat-cap-blue', name:'Skyline Cap', type:'hat', value:'cap', color:'#1463ff', desc:'Topi biru klasik untuk avatar harian.' },
-  { id:'hat-crown-gold', name:'Starter Crown', type:'hat', value:'crown', color:'#ffd700', desc:'Mahkota emas gratis untuk tampil standout.' },
-  { id:'hat-headphones', name:'Pulse Headphones', type:'hat', value:'headphones', color:'#8b5cf6', desc:'Headphone neon untuk sesi bermain panjang.' },
-  { id:'face-cool', name:'Cool Face', type:'face', value:'cool', color:'#06b6d4', desc:'Ekspresi santai dengan kacamata hitam.' },
-  { id:'face-wink', name:'Wink Face', type:'face', value:'wink', color:'#ec4899', desc:'Ekspresi kedip yang playful.' },
-  { id:'skin-ocean', name:'Ocean Suit', type:'skin', value:'#0d69ac', color:'#0d69ac', desc:'Warna badan biru ocean untuk karakter.' },
-  { id:'skin-lime', name:'Lime Suit', type:'skin', value:'#a4bd47', color:'#a4bd47', desc:'Warna lime cerah untuk avatar.' },
-  { id:'bundle-noob', name:'Classic Noob Bundle', type:'preset', value:'Noob', color:'#f5cd2f', desc:'Bundle starter warna kuning, biru, dan hijau.' },
-  { id:'bundle-ninja', name:'Midnight Ninja Bundle', type:'preset', value:'Ninja', color:'#1f2530', desc:'Bundle gelap dengan wajah keren.' }
+  { id:'hat-cap-blue', name:'Skyline Cap', type:'hat', value:'cap', color:'#1463ff', desc:'A classic blue cap for everyday avatar looks.' },
+  { id:'hat-crown-gold', name:'Starter Crown', type:'hat', value:'crown', color:'#ffd700', desc:'A free golden crown to stand out from the crowd.' },
+  { id:'hat-headphones', name:'Pulse Headphones', type:'hat', value:'headphones', color:'#8b5cf6', desc:'Neon headphones for long play sessions.' },
+  { id:'face-cool', name:'Cool Face', type:'face', value:'cool', color:'#06b6d4', desc:'A chill expression behind sunglasses.' },
+  { id:'face-wink', name:'Wink Face', type:'face', value:'wink', color:'#ec4899', desc:'A playful winking expression.' },
+  { id:'skin-ocean', name:'Ocean Suit', type:'skin', value:'#0d69ac', color:'#0d69ac', desc:'Ocean-blue body color for your character.' },
+  { id:'skin-lime', name:'Lime Suit', type:'skin', value:'#a4bd47', color:'#a4bd47', desc:'A bright lime color for your avatar.' },
+  { id:'bundle-noob', name:'Classic Noob Bundle', type:'preset', value:'Noob', color:'#f5cd2f', desc:'Starter bundle in yellow, blue, and green.' },
+  { id:'bundle-ninja', name:'Midnight Ninja Bundle', type:'preset', value:'Ninja', color:'#1f2530', desc:'A dark bundle with a cool face.' }
 ];
 let marketFilter = 'all';
 function ownedMarket() { try { return new Set(JSON.parse(localStorage.getItem('voxelyMarketOwned') || '[]')); } catch (e) { return new Set(); } }
 function saveMarketOwned(set) { localStorage.setItem('voxelyMarketOwned', JSON.stringify([...set])); }
-function marketPreview(item) { // preview = model avatar utuh yang memakai itemnya (bukan sekadar kotak + wajah)
+function marketPreview(item) { // preview = the full 3D avatar wearing the item, same model as in-game
   setTimeout(() => {
     const c = document.getElementById('market-canvas-' + item.id); if (!c) return;
-    c.width = 320; c.height = 400;
     let o2 = JSON.parse(JSON.stringify(outfit));
     if (item.type === 'hat') { o2.hat = item.value; o2.hatColor = item.color; }
     else if (item.type === 'face') o2.face = item.value;
     else if (item.type === 'skin') AVP.forEach(k => (o2.skin[k] = item.value));
     else if (item.type === 'preset') o2 = { ...AV_PRESETS[item.value](), tshirt: null };
-    drawAvatar(c, o2);
-    const g = c.getContext('2d'); // bayangan lantai biar terasa "berdiri"
-    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(160, 384, 62, 10, 0, 0, Math.PI * 2); g.fill();
+    V3D.render(c, o2);
   }, 0);
 }
 function buyMarket(id) {
   const item=MARKET_ITEMS.find(x=>x.id===id); if(!item) return;
-  const owned=ownedMarket(); owned.add(id); saveMarketOwned(owned); equipMarket(item); toast(item.name + ' ditambahkan ke koleksi'); marketplacePage();
+  const owned=ownedMarket(); owned.add(id); saveMarketOwned(owned); equipMarket(item); toast(item.name + ' added to your collection'); marketplacePage();
 }
 function equipMarket(item) {
   if(item.type==='hat') { outfit.hat=item.value; outfit.hatColor=item.color; }
@@ -537,7 +662,7 @@ function equipMarket(item) {
 }
 function marketplacePage() {
   const owned=ownedMarket(), list=MARKET_ITEMS.filter(x=>marketFilter==='all'||x.type===marketFilter);
-  $('#view').innerHTML=`<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Free items, pilih gaya kamu.</h1><p>Semua item di sini gratis. Klaim sekali, lalu langsung equip untuk dipakai di avatar dan game.</p></div><div class="market-filter">${[['all','Semua'],['hat','Topi'],['face','Wajah'],['skin','Warna'],['preset','Bundle']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div><div class="hint">Koleksi kamu: <b>${owned.size}</b> / ${MARKET_ITEMS.length} item gratis · outfit tersimpan otomatis di browser dan disinkronkan saat login.</div><div class="market-grid">${list.map(item=>{const has=owned.has(item.id);return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="320" height="400"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc)}</p><div class="market-meta"><span>FREE</span><span class="${has?'owned':''}">${has?'✓ Dimiliki':'Gratis'}</span></div><button class="btn ${has?'alt':''}" onclick="${has?`equipMarket(MARKET_ITEMS.find(x=>x.id==='${item.id}'));toast('Avatar diperbarui')`:`buyMarket('${item.id}')`} ">${has?'Equip':'Klaim gratis'}</button></div>`}).join('')}</div>`;
+  $('#view').innerHTML=`<div class="market-head"><div><span class="label">VOXELY MARKETPLACE</span><h1 class="ftitle">Free items — pick your style.</h1><p>Every item here is free. Claim it once, then equip it on your avatar in games.</p></div><div class="market-filter">${[['all','All'],['hat','Hats'],['face','Faces'],['skin','Colors'],['preset','Bundles']].map(([k,n])=>`<button class="vb ${marketFilter===k?'on':''}" onclick="marketFilter='${k}';marketplacePage()">${n}</button>`).join('')}</div></div><div class="hint">Your collection: <b>${owned.size}</b> / ${MARKET_ITEMS.length} free items · your outfit is saved in this browser and synced when you sign in.</div><div class="market-grid">${list.map(item=>{const has=owned.has(item.id);return `<div class="market-card"><div class="market-art"><canvas id="market-canvas-${item.id}" width="320" height="400"></canvas></div><h3>${E(item.name)}</h3><p>${E(item.desc)}</p><div class="market-meta"><span>FREE</span><span class="${has?'owned':''}">${has?'✓ Owned':'Free'}</span></div><button class="btn ${has?'alt':''}" onclick="${has?`equipMarket(MARKET_ITEMS.find(x=>x.id==='${item.id}'));toast('Avatar updated')`:`buyMarket('${item.id}')`} ">${has?'Equip':'Claim'}</button></div>`}).join('')}</div>`;
   list.forEach(marketPreview);
 }
 
@@ -564,33 +689,33 @@ async function rq(method, path, body) {
 const AH = () => session ? { Authorization: 'Bearer ' + session.token, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 const gj = async path => { try { const d = await rq('GET', path); return d.ok ? d.data : null; } catch (e) { return null; } };
 
-/* ---------- label rilis (beta / alpha / wip) ---------- */
+/* ---------- release labels (beta / alpha / wip) ---------- */
 const LBL = { beta: ['BETA', 'glabel beta'], alpha: ['ALPHA', 'glabel alpha'], wip: ['WIP', 'glabel wip'] };
 const lbl = g => { const l = LBL[g?.status]; return l ? `<span class="${l[1]}">${l[0]}</span>` : ''; };
 
-/* ---------- server list di game page ---------- */
+/* ---------- server list on the game page ---------- */
 async function loadServers(id) {
   const el = $('#servers'); if (!el) return;
   const list = await gj('/api/games/' + id + '/servers');
   if (!el || !list || !list.length) return;
-  el.innerHTML = `<h3 class="sec">SERVERS</h3><div class="ftable">${list.map(s => `<div class="srv"><div class="sinfo"><b>Server #${E(String(s.id).slice(0, 4))}</b><small>${s.players}/${s.max} pemain · dibuat ${s.age < 60 ? 'baru saja' : Math.floor(s.age / 60) + ' menit lalu'}${s.names && s.names.length ? ' · ' + E(s.names.join(', ')) : ''}</small><div class="sbar"><i style="width:${Math.round(100 * s.players / s.max)}%"></i></div></div><button class="btn sm ${s.full ? 'alt' : ''}" ${s.full ? 'disabled' : `onclick="play('${id}','${s.id}')"`}>${s.full ? 'Penuh' : 'Gabung'}</button></div>`).join('')}</div>`;
+  el.innerHTML = `<h3 class="sec">SERVERS</h3><div class="ftable">${list.map(s => `<div class="srv"><div class="sinfo"><b>Server #${E(String(s.id).slice(0, 4))}</b><small>${s.players}/${s.max} players · created ${s.age < 60 ? 'just now' : Math.floor(s.age / 60) + ' minutes ago'}${s.names && s.names.length ? ' · ' + E(s.names.join(', ')) : ''}</small><div class="sbar"><i style="width:${Math.round(100 * s.players / s.max)}%"></i></div></div><button class="btn sm ${s.full ? 'alt' : ''}" ${s.full ? 'disabled' : `onclick="play('${id}','${s.id}')"`}>${s.full ? 'Full' : 'Join'}</button></div>`).join('')}</div>`;
 }
 
 /* ---------- reviews di game page ---------- */
 let rvDraft = null, rvVote = true, rvSort = 'recent', rvGame = null;
 function rvForm() {
-  return `<div class="rform"><b style="color:var(--strong)">Tulis review</b>
-    <div class="tg"><button class="vb ${rvVote ? 'on' : ''}" onclick="rvVote=true;loadReviews(rvGame)">👍 Rekomendasi</button><button class="vb ${!rvVote ? 'on' : ''}" onclick="rvVote=false;loadReviews(rvGame)">👎 Tidak</button></div>
-    <textarea id="rvText" oninput="rvDraft=this.value" placeholder="Bagikan pengalamanmu bermain game ini…">${E(rvDraft || '')}</textarea>
-    <button class="btn sm" onclick="sendReview()">Kirim review</button> <small style="color:var(--dim)">Satu review per game, bisa kamu ubah kapan saja.</small></div>`;
+  return `<div class="rform"><b style="color:var(--strong)">Write a review</b>
+    <div class="tg"><button class="vb ${rvVote ? 'on' : ''}" onclick="rvVote=true;loadReviews(rvGame)">👍 Recommend</button><button class="vb ${!rvVote ? 'on' : ''}" onclick="rvVote=false;loadReviews(rvGame)">👎 Not really</button></div>
+    <textarea id="rvText" oninput="rvDraft=this.value" placeholder="Share your experience playing this game…">${E(rvDraft || '')}</textarea>
+    <button class="btn sm" onclick="sendReview()">Post review</button> <small style="color:var(--dim)">One review per game — you can edit it anytime.</small></div>`;
 }
 function rvRow(r, gid) {
   return `<div class="rv"><div class="au">${avatar({ uid: r.uid, av: r.av, color: r.color }, 44)}<a href="#/user/${r.uid}" style="font-size:11px;color:var(--link);word-break:break-word">${E(r.name)}</a></div>
-    <div><div class="rvh"><b style="color:${r.up ? '#22c55e' : '#ff5c6c'}">${r.up ? '👍 Rekomendasi' : '👎 Tidak direkomendasikan'}</b> <span>· ${ago(r.ts)}</span></div>
+    <div><div class="rvh"><b style="color:${r.up ? '#22c55e' : '#ff5c6c'}">${r.up ? '👍 Recommended' : '👎 Not recommended'}</b> <span>· ${ago(r.ts)}</span></div>
     <div class="rvr"><p>${E(r.text)}</p></div>
     <div class="rvf">${r.own
-      ? `<button class="vb" onclick="delReview('${gid}')">Hapus review saya</button>`
-      : `<button class="vb ${r.mine === 'yes' ? 'on' : ''}" onclick="voteReview('${gid}','${r.id}','yes')">👍 ${r.yes}</button><button class="vb ${r.mine === 'no' ? 'on' : ''}" onclick="voteReview('${gid}','${r.id}','no')">👎 ${r.no}</button><button class="flag" title="Laporkan review" onclick="reportReview('${gid}','${r.id}')">⚑</button>`}</div></div></div>`;
+      ? `<button class="vb" onclick="delReview('${gid}')">Delete my review</button>`
+      : `<button class="vb ${r.mine === 'yes' ? 'on' : ''}" onclick="voteReview('${gid}','${r.id}','yes')">👍 ${r.yes}</button><button class="vb ${r.mine === 'no' ? 'on' : ''}" onclick="voteReview('${gid}','${r.id}','no')">👎 ${r.no}</button><button class="flag" title="Report review" onclick="reportReview('${gid}','${r.id}')">⚑</button>`}</div></div></div>`;
 }
 async function loadReviews(id) {
   const el = $('#reviews'); if (!el) return;
@@ -600,26 +725,26 @@ async function loadReviews(id) {
   if (!d) { el.innerHTML = ''; return; }
   const pct = d.total ? Math.round(100 * d.up / d.total) : 0;
   el.innerHTML = `<h3 class="sec">REVIEWS</h3>
-    ${d.total ? `<div class="rec ${pct < 50 ? 'neg' : ''}"><svg class="ic" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg><span><b>${pct}% positif</b><small>${d.total} review</small></span></div>` : ''}
+    ${d.total ? `<div class="rec ${pct < 50 ? 'neg' : ''}"><svg class="ic" viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg><span><b>${pct}% positive</b><small>${d.total} reviews</small></span></div>` : ''}
     ${d.canReview ? rvForm() : ''}
-    <div class="sortbar">Urutkan: <button class="vb ${rvSort !== 'helpful' ? 'on' : ''}" onclick="rvSort='recent';loadReviews(rvGame)">Terbaru</button><button class="vb ${rvSort === 'helpful' ? 'on' : ''}" onclick="rvSort='helpful';loadReviews(rvGame)">Paling membantu</button></div>
-    ${d.reviews.map(r => rvRow(r, id)).join('') || '<div class="empty">Belum ada review. Jadilah yang pertama!</div>'}`;
+    <div class="sortbar">Sort: <button class="vb ${rvSort !== 'helpful' ? 'on' : ''}" onclick="rvSort='recent';loadReviews(rvGame)">Most recent</button><button class="vb ${rvSort === 'helpful' ? 'on' : ''}" onclick="rvSort='helpful';loadReviews(rvGame)">Most helpful</button></div>
+    ${d.reviews.map(r => rvRow(r, id)).join('') || '<div class="empty">No reviews yet. Be the first!</div>'}`;
 }
 async function sendReview() {
   const text = ($('#rvText')?.value || '').trim();
   const r = await rq('POST', '/api/games/' + rvGame + '/reviews', { up: rvVote, text });
-  if (!r.ok) return toast(r.data.error || 'Gagal mengirim review');
-  rvDraft = null; toast('Review tersimpan'); loadReviews(rvGame);
+  if (!r.ok) return toast(r.data.error || 'Failed to post review');
+  rvDraft = null; toast('Review saved'); loadReviews(rvGame);
 }
-async function delReview(gid) { await rq('DELETE', '/api/games/' + gid + '/reviews'); toast('Review dihapus'); loadReviews(gid); }
-async function voteReview(gid, rid, v) { const r = await rq('POST', `/api/games/${gid}/reviews/${rid}/vote`, { v }); if (!r.ok) return toast(r.data.error || 'Gagal vote'); loadReviews(gid); }
-async function reportReview(gid, rid) { await rq('POST', `/api/games/${gid}/reviews/${rid}/report`); toast('Review dilaporkan. Terima kasih!'); }
+async function delReview(gid) { await rq('DELETE', '/api/games/' + gid + '/reviews'); toast('Review deleted'); loadReviews(gid); }
+async function voteReview(gid, rid, v) { const r = await rq('POST', `/api/games/${gid}/reviews/${rid}/vote`, { v }); if (!r.ok) return toast(r.data.error || 'Vote failed'); loadReviews(gid); }
+async function reportReview(gid, rid) { await rq('POST', `/api/games/${gid}/reviews/${rid}/report`); toast('Review reported. Thank you!'); }
 
 /* ---------- People ---------- */
 let peopleQ = '';
 async function peoplePage() {
-  $('#view').innerHTML = `<span class="label">PEOPLE</span><h1 class="ftitle">Pemain Voxely</h1>
-    <div class="fsearch"><input class="search" id="pq" placeholder="Cari pemain…" value="${E(peopleQ)}" oninput="peopleQ=this.value;renderPeople()"></div><div id="plistEl"></div>`;
+  $('#view').innerHTML = `<span class="label">PEOPLE</span><h1 class="ftitle">Voxely Players</h1>
+    <div class="fsearch"><input class="search" id="pq" placeholder="Search players…" value="${E(peopleQ)}" oninput="peopleQ=this.value;renderPeople()"></div><div id="plistEl"></div>`;
   renderPeople();
 }
 async function renderPeople() {
@@ -628,40 +753,40 @@ async function renderPeople() {
   if (!el) return;
   const q = (peopleQ || '').toLowerCase();
   const items = (list || []).filter(u => !q || u.name.toLowerCase().includes(q));
-  el.innerHTML = items.map(u => `<a class="pc" href="#/user/${u.uid}" style="margin-bottom:8px">${avatar(u, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)">${E(u.name)}</b>${verifiedBadge(u)}<small>${u.game ? 'Sedang main ' + E(u.game) : 'Di lobi'}</small></div><small style="color:var(--link)">Lihat profil →</small></a>`).join('') || '<div class="empty">Tidak ada pemain ditemukan.</div>';
+  el.innerHTML = items.map(u => `<a class="pc" href="#/user/${u.uid}" style="margin-bottom:8px">${avatar(u, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)">${E(u.name)}</b>${verifiedBadge(u)}<small>${u.game ? 'Playing ' + E(u.game) : 'In lobby'}</small></div><small style="color:var(--link)">View profile →</small></a>`).join('') || '<div class="empty">No players found.</div>';
 }
 
-/* ---------- profil pemain lain ---------- */
+/* ---------- other player profiles ---------- */
 async function userPage(uid) {
-  $('#view').innerHTML = '<span class="label">PROFIL</span><div class="hint">Memuat profil…</div>';
+  $('#view').innerHTML = '<span class="label">PROFILE</span><div class="hint">Loading profile…</div>';
   const u = await gj('/api/users/' + encodeURIComponent(uid));
   if (!$('#view')) return;
-  if (!u) { $('#view').innerHTML = '<span class="label">PROFIL</span><div class="empty">Pemain tidak ditemukan.</div>'; return; }
+  if (!u) { $('#view').innerHTML = '<span class="label">PROFILE</span><div class="empty">Player not found.</div>'; return; }
   const fb = {
-    none: `<button class="btn sm" onclick="friendAction('${u.uid}','request')">＋ Tambah Teman</button>`,
-    sent: `<button class="btn sm alt" onclick="friendAction('${u.uid}','cancel')">Batalkan permintaan</button>`,
-    received: `<button class="btn sm" onclick="friendAction('${u.uid}','accept')">Terima permintaan</button>`,
-    friends: `<button class="btn sm alt" onclick="friendAction('${u.uid}','remove')">Hapus dari teman</button>`
+    none: `<button class="btn sm" onclick="friendAction('${u.uid}','request')">＋ Add Friend</button>`,
+    sent: `<button class="btn sm alt" onclick="friendAction('${u.uid}','cancel')">Cancel request</button>`,
+    received: `<button class="btn sm" onclick="friendAction('${u.uid}','accept')">Accept request</button>`,
+    friends: `<button class="btn sm alt" onclick="friendAction('${u.uid}','remove')">Remove friend</button>`
   }[u.friend] || '';
   $('#view').innerHTML = `<span class="label">PROFIL</span>
     <div class="card pad"><div class="prof">${avatar(u, 96)}<div style="min-width:0">
       <h2 class="ftitle" style="margin:0">${E(u.name)}${verifiedBadge(u)}</h2>
-      <div class="follow-stat"><b>${u.followers}</b> pengikut · <b>${u.following}</b> mengikuti · <b>${u.friends}</b> teman${u.game ? ' · sedang main <b>' + E(u.game) + '</b>' : ''}</div>
+      <div class="follow-stat"><b>${u.followers}</b> followers · <b>${u.following}</b> following · <b>${u.friends}</b> friends${u.game ? ' · playing <b>' + E(u.game) + '</b>' : ''}</div>
       <div class="acts">${session && session.user.uid !== u.uid ? fb + `<button class="btn sm alt" onclick="followAction('${u.uid}')">${u.followed ? 'Unfollow' : 'Follow'}</button>` : ''}</div>
     </div></div></div>
     ${u.badges?.length ? `<h3 class="sec">BADGES</h3><div class="badge-grid">${u.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span></div>`).join('')}</div>` : ''}
     ${u.outfit ? `<h3 class="sec">AVATAR</h3><div class="card pad" style="max-width:340px"><canvas id="uav" width="320" height="400"></canvas></div>` : ''}
-    <h3 class="sec">GAME BUATAN ${E(u.name).toUpperCase()}</h3>
-    ${u.games.length ? `<div class="grid">${u.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online} online · Free</small></div></a>`).join('')}</div>` : '<div class="empty">Belum membuat game.</div>'}`;
-  if (u.outfit) drawAvatar($('#uav'), u.outfit);
+    <h3 class="sec">GAMES BY ${E(u.name).toUpperCase()}</h3>
+    ${u.games.length ? `<div class="grid">${u.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online} online · Free</small></div></a>`).join('')}</div>` : '<div class="empty">Hasn&#39;t created any games yet.</div>'}`;
+  if (u.outfit) V3D.render($('#uav'), u.outfit);
 }
 async function friendAction(uid, act) {
   if (!session) return ($('#login').classList.add('on'));
-  if (act === 'remove') { await rq('DELETE', '/api/friends/' + uid); toast('Teman dihapus'); }
+  if (act === 'remove') { await rq('DELETE', '/api/friends/' + uid); toast('Friend removed'); }
   else {
     const r = await rq('POST', '/api/friends/' + uid + '/' + act);
-    if (!r.ok) return toast(r.data.error || 'Gagal');
-    toast(act === 'accept' ? 'Sekarang kalian teman!' : act === 'cancel' ? 'Permintaan dibatalkan' : 'Permintaan terkirim');
+    if (!r.ok) return toast(r.data.error || 'Something went wrong');
+    toast(act === 'accept' ? 'You are now friends!' : act === 'cancel' ? 'Request canceled' : 'Request sent');
   }
   userPage(uid);
 }
@@ -673,7 +798,7 @@ async function followAction(uid) {
   userPage(uid);
 }
 
-/* ---------- profil sendiri ---------- */
+/* ---------- own profile ---------- */
 async function profilePage() {
   if (!session) return (location.hash = '#/');
   const u = session.user;
@@ -681,25 +806,25 @@ async function profilePage() {
   if (!$('#view')) return;
   $('#view').innerHTML = `<span class="label">PROFILE</span>
     <div class="card pad" style="max-width:640px">
-      <div class="prof">${avatar(u, 96)}<div><h2 class="ftitle" style="margin:0">${E(u.name)}</h2><small style="color:var(--dim)">Akun guest${u.google ? ' · terhubung Google' : ''}</small></div></div>
-      <label style="margin-top:16px">Nama tampilan</label>
-      <div style="display:flex;gap:8px"><input id="pfName" value="${E(u.name)}" maxlength="16" style="flex:1"><button class="btn sm" onclick="saveName()">Simpan</button></div>
-      <div class="shirt-upload" style="margin-top:14px"><button class="btn sm alt" onclick="saveAvatar()">Ganti foto profil</button><button class="x" onclick="rmAvatar()">Hapus foto</button><small style="color:var(--dim)">Foto dipakai sebagai avatar kecil di seluruh situs</small></div>
+      <div class="prof">${avatar(u, 96)}<div><h2 class="ftitle" style="margin:0">${E(u.name)}</h2><small style="color:var(--dim)">Guest account${u.google ? ' · Google connected' : ''}</small></div></div>
+      <label style="margin-top:16px">Display name</label>
+      <div style="display:flex;gap:8px"><input id="pfName" value="${E(u.name)}" maxlength="16" style="flex:1"><button class="btn sm" onclick="saveName()">Save</button></div>
+      <div class="shirt-upload" style="margin-top:14px"><button class="btn sm alt" onclick="saveAvatar()">Change profile photo</button><button class="x" onclick="rmAvatar()">Remove photo</button><small style="color:var(--dim)">Used as the small avatar across the whole site</small></div>
       <div class="sep2"></div>
-      <h3 class="ft">Badge saya</h3>
-      ${mine?.badges?.length ? `<div class="badge-grid" style="margin-top:10px">${mine.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name">${E(b.name)}</span></div>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">Belum punya badge.</div>'}
+      <h3 class="ft">My badges</h3>
+      ${mine?.badges?.length ? `<div class="badge-grid" style="margin-top:10px">${mine.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name">${E(b.name)}</span></div>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No badges yet.</div>'}
     </div>`;
 }
 async function saveName() {
   const r = await rq('POST', '/api/profile', { name: $('#pfName').value });
-  if (!r.ok) return toast(r.data.error || 'Gagal menyimpan nama');
-  session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); toast('Nama disimpan'); profilePage();
+  if (!r.ok) return toast(r.data.error || 'Failed to save name');
+  session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); toast('Name saved'); profilePage();
 }
 async function saveAvatar() {
   pickImage(256, 256, async d => {
     const r = await rq('POST', '/api/profile', { avatar: d });
-    if (!r.ok) return toast(r.data.error || 'Gagal mengganti foto');
-    session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); toast('Foto profil diperbarui'); profilePage();
+    if (!r.ok) return toast(r.data.error || 'Failed to change photo');
+    session.user = r.data; localStorage.setItem('voxely', JSON.stringify(session)); renderMe(); toast('Profile photo updated'); profilePage();
   });
 }
 async function rmAvatar() {
@@ -710,23 +835,23 @@ async function rmAvatar() {
 /* ---------- Friends ---------- */
 async function friendsPage() {
   if (!session) return (location.hash = '#/');
-  $('#view').innerHTML = '<span class="label">FRIENDS</span><div class="hint">Memuat…</div>';
+  $('#view').innerHTML = '<span class="label">FRIENDS</span><div class="hint">Loading…</div>';
   const [f, n] = await Promise.all([gj('/api/friends'), gj('/api/notifications')]);
   if (!$('#view')) return;
   const reqs = n?.requests || [];
   $('#view').innerHTML = `<span class="label">FRIENDS</span>
-    <h3 class="sec">PERMINTAAN TEMAN</h3>
-    ${reqs.length ? reqs.map(x => `<div class="pc" style="margin-bottom:8px">${avatar(x.user, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)"><a href="#/user/${x.user.uid}">${E(x.user.name)}</a></b><small>${ago(x.ts)}</small></div><div class="pact"><button class="btn sm" onclick="reqAction('${x.user.uid}','accept')">Terima</button><button class="x" onclick="reqAction('${x.user.uid}','decline')">Tolak</button></div></div>`).join('') : '<div class="empty">Tidak ada permintaan masuk.</div>'}
-    <h3 class="sec">DAFTAR TEMAN (${f?.friends.length || 0})</h3>
-    ${f?.friends.length ? f.friends.map(u => `<div class="pc" style="margin-bottom:8px"><a href="#/user/${u.uid}" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">${avatar(u, 40)}<div style="min-width:0"><b style="color:var(--strong)">${E(u.name)}</b><small>${u.game ? 'Main ' + E(u.game) : 'Offline'}</small></div></a><button class="x" onclick="unfriend('${u.uid}')">Hapus</button></div>`).join('') : '<div class="empty">Belum punya teman. Tekan username pemain lain di dalam game, atau buka halaman People untuk menambah teman!</div>'}`;
+    <h3 class="sec">FRIEND REQUESTS</h3>
+    ${reqs.length ? reqs.map(x => `<div class="pc" style="margin-bottom:8px">${avatar(x.user, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)"><a href="#/user/${x.user.uid}">${E(x.user.name)}</a></b><small>${ago(x.ts)}</small></div><div class="pact"><button class="btn sm" onclick="reqAction('${x.user.uid}','accept')">Accept</button><button class="x" onclick="reqAction('${x.user.uid}','decline')">Decline</button></div></div>`).join('') : '<div class="empty">No incoming requests.</div>'}
+    <h3 class="sec">FRIEND LIST (${f?.friends.length || 0})</h3>
+    ${f?.friends.length ? f.friends.map(u => `<div class="pc" style="margin-bottom:8px"><a href="#/user/${u.uid}" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">${avatar(u, 40)}<div style="min-width:0"><b style="color:var(--strong)">${E(u.name)}</b><small>${u.game ? 'Playing ' + E(u.game) : 'Offline'}</small></div></a><button class="x" onclick="unfriend('${u.uid}')">Remove</button></div>`).join('') : '<div class="empty">No friends yet. Tap another player&#39;s username inside a game, or open the People page to add friends!</div>'}`;
 }
 async function reqAction(uid, act, back) {
   if (!session) return ($('#login').classList.add('on'));
   await rq('POST', '/api/friends/' + uid + '/' + act);
-  toast(act === 'accept' ? 'Teman baru ditambahkan!' : 'Permintaan ditolak');
+  toast(act === 'accept' ? 'New friend added!' : 'Request declined');
   back === 'notif' ? notificationsPage() : friendsPage();
 }
-async function unfriend(uid) { await rq('DELETE', '/api/friends/' + uid); toast('Teman dihapus'); friendsPage(); }
+async function unfriend(uid) { await rq('DELETE', '/api/friends/' + uid); toast('Friend removed'); friendsPage(); }
 
 /* ---------- Notifications ---------- */
 async function notificationsPage() {
@@ -736,86 +861,86 @@ async function notificationsPage() {
   nCount = 0; renderMe(); rq('POST', '/api/notifications/read').catch(() => {});
   const row = (u, text, ts, extra = '') => u ? `<div class="nr">${avatar(u, 40)}<div class="nt"><a href="#/user/${u.uid}">${E(u.name)}</a> <span style="color:var(--soft)">${text}</span><small>${ago(ts)}</small>${extra}</div></div>` : '';
   $('#view').innerHTML = `<span class="label">NOTIFICATIONS</span>
-    ${(d?.requests || []).map(x => row(x.user, 'ingin berteman denganmu.', x.ts, `<div class="acts" style="margin-top:8px"><button class="btn sm" onclick="reqAction('${x.user.uid}','accept','notif')">Terima</button><button class="x" onclick="reqAction('${x.user.uid}','decline','notif')">Tolak</button></div>`)).join('')}
-    ${(d?.accepted || []).map(x => row(x.user, 'menerima permintaan temanmu.', x.ts)).join('')}
-    ${!d || (!d.requests.length && !d.accepted.length) ? '<div class="empty">Belum ada notifikasi.</div>' : ''}`;
+    ${(d?.requests || []).map(x => row(x.user, 'wants to be your friend.', x.ts, `<div class="acts" style="margin-top:8px"><button class="btn sm" onclick="reqAction('${x.user.uid}','accept','notif')">Accept</button><button class="x" onclick="reqAction('${x.user.uid}','decline','notif')">Decline</button></div>`)).join('')}
+    ${(d?.accepted || []).map(x => row(x.user, 'accepted your friend request.', x.ts)).join('')}
+    ${!d || (!d.requests.length && !d.accepted.length) ? '<div class="empty">No notifications yet.</div>' : ''}`;
 }
 
 /* ---------- Forum ---------- */
 const catIc = c => `<span class="cat-ic" style="background:${c.color}">${E((c.name || '?')[0])}</span>`;
-const threadRow = t => `<div class="fr tt" style="cursor:pointer" onclick="location.hash='#/forum/thread/${t.id}'"><span class="au">${avatar(t.author, 44)}<small style="color:var(--dim);font-size:11px;word-break:break-all">${E(t.author.name)}</small></span><span style="text-align:left;min-width:0"><span class="tl">${E(t.title)}</span><small style="color:var(--dim)">${t.replies} balasan · ${t.views} dilihat · ${ago(t.ts)}</small></span></div>`;
+const threadRow = t => `<div class="fr tt" style="cursor:pointer" onclick="location.hash='#/forum/thread/${t.id}'"><span class="au">${avatar(t.author, 44)}<small style="color:var(--dim);font-size:11px;word-break:break-all">${E(t.author.name)}</small></span><span style="text-align:left;min-width:0"><span class="tl">${E(t.title)}</span><small style="color:var(--dim)">${t.replies} replies · ${t.views} views · ${ago(t.ts)}</small></span></div>`;
 function threadList(title, list, back) {
-  $('#view').innerHTML = `<span class="label">FORUM</span><div class="fhead"><h1 class="ftitle">${E(title)}</h1>${back ? `<button class="btn sm alt" onclick="location.hash='#/forum'">← Kembali</button>` : ''}</div>
-    ${list.length ? `<div class="ftable tt">${list.map(threadRow).join('')}</div>` : '<div class="empty">Tidak ada thread.</div>'}`;
+  $('#view').innerHTML = `<span class="label">FORUM</span><div class="fhead"><h1 class="ftitle">${E(title)}</h1>${back ? `<button class="btn sm alt" onclick="location.hash='#/forum'">← Back</button>` : ''}</div>
+    ${list.length ? `<div class="ftable tt">${list.map(threadRow).join('')}</div>` : '<div class="empty">No threads.</div>'}`;
 }
 async function forumPage() {
   const d = await gj('/api/forum');
   if (!$('#view')) return;
-  $('#view').innerHTML = `<span class="label">FORUM</span><h1 class="ftitle">Komunitas Voxely</h1>
-    <div class="fsearch"><input class="search" id="fq" placeholder="Cari thread…" onkeydown="if(event.key==='Enter')forumSearch()"><button class="btn" onclick="forumSearch()">Cari</button></div>
-    <div class="ftable"><div class="fh"><span>Kategori</span><span>Threads</span><span>Posts</span></div>
+  $('#view').innerHTML = `<span class="label">FORUM</span><h1 class="ftitle">Voxely Community</h1>
+    <div class="fsearch"><input class="search" id="fq" placeholder="Search threads…" onkeydown="if(event.key==='Enter')forumSearch()"><button class="btn" onclick="forumSearch()">Search</button></div>
+    <div class="ftable"><div class="fh"><span>Category</span><span>Threads</span><span>Posts</span></div>
     ${(d?.cats || []).map(c => `<a class="fr" href="#/forum/cat/${c.id}"><span class="fc" style="text-align:left">${catIc(c)}<span style="min-width:0"><b>${E(c.name)}</b><small>${E(c.desc)}</small></span></span><span>${c.threads}</span><span>${c.posts}</span></a>`).join('')}</div>
-    <div class="fstat"><div>Threads: <b>${d?.stats?.threads || 0}</b> · Posts: <b>${d?.stats?.posts || 0}</b> · <a style="color:var(--link)" href="#/forum/mine">Thread saya</a></div></div>`;
+    <div class="fstat"><div>Threads: <b>${d?.stats?.threads || 0}</b> · Posts: <b>${d?.stats?.posts || 0}</b> · <a style="color:var(--link)" href="#/forum/mine">My threads</a></div></div>`;
 }
 function forumSearch() { const q = $('#fq')?.value?.trim(); if (q) location.hash = '#/forum/search/' + encodeURIComponent(q); }
 async function forumSearchPage(q) {
   const list = await gj('/api/forum/search?q=' + encodeURIComponent(q));
   if (!$('#view')) return;
-  threadList('Hasil pencarian: "' + q + '"', list || [], true);
+  threadList('Search results: "' + q + '"', list || [], true);
 }
 async function forumCatPage(id) {
   const d = await gj('/api/forum/cat/' + id);
   if (!d) return (location.hash = '#/forum');
-  $('#view').innerHTML = `<span class="label">FORUM</span><div class="fhead"><h1 class="ftitle">${E(d.cat.name)}</h1><div class="acts" style="margin:0">${session ? `<button class="btn sm" onclick="location.hash='#/forum/new/${d.cat.id}'">＋ Thread Baru</button>` : ''}<button class="btn sm alt" onclick="location.hash='#/forum'">← Kembali</button></div></div>
+  $('#view').innerHTML = `<span class="label">FORUM</span><div class="fhead"><h1 class="ftitle">${E(d.cat.name)}</h1><div class="acts" style="margin:0">${session ? `<button class="btn sm" onclick="location.hash='#/forum/new/${d.cat.id}'">＋ New Thread</button>` : ''}<button class="btn sm alt" onclick="location.hash='#/forum'">← Back</button></div></div>
     <p style="color:var(--soft);margin-bottom:12px">${E(d.cat.desc)}</p>
-    ${d.threads.length ? `<div class="ftable tt">${d.threads.map(threadRow).join('')}</div>` : '<div class="empty">Belum ada thread di kategori ini.</div>'}`;
+    ${d.threads.length ? `<div class="ftable tt">${d.threads.map(threadRow).join('')}</div>` : '<div class="empty">No threads in this category yet.</div>'}`;
 }
 async function forumNewPage(cat) {
   if (!session) return (location.hash = '#/');
-  $('#view').innerHTML = `<span class="label">FORUM</span><div class="card pad" style="max-width:640px"><h3 class="ft">Thread baru</h3><div class="err" id="ferr"></div>
-    <label>Judul</label><input id="ftTitle" maxlength="100">
-    <label>Isi</label><textarea id="ftBody" style="height:120px"></textarea>
-    <div class="acts"><button class="btn" onclick="postThread('${cat}')">Posting</button><button class="btn alt" onclick="location.hash='#/forum/cat/${cat}'">Batal</button></div></div>`;
+  $('#view').innerHTML = `<span class="label">FORUM</span><div class="card pad" style="max-width:640px"><h3 class="ft">New thread</h3><div class="err" id="ferr"></div>
+    <label>Title</label><input id="ftTitle" maxlength="100">
+    <label>Body</label><textarea id="ftBody" style="height:120px"></textarea>
+    <div class="acts"><button class="btn" onclick="postThread('${cat}')">Post</button><button class="btn alt" onclick="location.hash='#/forum/cat/${cat}'">Cancel</button></div></div>`;
 }
 async function postThread(cat) {
   const r = await rq('POST', '/api/forum/cat/' + cat, { title: $('#ftTitle').value, body: $('#ftBody').value });
-  if (!r.ok) return ($('#ferr').textContent = r.data.error || 'Gagal membuat thread');
+  if (!r.ok) return ($('#ferr').textContent = r.data.error || 'Failed to create thread');
   location.hash = '#/forum/thread/' + r.data.id;
 }
 async function forumThreadPage(id) {
   const t = await gj('/api/forum/thread/' + id);
   if (!$('#view')) return;
   if (!t) return (location.hash = '#/forum');
-  const post = (p, own) => `<div class="post"><div class="pa">${avatar(p.author, 48)}<b style="color:var(--link);font-size:13px;word-break:break-word">${E(p.author.name)}</b><small style="color:var(--dim)">${ago(p.ts)}</small>${own ? `<button class="x" style="margin-top:4px" onclick="delPost('${id}','${p.id}')">Hapus</button>` : ''}</div><div class="pb"><div class="ptext">${E(p.body)}</div></div></div>`;
+  const post = (p, own) => `<div class="post"><div class="pa">${avatar(p.author, 48)}<b style="color:var(--link);font-size:13px;word-break:break-word">${E(p.author.name)}</b><small style="color:var(--dim)">${ago(p.ts)}</small>${own ? `<button class="x" style="margin-top:4px" onclick="delPost('${id}','${p.id}')">Delete</button>` : ''}</div><div class="pb"><div class="ptext">${E(p.body)}</div></div></div>`;
   $('#view').innerHTML = `<div class="crumb"><a href="#/forum">Forum</a> &gt; <a href="#/forum/cat/${t.category.id}">${E(t.category.name)}</a></div>
-    <div class="fhead"><h1 class="ftitle" style="word-break:break-word">${E(t.title)}</h1>${t.own ? `<button class="x" onclick="delThread('${id}')">Hapus thread</button>` : ''}</div>
+    <div class="fhead"><h1 class="ftitle" style="word-break:break-word">${E(t.title)}</h1>${t.own ? `<button class="x" onclick="delThread('${id}')">Delete thread</button>` : ''}</div>
     ${post({ author: t.author, body: t.body, ts: t.ts }, false)}
-    <h3 class="sec">${t.replies} BALASAN</h3>
-    ${t.posts.map(p => post(p, p.own)).join('') || '<div class="empty">Belum ada balasan.</div>'}
-    ${session ? `<div class="card pad" style="margin-top:14px"><label>Balas</label><textarea id="frBody" style="height:90px"></textarea><div class="acts"><button class="btn" onclick="replyThread('${id}')">Kirim</button></div></div>` : '<div class="hint" style="margin-top:14px">Masuk untuk membalas thread ini.</div>'}`;
+    <h3 class="sec">${t.replies} REPLIES</h3>
+    ${t.posts.map(p => post(p, p.own)).join('') || '<div class="empty">No replies yet.</div>'}
+    ${session ? `<div class="card pad" style="margin-top:14px"><label>Reply</label><textarea id="frBody" style="height:90px"></textarea><div class="acts"><button class="btn" onclick="replyThread('${id}')">Send</button></div></div>` : '<div class="hint" style="margin-top:14px">Sign in to reply to this thread.</div>'}`;
 }
-async function replyThread(id) { const r = await rq('POST', '/api/forum/thread/' + id + '/reply', { body: $('#frBody').value }); if (!r.ok) return toast(r.data.error || 'Gagal membalas'); forumThreadPage(id); }
+async function replyThread(id) { const r = await rq('POST', '/api/forum/thread/' + id + '/reply', { body: $('#frBody').value }); if (!r.ok) return toast(r.data.error || 'Failed to reply'); forumThreadPage(id); }
 async function delPost(tid, pid) { await rq('DELETE', `/api/forum/thread/${tid}/post/${pid}`); forumThreadPage(tid); }
-async function delThread(tid) { if (!confirm('Hapus thread ini?')) return; await rq('DELETE', '/api/forum/thread/' + tid); location.hash = '#/forum'; }
-async function forumMinePage() { if (!session) return (location.hash = '#/'); const list = await gj('/api/forum/mine'); if (!$('#view')) return; threadList('Thread saya', list || [], true); }
+async function delThread(tid) { if (!confirm('Delete this thread?')) return; await rq('DELETE', '/api/forum/thread/' + tid); location.hash = '#/forum'; }
+async function forumMinePage() { if (!session) return (location.hash = '#/'); const list = await gj('/api/forum/mine'); if (!$('#view')) return; threadList('My threads', list || [], true); }
 
 /* ---------- Developer Portal ---------- */
 const MAXP = 300;
 let ED = null, EDsel = 0;
 async function devPage() {
   if (!session) {
-    $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="notice"><b style="color:var(--strong);font-size:18px">Jadilah Developer di Voxely</b>
-      <small>Buat game sendiri dengan Voxely Studio, pasang label Beta / Alpha / WIP, tulis changelog, dan pantau statistiknya.</small>
-      <div class="acts" style="justify-content:center;margin-top:14px"><button class="btn" onclick="$('#login').classList.add('on')">Masuk dulu</button></div></div>`;
+    $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="notice"><b style="color:var(--strong);font-size:18px">Become a Developer on Voxely</b>
+      <small>Create your own games with Voxely Studio, add Beta / Alpha / WIP labels, write changelogs, and track their stats.</small>
+      <div class="acts" style="justify-content:center;margin-top:14px"><button class="btn" onclick="$('#login').classList.add('on')">Sign in first</button></div></div>`;
     return;
   }
   const mine = Object.entries(games).filter(([, g]) => g.mine);
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
-    <div class="fhead"><h1 class="ftitle">Game saya</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Buat Game Baru</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Kelola Badge</button></div></div>
-    <div class="hint">Kamu bisa membuat maksimal 5 game. Susun world-nya di Voxely Studio, pasang label rilis (WIP / ALPHA / BETA), lalu catat setiap update di changelog supaya pemain tahu apa yang baru.</div>
-    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b><small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} kunjungan · ${(g.changelog || []).length} catatan update</small><div class="acts"><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Edit</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Statistik</button><button class="x" onclick="delGame('${id}')">Hapus</button></div></div></div></div>`).join('') : '<div class="empty">Belum punya game. Klik "Buat Game Baru" untuk mulai!</div>'}`;
+    <div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
+    <div class="hint">You can create up to 5 games. Build the world in Voxely Studio, set a release label (WIP / ALPHA / BETA), then log every update in the changelog so players know what's new.</div>
+    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b><small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Edit</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
 }
-async function delGame(id) { if (!confirm('Hapus game ini permanen?')) return; await rq('DELETE', '/api/games/' + id); await loadGames(); devPage(); toast('Game dihapus'); }
+async function delGame(id) { if (!confirm('Delete this game permanently?')) return; await rq('DELETE', '/api/games/' + id); await loadGames(); devPage(); toast('Game deleted'); }
 
 async function editPage(id) {
   if (!session) return (location.hash = '#/');
@@ -832,39 +957,39 @@ async function editPage(id) {
 }
 function renderEditor() {
   const isNew = !ED.id;
-  $('#view').innerHTML = `<span class="label">VOXELY STUDIO</span><div class="fhead"><h1 class="ftitle">${isNew ? 'Buat game baru' : 'Edit game'}</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="saveGameEd()">💾 Simpan</button><button class="btn sm alt" onclick="location.hash='#/dev'">Batal</button></div></div>
-  <div class="card pad"><h3 class="ft">1 · Info game</h3>
+  $('#view').innerHTML = `<span class="label">VOXELY STUDIO</span><div class="fhead"><h1 class="ftitle">${isNew ? 'Create new game' : 'Edit game'}</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="saveGameEd()">💾 Save</button><button class="btn sm alt" onclick="location.hash='#/dev'">Cancel</button></div></div>
+  <div class="card pad"><h3 class="ft">1 · Game info</h3>
     <div class="row2">
-      <div><label>Judul</label><input id="edTitle" maxlength="30" value="${E(ED.title)}"></div>
-      <div><label>Label rilis</label><select id="edStatus">
-        <option value="" ${ED.status === '' ? 'selected' : ''}>— Tanpa label —</option>
+      <div><label>Title</label><input id="edTitle" maxlength="30" value="${E(ED.title)}"></div>
+      <div><label>Release label</label><select id="edStatus">
+        <option value="" ${ED.status === '' ? 'selected' : ''}>— No label —</option>
         <option value="wip" ${ED.status === 'wip' ? 'selected' : ''}>WIP · Work in Progress</option>
-        <option value="alpha" ${ED.status === 'alpha' ? 'selected' : ''}>ALPHA · uji coba awal</option>
-        <option value="beta" ${ED.status === 'beta' ? 'selected' : ''}>BETA · hampir selesai</option>
+        <option value="alpha" ${ED.status === 'alpha' ? 'selected' : ''}>ALPHA · early testing</option>
+        <option value="beta" ${ED.status === 'beta' ? 'selected' : ''}>BETA · almost finished</option>
       </select></div>
       <div><label>Tagline</label><input id="edTag" maxlength="60" value="${E(ED.tagline)}"></div>
-      <div><label>Tags (pisah koma, maks 3)</label><input id="edTags" value="${E((ED.tags || []).join(', '))}"></div>
-      <div><label>Warna langit</label><input type="color" id="edSky" value="${ED.sky}"></div>
-      <div><label>Warna kartu (2)</label><div style="display:flex;gap:8px"><input type="color" id="edArt1" value="${ED.art[0]}" style="flex:1"><input type="color" id="edArt2" value="${ED.art[1]}" style="flex:1"></div></div>
+      <div><label>Tags (comma separated, max 3)</label><input id="edTags" value="${E((ED.tags || []).join(', '))}"></div>
+      <div><label>Sky color</label><input type="color" id="edSky" value="${ED.sky}"></div>
+      <div><label>Card colors (2)</label><div style="display:flex;gap:8px"><input type="color" id="edArt1" value="${ED.art[0]}" style="flex:1"><input type="color" id="edArt2" value="${ED.art[1]}" style="flex:1"></div></div>
     </div>
-    <label>Deskripsi</label><textarea id="edDesc">${E(ED.desc)}</textarea>
-    <div class="shirt-upload"><button class="btn sm alt" onclick="edThumb()">Upload thumbnail</button>${ED.hasThumb || ED.thumb ? '<small style="color:#22c55e">Thumbnail terpasang</small>' : '<small style="color:var(--dim)">Opsional — dipakai di beranda &amp; carousel</small>'}</div>
+    <label>Description</label><textarea id="edDesc">${E(ED.desc)}</textarea>
+    <div class="shirt-upload"><button class="btn sm alt" onclick="edThumb()">Upload thumbnail</button>${ED.hasThumb || ED.thumb ? '<small style="color:#22c55e">Thumbnail attached</small>' : '<small style="color:var(--dim)">Optional — used on the home page &amp; carousel</small>'}</div>
   </div>
-  <div class="card pad" style="margin-top:14px"><h3 class="ft">2 · Susun world</h3>
-    <div class="tools"><button class="btn sm" onclick="edAdd()">＋ Platform</button><button class="btn sm alt" onclick="edDup()">Duplikat</button><button class="btn sm alt" onclick="edDel()">Hapus terpilih</button><small style="color:var(--dim)"><span class="num">${ED.boxes.length}</span> part · drag di kanvas (tampak atas) untuk memindah · S = spawn, ☠ = kill, ≡ = tangga</small></div>
+  <div class="card pad" style="margin-top:14px"><h3 class="ft">2 · Build the world</h3>
+    <div class="tools"><button class="btn sm" onclick="edAdd()">＋ Platform</button><button class="btn sm alt" onclick="edDup()">Duplicate</button><button class="btn sm alt" onclick="edDel()">Delete selected</button><small style="color:var(--dim)"><span class="num">${ED.boxes.length}</span> parts · drag on the canvas (top view) to move · S = spawn, ☠ = kill, ≡ = stairs</small></div>
     <canvas id="cv" height="420"></canvas>
     <div class="selp" id="selp2"></div>
     <div id="partsList" style="margin-top:10px"></div>
   </div>
   <div class="card pad" style="margin-top:14px"><h3 class="ft">3 · Preview &amp; scripts</h3>
     <canvas id="pv" height="300"></canvas>
-    <div class="tools" style="margin-top:10px"><button class="btn sm" onclick="edAddScript()">＋ Script</button><small style="color:var(--dim)">Maks 8 script · API: player, game, ui, net, parts, wait, console</small></div>
+    <div class="tools" style="margin-top:10px"><button class="btn sm" onclick="edAddScript()">＋ Script</button><small style="color:var(--dim)">Max 8 scripts · API: player, game, ui, net, parts, wait, console</small></div>
     <div id="scriptList"></div>
   </div>
-  <div class="acts" style="margin:14px 0 40px"><button class="btn" onclick="saveGameEd()">💾 Simpan game</button></div>`;
+  <div class="acts" style="margin:14px 0 40px"><button class="btn" onclick="saveGameEd()">💾 Save game</button></div>`;
   renderParts(); renderSelp(); renderScripts(); drawCv(); drawPv(); bindCv();
 }
-function edThumb() { pickImage(460, 215, d => { ED.thumb = d; toast('Thumbnail siap — jangan lupa klik Simpan'); }); }
+function edThumb() { pickImage(460, 215, d => { ED.thumb = d; toast('Thumbnail ready — don’t forget to click Save'); }); }
 function renderParts() {
   const el = $('#partsList'); if (!el) return;
   el.innerHTML = ED.boxes.map((b, i) => `<div class="mrow" style="cursor:pointer;background:${i === EDsel ? 'var(--hover)' : 'transparent'}" onclick="EDsel=${i};renderParts();renderSelp();drawCv()"><input type="color" value="${b.c}" style="width:40px;height:30px;padding:2px;background:var(--input);border:1px solid var(--line)" oninput="event.stopPropagation();ED.boxes[${i}].c=this.value;drawCv();drawPv()"><span style="flex:1;min-width:0;font-size:12px;color:var(--soft)">${E(b.n || 'Part')} <small style="color:var(--dim)" class="num">· ${b.x}, ${b.y}, ${b.z} · ${b.w}x${b.h}x${b.d}</small>${b.sp ? ' <b style="color:var(--link)">SP</b>' : ''}${b.k ? ' <b style="color:#ff5c6c">☠</b>' : ''}${b.l ? ' <b style="color:#22c55e">≡</b>' : ''}</span><button class="x" onclick="event.stopPropagation();EDsel=${i};edDel()">✕</button></div>`).join('');
@@ -872,19 +997,19 @@ function renderParts() {
 function renderSelp() {
   const el = $('#selp2'); if (!el) return;
   const b = ED.boxes[EDsel];
-  if (!b) { el.innerHTML = '<div class="empty" style="padding:4px 0">Klik sebuah platform di kanvas untuk mengeditnya.</div>'; return; }
+  if (!b) { el.innerHTML = '<div class="empty" style="padding:4px 0">Click a platform on the canvas to edit it.</div>'; return; }
   const N = (k, v, step, extra) => `<input id="ps_${k}" type="number" step="${step || 0.5}" value="${v}" ${extra || ''} oninput="edNum('${k}',this.value)">`;
   el.innerHTML = `<div class="row2">
-    <div><label>Nama</label><input value="${E(b.n || '')}" maxlength="30" oninput="ED.boxes[${EDsel}].n=this.value;renderParts()"></div>
-    <div><label>Warna</label><input type="color" value="${b.c}" oninput="ED.boxes[${EDsel}].c=this.value;drawCv();drawPv();renderParts()"></div>
-    <div><label>Posisi X</label>${N('x', b.x)}</div><div><label>Posisi Z</label>${N('z', b.z)}</div>
-    <div><label>Tinggi (posisi Y)</label>${N('y', b.y)}</div><div><label>Tebal (H)</label>${N('h', b.h)}</div>
-    <div><label>Panjang (W)</label>${N('w', b.w)}</div><div><label>Lebar (D)</label>${N('d', b.d)}</div>
-    <div><label>Rotasi (°)</label>${N('r', b.r || 0, 15)}</div><div><label>Transparansi (0–0.95)</label>${N('t', b.t || 0, 0.05)}</div></div>
-    <div class="chk"><input type="checkbox" ${b.l ? 'checked' : ''} onchange="edFlag('l',this.checked)"> Tangga (bisa dipanjat)</div>
-    <div class="chk"><input type="checkbox" ${b.k ? 'checked' : ''} onchange="edFlag('k',this.checked)"> Kill brick (respawn saat disentuh)</div>
-    <div class="chk"><input type="checkbox" ${b.sp ? 'checked' : ''} onchange="edFlag('sp',this.checked)"> Titik spawn pemain</div>
-    <div class="chk"><input type="checkbox" ${b.cc === 0 ? '' : 'checked'} onchange="edFlag('cc',this.checked)"> Bisa ditabrak (collider)</div>`;
+    <div><label>Name</label><input value="${E(b.n || '')}" maxlength="30" oninput="ED.boxes[${EDsel}].n=this.value;renderParts()"></div>
+    <div><label>Color</label><input type="color" value="${b.c}" oninput="ED.boxes[${EDsel}].c=this.value;drawCv();drawPv();renderParts()"></div>
+    <div><label>Position X</label>${N('x', b.x)}</div><div><label>Position Z</label>${N('z', b.z)}</div>
+    <div><label>Height (Y position)</label>${N('y', b.y)}</div><div><label>Thickness (H)</label>${N('h', b.h)}</div>
+    <div><label>Length (W)</label>${N('w', b.w)}</div><div><label>Width (D)</label>${N('d', b.d)}</div>
+    <div><label>Rotation (°)</label>${N('r', b.r || 0, 15)}</div><div><label>Transparency (0–0.95)</label>${N('t', b.t || 0, 0.05)}</div></div>
+    <div class="chk"><input type="checkbox" ${b.l ? 'checked' : ''} onchange="edFlag('l',this.checked)"> Stairs (climbable)</div>
+    <div class="chk"><input type="checkbox" ${b.k ? 'checked' : ''} onchange="edFlag('k',this.checked)"> Kill brick (respawns on touch)</div>
+    <div class="chk"><input type="checkbox" ${b.sp ? 'checked' : ''} onchange="edFlag('sp',this.checked)"> Player spawn point</div>
+    <div class="chk"><input type="checkbox" ${b.cc === 0 ? '' : 'checked'} onchange="edFlag('cc',this.checked)"> Collidable (collider)</div>`;
 }
 function edNum(k, v) {
   const b = ED.boxes[EDsel]; if (!b) return;
@@ -900,16 +1025,16 @@ function edFlag(k, v) {
   renderParts(); drawCv(); drawPv();
 }
 function edAdd() {
-  if (ED.boxes.length >= MAXP) return toast('Maksimal ' + MAXP + ' platform');
+  if (ED.boxes.length >= MAXP) return toast('Max ' + MAXP + ' platforms');
   ED.boxes.push({ x: 0, y: 1, z: 0, w: 4, h: 1, d: 4, c: '#e0a040', n: 'Part' + (ED.boxes.length + 1), l: 0, r: 0, t: 0, cc: 1, k: 0, sp: 0 });
   EDsel = ED.boxes.length - 1; renderParts(); renderSelp(); drawCv(); drawPv();
 }
 function edDel() {
-  if (ED.boxes.length <= 1) return toast('Minimal harus ada 1 platform');
+  if (ED.boxes.length <= 1) return toast('At least 1 platform is required');
   ED.boxes.splice(EDsel, 1); EDsel = 0; renderParts(); renderSelp(); drawCv(); drawPv();
 }
 function edDup() {
-  if (ED.boxes.length >= MAXP) return toast('Maksimal ' + MAXP + ' platform');
+  if (ED.boxes.length >= MAXP) return toast('Max ' + MAXP + ' platforms');
   const b = { ...ED.boxes[EDsel] }; b.x += (b.w || 4) + 1; b.n = (b.n || 'Part') + ' copy'; b.sp = 0;
   ED.boxes.push(b); EDsel = ED.boxes.length - 1; renderParts(); renderSelp(); drawCv(); drawPv();
 }
@@ -980,8 +1105,8 @@ function renderScripts() {
   el.innerHTML = ED.scripts.map((s, i) => `<div class="card pad" style="margin-top:8px;background:var(--input)"><div class="tools"><input value="${E(s.name)}" oninput="ED.scripts[${i}].name=this.value" style="flex:1;background:var(--panel);border:1px solid var(--line);color:var(--strong);padding:7px;font:inherit"><button class="x" onclick="ED.scripts.splice(${i},1);renderScripts()">✕</button></div><textarea style="width:100%;height:110px;background:var(--panel);border:1px solid var(--line);color:var(--strong);padding:8px;font:12px monospace" oninput="ED.scripts[${i}].code=this.value">${E(s.code)}</textarea></div>`).join('');
 }
 function edAddScript() {
-  if (ED.scripts.length >= 8) return toast('Maksimal 8 script');
-  ED.scripts.push({ name: 'Script' + (ED.scripts.length + 1), code: '// Contoh: platform melayang\n// const p = part("Part2");\n// game.onTick(() => { p.position.y = 2 + Math.sin(game.time()) * 2; });\n' });
+  if (ED.scripts.length >= 8) return toast('Max 8 scripts');
+  ED.scripts.push({ name: 'Script' + (ED.scripts.length + 1), code: '// Example: floating platform\n// const p = part("Part2");\n// game.onTick(() => { p.position.y = 2 + Math.sin(game.time()) * 2; });\n' });
   renderScripts();
 }
 async function saveGameEd() {
@@ -995,10 +1120,10 @@ async function saveGameEd() {
   };
   if (ED.thumb) b.thumb = ED.thumb;
   const r = ED.id ? await rq('PUT', '/api/games/' + ED.id, b) : await rq('POST', '/api/games', b);
-  if (!r.ok) return toast(r.data.error || 'Gagal menyimpan game');
+  if (!r.ok) return toast(r.data.error || 'Failed to save game');
   if (!ED.id) ED.id = r.data.id;
   await loadGames();
-  toast('Game tersimpan');
+  toast('Game saved');
   location.hash = '#/dev';
 }
 
@@ -1011,19 +1136,19 @@ async function changelogPage(id) {
   renderChangelog(id, src.title, src.changelog || []);
 }
 function renderChangelog(id, title, list) {
-  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Changelog — ${E(title)}</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Kembali</button></div>
-    <div class="hint">Setiap entri langsung tampil di halaman game. Pemain melihatnya di bagian "Changelog" tepat di bawah deskripsi game.</div>
-    <div class="card pad" style="max-width:640px"><h3 class="ft">Tambah update</h3><div class="err" id="clerr"></div>
-      <label>Versi (misal v1.1)</label><input id="clVer" maxlength="10" placeholder="v1.0">
-      <label>Apa yang baru?</label><textarea id="clText" placeholder="Contoh: Menambah 3 checkpoint baru dan memperbaiki bug lompatan."></textarea>
-      <div class="acts"><button class="btn" onclick="addChangelog('${id}')">Tambah ke changelog</button></div></div>
-    <h3 class="sec">RIWAYAT UPDATE (${list.length})</h3>
-    ${list.length ? list.map(e => `<div class="mrow"><b style="color:var(--link);min-width:56px" class="num">${E(e.ver)}</b><div style="flex:1;min-width:0"><span style="color:var(--soft)">${E(e.text)}</span><small style="display:block;color:var(--dim)">${dateStr(e.ts)}</small></div><button class="x" onclick="delChangelog('${id}','${e.id}')">Hapus</button></div>`).join('') : '<div class="empty">Belum ada update tercatat. Tambahkan entri pertama di form atas!</div>'}`;
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Changelog — ${E(title)}</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div>
+    <div class="hint">Every entry appears instantly on the game page. Players see it in the "Changelog" section right below the game description.</div>
+    <div class="card pad" style="max-width:640px"><h3 class="ft">Add update</h3><div class="err" id="clerr"></div>
+      <label>Version (e.g. v1.1)</label><input id="clVer" maxlength="10" placeholder="v1.0">
+      <label>What’s new?</label><textarea id="clText" placeholder="Example: Added 3 new checkpoints and fixed a jumping bug."></textarea>
+      <div class="acts"><button class="btn" onclick="addChangelog('${id}')">Add to changelog</button></div></div>
+    <h3 class="sec">UPDATE HISTORY (${list.length})</h3>
+    ${list.length ? list.map(e => `<div class="mrow"><b style="color:var(--link);min-width:56px" class="num">${E(e.ver)}</b><div style="flex:1;min-width:0"><span style="color:var(--soft)">${E(e.text)}</span><small style="display:block;color:var(--dim)">${dateStr(e.ts)}</small></div><button class="x" onclick="delChangelog('${id}','${e.id}')">Delete</button></div>`).join('') : '<div class="empty">No updates recorded yet. Add the first entry with the form above!</div>'}`;
 }
 async function addChangelog(id) {
   const r = await rq('POST', '/api/games/' + id + '/changelog', { ver: $('#clVer').value, text: $('#clText').value });
-  if (!r.ok) return ($('#clerr').textContent = r.data.error || 'Gagal menambah changelog');
-  toast('Changelog ditambahkan'); await loadGames();
+  if (!r.ok) return ($('#clerr').textContent = r.data.error || 'Failed to add changelog');
+  toast('Changelog added'); await loadGames();
   renderChangelog(id, games.find(g => g.id === id)?.title || '', r.data.changelog || []);
 }
 async function delChangelog(id, cid) { await rq('DELETE', `/api/games/${id}/changelog/${cid}`); await loadGames(); changelogPage(id); }
@@ -1036,17 +1161,17 @@ async function statsPage(id) {
   const g = games.find(x => x.id === id);
   const mmss = v => Math.floor(v / 60) + 'm ' + (v % 60) + 's';
   const mx = Math.max(1, ...(s.daily || []).map(d => d.n));
-  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Statistik — ${E(g?.title || 'Game')}</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Kembali</button></div>
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Stats — ${E(g?.title || 'Game')}</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div>
     <div class="stgrid">
-      <div class="stc"><b class="num">${s.visits}</b><small>KUNJUNGAN</small></div>
-      <div class="stc"><b class="num">${s.unique}</b><small>Pemain unik</small></div>
-      <div class="stc"><b class="num">${s.online}</b><small>Online sekarang</small></div>
-      <div class="stc"><b class="num">${s.peak}</b><small>Puncak online</small></div>
-      <div class="stc"><b class="num">${mmss(s.avg)}</b><small>Rata-rata main</small></div>
-      <div class="stc"><b class="num">${s.servers}</b><small>Server aktif</small></div>
-      <div class="stc"><b class="num">${s.reviews}</b><small>Review (${s.up} 👍)</small></div>
+      <div class="stc"><b class="num">${s.visits}</b><small>VISITS</small></div>
+      <div class="stc"><b class="num">${s.unique}</b><small>Unique players</small></div>
+      <div class="stc"><b class="num">${s.online}</b><small>Online now</small></div>
+      <div class="stc"><b class="num">${s.peak}</b><small>Peak online</small></div>
+      <div class="stc"><b class="num">${mmss(s.avg)}</b><small>Avg. playtime</small></div>
+      <div class="stc"><b class="num">${s.servers}</b><small>Active servers</small></div>
+      <div class="stc"><b class="num">${s.reviews}</b><small>Reviews (${s.up} 👍)</small></div>
     </div>
-    <h3 class="sec">KUNJUNGAN 14 HARI TERAKHIR</h3>
+    <h3 class="sec">VISITS — LAST 14 DAYS</h3>
     <div class="card pad"><div class="chart">${(s.daily || []).map(d => `<div class="cb"><i style="height:${Math.round(100 * d.n / mx)}%"></i>${d.n}</div>`).join('')}</div></div>`;
 }
 
@@ -1056,36 +1181,37 @@ async function badgesPage() {
   const d = await gj('/api/badges');
   if (!$('#view')) return;
   const list = d?.badges || [];
-  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Badge</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Kembali</button></div>
-    <div class="hint">Badge dipakai untuk menghargai pemain. Membuat badge hanya untuk akun Google terverifikasi; pemain yang dapat badge memamerkannya di profilnya.</div>
-    <div class="badge-form" style="max-width:520px"><h3 class="ft">Buat badge baru</h3><div class="err" id="berr"></div>
-      <label>Nama</label><input id="bdName" maxlength="40" placeholder="Contoh: Champion Obby">
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Badges</h1><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div>
+    <div class="hint">Badges are a way to reward players. Creating badges is limited to verified Google accounts; players who earn them show them off on their profile.</div>
+    <div class="badge-form" style="max-width:520px"><h3 class="ft">Create new badge</h3><div class="err" id="berr"></div>
+      <label>Name</label><input id="bdName" maxlength="40" placeholder="Contoh: Champion Obby">
       <label>Icon (emoji)</label><input id="bdIcon" maxlength="4" placeholder="🏆">
-      <label>Warna</label><input type="color" id="bdColor" value="#ffd700">
-      <label>Deskripsi</label><textarea id="bdDesc" maxlength="200"></textarea>
-      <div class="acts"><button class="btn" onclick="createBadge()">Buat badge</button></div></div>
-    <h3 class="sec">SEMUA BADGE (${list.length})</h3>
-    ${list.length ? `<div class="badge-grid">${list.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span><div class="acts" style="justify-content:center;margin-top:6px">${b.createdBy === session.user.uid ? `<button class="x" onclick="delBadge('${b.id}')">Hapus</button>` : ''}</div></div>`).join('')}</div>` : '<div class="empty">Belum ada badge.</div>'}
-    <div class="card pad" style="max-width:520px;margin-top:14px"><h3 class="ft">Beri badge ke pemain</h3><div class="err" id="baerr"></div>
+      <label>Color</label><input type="color" id="bdColor" value="#ffd700">
+      <label>Description</label><textarea id="bdDesc" maxlength="200"></textarea>
+      <div class="acts"><button class="btn" onclick="createBadge()">Create badge</button></div></div>
+    <h3 class="sec">ALL BADGES (${list.length})</h3>
+    ${list.length ? `<div class="badge-grid">${list.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span><div class="acts" style="justify-content:center;margin-top:6px">${b.createdBy === session.user.uid ? `<button class="x" onclick="delBadge('${b.id}')">Delete</button>` : ''}</div></div>`).join('')}</div>` : '<div class="empty">No badges yet.</div>'}
+    <div class="card pad" style="max-width:520px;margin-top:14px"><h3 class="ft">Give a badge to a player</h3><div class="err" id="baerr"></div>
       <label>Badge</label><select id="bdSel">${list.map(b => `<option value="${b.id}">${E(b.name)}</option>`).join('')}</select>
-      <label>UID pemain</label><input id="bdUid" placeholder="uid pemain (lihat di halaman profilnya)">
-      <div class="acts"><button class="btn" onclick="awardBadge()">Beri badge</button></div></div>`;
+      <label>Player UID</label><input id="bdUid" placeholder="player UID (see their profile page)">
+      <div class="acts"><button class="btn" onclick="awardBadge()">Give badge</button></div></div>`;
 }
 async function createBadge() {
   const r = await rq('POST', '/api/badges', { name: $('#bdName').value, icon: $('#bdIcon').value || '⭐', color: $('#bdColor').value, description: $('#bdDesc').value });
-  if (!r.ok) return ($('#berr').textContent = r.data.error || 'Gagal membuat badge');
-  toast('Badge dibuat'); badgesPage();
+  if (!r.ok) return ($('#berr').textContent = r.data.error || 'Failed to create badge');
+  toast('Badge created'); badgesPage();
 }
 async function delBadge(id) { await rq('DELETE', '/api/badges/' + id); badgesPage(); }
 async function awardBadge() {
   const r = await rq('POST', '/api/badges/' + $('#bdSel').value + '/award', { uid: $('#bdUid').value.trim() });
-  if (!r.ok) return ($('#baerr').textContent = r.data.error || 'Gagal memberi badge');
-  toast('Badge diberikan!');
+  if (!r.ok) return ($('#baerr').textContent = r.data.error || 'Failed to give badge');
+  toast('Badge awarded!');
 }
 
 /* ---------- router ---------- */
 function route() {
   clearInterval(timer); timer = null;
+  V3D.disposeAll(); // free the WebGL previews of the previous page
   const h = location.hash.replace(/^#\/?/, '');
   const p = h.split('/');
   ['nGames', 'nPeople', 'nForum', 'nAvatar', 'nMarket'].forEach(id => document.getElementById(id)?.classList.remove('on'));
@@ -1133,7 +1259,7 @@ async function googleLogin(at) {
   } catch (e) {}
 }
 $('#googleBtn').onclick = async () => {
-  if (!sb) return ($('#loginErr').textContent = 'Google login belum dikonfigurasi di server');
+  if (!sb) return ($('#loginErr').textContent = 'Google login is not configured on the server yet');
   const { error } = await sb.auth.signInWithOAuth({ provider: 'google' });
   if (error) $('#loginErr').textContent = error.message;
 };
@@ -1150,7 +1276,7 @@ async function pollNotifs() {
   if (sb) { try { const { data } = await sb.auth.getSession(); if (data?.session && !session) await googleLogin(data.session.access_token); } catch (e) {} }
   if (session) { syncOutfit(); pollNotifs(); }
   try { await loadGames(); } catch (e) { games = []; }
-  if (!games.length) $('#view').innerHTML = '<div class="hint">Gagal memuat daftar game. Pastikan Voxely server berjalan, lalu refresh halaman.</div>';
+  if (!games.length) $('#view').innerHTML = '<div class="hint">Failed to load the game list. Make sure the Voxely server is running, then refresh the page.</div>';
   else route();
   setInterval(() => { loadGames().catch(() => {}); if (session) pollNotifs(); }, 30000);
 })();
