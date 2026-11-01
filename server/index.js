@@ -82,13 +82,6 @@ const GAMES = {
     tags: ['Obby', 'Parkour', 'Multiplayer'], sky: '#1b2a49', art: ['#6b21a8', '#f97316'],
     spawn: [0, 2, 0],
     boxes: [B(0, -0.5, 0, 10, 1, 10, '#3b82f6'), B(0, 1, 11, 4, 1, 4, '#f97316'), B(5, 2.5, 17, 4, 1, 4, '#eab308'), B(11, 4, 20, 4, 1, 4, '#22c55e'), B(17, 5.5, 14, 3, 1, 3, '#ec4899'), B(20, 7, 7, 3, 1, 3, '#8b5cf6'), B(20, 8.5, -1, 8, 1, 8, '#ffffff')]
-  },
-  hills: {
-    title: 'Candy Hills', tagline: 'Climb the sweetest staircase.',
-    desc: 'Colorful stairs and hills made of candy blocks. Race your friends to the summit.',
-    tags: ['Casual', 'Climbing', 'Multiplayer'], sky: '#ffd6e8', art: ['#db2777', '#fcd34d'],
-    spawn: [0, 2, -10],
-    boxes: [B(0, -0.5, 0, 60, 1, 60, '#f9a8d4'), ...Array.from({ length: 10 }, (_, i) => B(0, i * 0.8 + 0.4, i * 3, 8, 0.8, 3, i % 2 ? '#a7f3d0' : '#fde68a'))]
   }
 };
 // ---------- Servers (instances): every game can run several rooms ----------
@@ -115,6 +108,7 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
+app.use((req, res, next) => { const u = sessions.get((req.headers.authorization || '').replace('Bearer ', '')); if (u) { u.joined = u.joined || Date.now(); u.lastSeen = Date.now(); } next(); });
 app.use(express.json({ limit: '1mb' }));
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
@@ -199,7 +193,7 @@ const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.d
 app.get('/api/games', (req, res) => res.json(Object.entries(GAMES).map(([id, g]) => pub(id, g, bearer(req)))));
 
 app.get('/api/people', (_req, res) => {
-  const list = [...sessions.values()].map(u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null }));
+  const list = [...new Set(sessions.values())].map(u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null }));
   list.sort((a, b) => !!b.game - !!a.game);
   res.json(list.slice(0, 200));
 });
@@ -243,7 +237,7 @@ app.post('/api/games', (req, res) => {
   if (!user) return res.sendStatus(401);
   const b = req.body || {};
   const all = Object.values(GAMES).filter(g => g.ownerUid);
-  if (all.filter(g => g.ownerUid === user.uid).length >= 5) return res.status(400).json({ error: 'Maksimal 5 game per akun' });
+  if (all.filter(g => g.ownerUid === user.uid).length >= 5) return res.status(400).json({ error: 'You can create up to 5 games per account' });
   if (all.length >= 50) return res.status(400).json({ error: 'Server is full, try again later' });
   const built = buildGame(b);
   if (built.error) return res.status(400).json({ error: built.error });
@@ -416,7 +410,7 @@ app.post('/api/forum/cat/:cat', (req, res) => {
 });
 app.get('/api/forum/thread/:id', (req, res) => {
   const t = threads.find(x => x.id === req.params.id); if (!t) return res.sendStatus(404);
-  t.views++;
+  if (!req.query.nv) t.views++;
   const users = uidMap(), me = meOf(req);
   res.json({ ...item(users, t), category: CATS.find(c => c.id === t.cat), body: t.body, own: me?.uid === t.uid,
     posts: t.posts.map(p => ({ id: p.id, body: p.body, ts: p.ts, own: me?.uid === p.uid, author: author(users, p.uid, p.name) })) });
@@ -463,7 +457,7 @@ app.get('/api/users/:uid', (req, res) => {
   const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
   const me = sessions.get(bearer(req));
   const userBadges = getUserBadges(u.uid);
-  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', followed: !!me?.following?.has(u.uid), friends: u.friends.size,
+  res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', followed: !!me?.following?.has(u.uid), friends: u.friends.size, joined: u.joined || null, lastSeen: u.lastSeen || null,
     games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))),
     badges: userBadges.slice(0, 10) }); // Show up to 10 badges in profile
 });
@@ -579,15 +573,13 @@ app.post('/api/badges/:id/award', (req, res) => {
   const badge = getBadgeDefinition(req.params.id);
   if (!badge) return res.sendStatus(404);
   
-  const targetUid = req.body?.uid;
-  const targetUser = uidMap().get(targetUid);
+  const key = String(req.body?.uid || '').trim(), allU = uidMap();
+  const targetUser = allU.get(key) || [...allU.values()].find(u => u.name.toLowerCase() === key.toLowerCase());
+  const targetUid = targetUser?.uid;
   
   if (!targetUser) return res.status(404).json({ error: 'User not found' });
   
-  // Only creator can award to others, or user can award to themselves
-  if (targetUid !== me.uid && badge.createdBy !== me.uid) {
-    return res.status(403).json({ error: 'This badge cannot be given' });
-  }
+  if (badge.createdBy !== me.uid) return res.status(403).json({ error: 'Only the badge creator can give this badge' });
   
   const success = awardBadge(targetUid, req.params.id);
   if (!success) return res.status(400).json({ error: 'User already has this badge' });
@@ -693,7 +685,15 @@ async function loadGames() {
   } catch (e) { console.error('load games failed:', e.message); }
 }
 
-app.get('/', (_req, res) => res.send('Voxely game server is running'));
+const fs = require('fs');
+const WEB = [path.join(__dirname, 'web'), path.join(__dirname, '..', 'web')].find(p => fs.existsSync(path.join(p, 'index.html'))) || __dirname;
+app.get('/config.js', (req, res, next) => {
+  if (WEB !== __dirname && fs.existsSync(path.join(WEB, 'config.js'))) return next();
+  const origin = (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host');
+  res.type('js').send('window.VOXELY=' + JSON.stringify({ server: origin, supabaseUrl: SUPA_URL, supabaseKey: SUPA_KEY, download: process.env.CLIENT_DOWNLOAD_URL || '' }) + ';');
+});
+app.get(['/', '/index.html'], (_req, res) => fs.existsSync(path.join(WEB, 'index.html')) ? res.sendFile(path.join(WEB, 'index.html')) : res.send('Voxely game server is running'));
+if (WEB !== __dirname) app.use(express.static(WEB, { index: false, dotfiles: 'ignore' }));
 
 // ---------- Multiplayer ----------
 io.use((socket, next) => {
@@ -740,7 +740,7 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     if (!inst) return;
     trackLeave(inst.game, (Date.now() - joinedAt) / 1000);
-    socket.user.game = null;
+    socket.user.game = null; socket.user.lastSeen = Date.now();
     inst.players.delete(socket.id);
     io.to(inst.id).emit('leave', socket.id);
     io.to(inst.id).emit('count', inst.players.size);
