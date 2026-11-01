@@ -9,28 +9,60 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-// ---------- Badge System (game badges) ----------
-// Each game owns its badges: g.badges = [{ id, name, description, icon, color, trigger, value, earned: { uid: timestamp } }]
-// trigger: 'join' (first join), 'playtime' (minutes played), 'touch' (touch a named part)
-const badgesOf = g => (g.badges = g.badges || []);
-const pubBadge = b => ({ id: b.id, name: b.name, description: b.description, icon: b.icon, color: b.color, trigger: b.trigger, value: b.value, earners: Object.keys(b.earned || {}).length });
-const earnedBadge = (g, b) => ({ id: b.id, name: b.name, description: b.description, icon: b.icon, color: b.color, gameTitle: g.title, game: g.id, earnedAt: b.earned });
-function awardGameBadge(g, b, uid) {
-  if (!g || !b || b.earned[uid]) return false;
-  b.earned[uid] = Date.now();
-  if (g.ownerUid) touchGame(g.id);
+// ---------- Badge System ----------
+const BADGES = new Map(); // badgeId -> badge definition
+const USER_BADGES = new Map(); // uid -> Set of badgeIds
+
+// Badge definition structure:
+// { id, name, description, icon (emoji or color), color, category, createdBy, createdAt, isHidden }
+
+// User badge structure:
+// { badgeId, earnedAt, expiresAt (optional) }
+
+function createBadge(definition, creator) {
+  const id = 'b' + crypto.randomBytes(4).toString('hex');
+  const badge = {
+    id,
+    name: String(definition.name || '').slice(0, 40),
+    description: String(definition.description || '').slice(0, 200),
+    icon: String(definition.icon || '⭐').slice(0, 10),
+    color: /^#[0-9a-f]{6}$/i.test(definition.color) ? definition.color : '#ffd700',
+    category: String(definition.category || 'general').slice(0, 30),
+    createdBy: creator.uid,
+    createdByName: creator.name,
+    createdAt: Date.now(),
+    isHidden: !!definition.isHidden
+  };
+  BADGES.set(id, badge);
+  return badge;
+}
+
+function awardBadge(uid, badgeId) {
+  if (!BADGES.has(badgeId)) return false;
+  if (!USER_BADGES.has(uid)) {
+    USER_BADGES.set(uid, new Map());
+  }
+  const userBadges = USER_BADGES.get(uid);
+  if (userBadges.has(badgeId)) return false; // Already has this badge
+  
+  userBadges.set(badgeId, { badgeId, earnedAt: Date.now() });
   return true;
 }
-function allGameBadges() {
-  const out = [];
-  Object.entries(GAMES).forEach(([gid, g]) => badgesOf(g).forEach(b => out.push({ ...pubBadge(b), gameTitle: g.title, game: gid })));
-  return out;
+
+function getUserBadges(uid) {
+  const userBadges = USER_BADGES.get(uid) || new Map();
+  return [...userBadges.values()].map(ub => {
+    const badge = BADGES.get(ub.badgeId);
+    return badge ? { ...badge, earnedAt: ub.earnedAt } : null;
+  }).filter(Boolean);
 }
-function userBadgesOf(uid) {
-  const out = [];
-  Object.values(GAMES).forEach(g => badgesOf(g).forEach(b => { if (b.earned[uid]) out.push(earnedBadge(g, { ...b, earned: b.earned[uid] })); }));
-  out.sort((a, b) => b.earnedAt - a.earnedAt);
-  return out;
+
+function getBadgeDefinition(badgeId) {
+  return BADGES.get(badgeId);
+}
+
+function listAllBadges() {
+  return [...BADGES.values()];
 }
 
 // ---------- Games (each one is just a list of boxes) ----------
@@ -50,6 +82,13 @@ const GAMES = {
     tags: ['Obby', 'Parkour', 'Multiplayer'], sky: '#1b2a49', art: ['#6b21a8', '#f97316'],
     spawn: [0, 2, 0],
     boxes: [B(0, -0.5, 0, 10, 1, 10, '#3b82f6'), B(0, 1, 11, 4, 1, 4, '#f97316'), B(5, 2.5, 17, 4, 1, 4, '#eab308'), B(11, 4, 20, 4, 1, 4, '#22c55e'), B(17, 5.5, 14, 3, 1, 3, '#ec4899'), B(20, 7, 7, 3, 1, 3, '#8b5cf6'), B(20, 8.5, -1, 8, 1, 8, '#ffffff')]
+  },
+  hills: {
+    title: 'Candy Hills', tagline: 'Climb the sweetest staircase.',
+    desc: 'Colorful stairs and hills made of candy blocks. Race your friends to the summit.',
+    tags: ['Casual', 'Climbing', 'Multiplayer'], sky: '#ffd6e8', art: ['#db2777', '#fcd34d'],
+    spawn: [0, 2, -10],
+    boxes: [B(0, -0.5, 0, 60, 1, 60, '#f9a8d4'), ...Array.from({ length: 10 }, (_, i) => B(0, i * 0.8 + 0.4, i * 3, 8, 0.8, 3, i % 2 ? '#a7f3d0' : '#fde68a'))]
   }
 };
 // ---------- Servers (instances): every game can run several rooms ----------
@@ -79,71 +118,10 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
-const now = () => Date.now();
-const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid, followers: u.followers?.size || 0, following: u.following?.size || 0, joined: u.createdAt || 0 });
-// keep track of the last time each logged-in user was seen (profile pages show "last online")
-app.use((req, res, next) => { const u = sessions.get((req.headers.authorization || '').replace('Bearer ', '')); if (u) u.lastSeen = now(); next(); });
+const pubUser = u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, google: !!u.gid, followers: u.followers?.size || 0, following: u.following?.size || 0 });
 const IMG = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/;
 const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) return null; const buf = Buffer.from(m[2], 'base64'); return buf.length && buf.length <= max ? { type: m[1], buf } : null; };
 const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
-
-// ---------- BUX economy: wallet, shop, inventory, transactions ----------
-// Everything is server-side: the client only asks to buy, the server checks the balance and ownership.
-const CURRENCY = 'BUX', START_BUX = 500, DAILY_BUX = 100, DAILY_MS = 24 * 3600 * 1000, MAX_TX = 100;
-const SHOP = [ // kind 'item' = avatar item (equip on the website), kind 'tool' = gear that shows up on the in-game hotbar
-  { id: 'hat-cap-blue', kind: 'item', name: 'Skyline Cap', price: 50 },
-  { id: 'hat-headphones', kind: 'item', name: 'Pulse Headphones', price: 120 },
-  { id: 'hat-crown-gold', kind: 'item', name: 'Starter Crown', price: 200 },
-  { id: 'face-cool', kind: 'item', name: 'Cool Face', price: 80 },
-  { id: 'face-wink', kind: 'item', name: 'Wink Face', price: 80 },
-  { id: 'skin-ocean', kind: 'item', name: 'Ocean Suit', price: 60 },
-  { id: 'skin-lime', kind: 'item', name: 'Lime Suit', price: 60 },
-  { id: 'bundle-noob', kind: 'item', name: 'Classic Noob Bundle', price: 150 },
-  { id: 'bundle-ninja', kind: 'item', name: 'Midnight Ninja Bundle', price: 250 },
-  { id: 'tool-sword', kind: 'tool', name: 'Sword', price: 150, icon: '🗡️', desc: 'A sturdy blade. Game scripts decide what it does.' },
-  { id: 'tool-pistol', kind: 'tool', name: 'Pistol', price: 300, icon: '🔫', desc: 'A ranged sidearm for shooter-style games.' },
-  { id: 'tool-medkit', kind: 'tool', name: 'Medkit', price: 75, icon: '➕', desc: 'Patch yourself up in games that support healing.' },
-  { id: 'tool-flashlight', kind: 'tool', name: 'Flashlight', price: 100, icon: '🔦', desc: 'Light the way through dark places.' },
-  { id: 'tool-grapple', kind: 'tool', name: 'Grappling Hook', price: 250, icon: '🪝', desc: 'Swing and climb to hard-to-reach spots.' }
-];
-const shopItem = id => SHOP.find(x => x.id === id);
-function logTx(u, type, label, amount, item) { // newest first, capped
-  const w = u.wallet;
-  w.tx.unshift({ id: crypto.randomBytes(4).toString('hex'), type, label, amount, balance: w.bux, item: item || null, ts: Date.now() });
-  if (w.tx.length > MAX_TX) w.tx.length = MAX_TX;
-}
-function walletOf(u) { // created lazily so guests and Google users both get one
-  if (!u.wallet) { u.wallet = { bux: START_BUX, inv: [], tx: [], dailyAt: 0 }; logTx(u, 'bonus', 'Welcome bonus', START_BUX); }
-  return u.wallet;
-}
-const walletPub = u => { const w = walletOf(u); return { currency: CURRENCY, bux: w.bux, inventory: w.inv.slice(), dailyIn: Math.max(0, w.dailyAt + DAILY_MS - Date.now()), dailyAmount: DAILY_BUX }; };
-function pushWallet(u) { // live-update the HUD of every game window this user has open
-  for (const s of io.sockets.sockets.values()) if (s.user === u) s.emit('wallet', walletPub(u));
-}
-const authed = (req, res) => { const u = sessions.get((req.headers.authorization || '').replace('Bearer ', '')); if (!u) res.sendStatus(401); return u; };
-app.get('/api/shop', (_req, res) => res.json({ currency: CURRENCY, items: SHOP }));
-app.get('/api/me/wallet', (req, res) => { const u = authed(req, res); if (u) res.json(walletPub(u)); });
-app.get('/api/me/transactions', (req, res) => { const u = authed(req, res); if (u) res.json({ transactions: walletOf(u).tx }); });
-app.post('/api/shop/buy', (req, res) => {
-  const u = authed(req, res); if (!u) return;
-  const it = shopItem(String(req.body?.id || '')); if (!it) return res.status(404).json({ error: 'Item not found' });
-  const w = walletOf(u);
-  if (w.inv.includes(it.id)) return res.status(400).json({ error: 'You already own this item', ...walletPub(u) });
-  if (w.bux < it.price) return res.status(400).json({ error: 'Not enough ' + CURRENCY + ' — you need ' + (it.price - w.bux) + ' more', ...walletPub(u) });
-  w.bux -= it.price; w.inv.push(it.id); // sync handler: balance check and deduction can't race
-  logTx(u, 'purchase', 'Bought ' + it.name, -it.price, it.id);
-  pushWallet(u);
-  res.json({ ...walletPub(u), bought: it.id });
-});
-app.post('/api/me/daily', (req, res) => {
-  const u = authed(req, res); if (!u) return;
-  const w = walletOf(u);
-  if (w.dailyAt + DAILY_MS > Date.now()) return res.status(400).json({ error: 'Daily reward is not ready yet', ...walletPub(u) });
-  w.bux += DAILY_BUX; w.dailyAt = Date.now();
-  logTx(u, 'reward', 'Daily reward', DAILY_BUX);
-  pushWallet(u);
-  res.json(walletPub(u));
-});
 
 app.get('/api/me', (req, res) => {
   const u = sessions.get((req.headers.authorization || '').replace('Bearer ', ''));
@@ -159,7 +137,7 @@ app.post('/api/guest', (req, res) => {
     do { name = 'Guest' + Math.floor(1000 + Math.random() * 9000); } while (nameTaken(name));
   }
   const token = crypto.randomBytes(16).toString('hex');
-  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [], createdAt: now(), lastSeen: now(), playtime: {} };
+  const user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.randomBytes(4).toString('hex'), game: null, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [] };
   if (sessions.size > 5000) sessions.delete(sessions.keys().next().value);
   sessions.set(token, user);
   res.json({ token, user: pubUser(user) });
@@ -175,7 +153,7 @@ app.post('/api/login/google', async (req, res) => {
   let info;
   try {
     const r = await fetch(SUPA_URL + '/auth/v1/user', { headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + at } });
-    if (!r.ok) return res.status(401).json({ error: 'Google login is invalid or expired' });
+    if (!r.ok) return res.status(401).json({ error: 'Google login invalid or expired' });
     info = await r.json();
   } catch (e) { return res.status(502).json({ error: 'Could not reach Supabase' }); }
   if (!info?.id) return res.status(401).json({ error: 'Invalid Google login' });
@@ -187,10 +165,9 @@ app.post('/api/login/google', async (req, res) => {
     let name = base;
     while (nameTaken(name)) name = base.slice(0, 12) + Math.floor(100 + Math.random() * 900);
     user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.createHash('sha256').update(info.id).digest('hex').slice(0, 8),
-      game: null, gid: info.id, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [], createdAt: now(), lastSeen: now(), playtime: {} };
+      game: null, gid: info.id, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [] };
     byGoogle.set(info.id, user);
   }
-  user.lastSeen = now();
   const token = crypto.randomBytes(16).toString('hex');
   sessions.set(token, user);
   res.json({ token, user: pubUser(user) });
@@ -203,7 +180,7 @@ app.post('/api/profile', (req, res) => {
   if (b.name !== undefined) {
     const name = cleanName(b.name);
     if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 characters (letters/numbers)' });
-    if (nameTaken(name, tok)) return res.status(400).json({ error: 'That name is already taken' });
+    if (nameTaken(name, tok)) return res.status(400).json({ error: 'Name already taken' });
     user.name = name;
     Object.entries(GAMES).forEach(([gid, g]) => { if (g.ownerUid === user.uid) { g.owner = name; saveGame(gid); } });
   }
@@ -218,12 +195,12 @@ app.post('/api/profile', (req, res) => {
 });
 
 const bearer = req => (req.headers.authorization || '').replace('Bearer ', '');
-const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, visits: g.stats?.visits || 0, thumb: g.thumb ? g.thumbV : 0, mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: online(id) });
+const pub = (id, g, tok) => ({ id, title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, owner: g.owner, visits: g.stats?.visits || 0, thumb: g.thumb ? g.thumbV : 0, status: g.status || '', changelog: (g.changelog || []).slice(0, 12), mine: !!sessions.get(tok) && g.ownerUid === sessions.get(tok).uid, online: online(id) });
 app.get('/api/games', (req, res) => res.json(Object.entries(GAMES).map(([id, g]) => pub(id, g, bearer(req)))));
 
 app.get('/api/people', (_req, res) => {
-  const list = [...sessions.values()].map(u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null, lastSeen: u.lastSeen || 0 }));
-  list.sort((a, b) => (!!b.game - !!a.game) || (b.lastSeen || 0) - (a.lastSeen || 0));
+  const list = [...sessions.values()].map(u => ({ name: u.name, color: u.color, uid: u.uid, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null }));
+  list.sort((a, b) => !!b.game - !!a.game);
   res.json(list.slice(0, 200));
 });
 
@@ -239,11 +216,13 @@ const cleanPart = x => ({
   n: txt(x?.n, 30), r: num(x?.r, -360, 360, 0), t: num(x?.t, 0, 0.95, 0),
   cc: x?.cc === 0 || x?.cc === false ? 0 : 1, k: x?.k ? 1 : 0, sp: x?.sp ? 1 : 0
 });
+// Release label shown on game cards: '', 'beta', 'alpha' or 'wip'
+const LABELS = ['', 'beta', 'alpha', 'wip'];
 // ex = existing game: fields that are missing from the request keep their old value (partial update)
 const buildGame = (b, ex) => {
   const has = k => b[k] !== undefined;
   const title = has('title') || !ex ? txt(b.title, 30) : ex.title;
-  if (title.length < 3) return { error: 'Title must be at least 3 characters' };
+  if (title.length < 3) return { error: 'Title must be at least 3 letters' };
   const boxes = Array.isArray(b.boxes) ? b.boxes.slice(0, MAX_PARTS).map(cleanPart) : ex ? ex.boxes : [];
   if (!boxes.length) return { error: 'Add at least 1 platform' };
   const f = boxes.find(x => x.sp) || boxes[0];
@@ -255,6 +234,7 @@ const buildGame = (b, ex) => {
     sky: HEX.test(b.sky) ? b.sky : ex?.sky || '#7ec8ff',
     art: [HEX.test(b.art?.[0]) ? b.art[0] : ex?.art?.[0] || '#1463ff', HEX.test(b.art?.[1]) ? b.art[1] : ex?.art?.[1] || '#0a0f1a'],
     spawn: [f.x, f.y + f.h / 2 + 1.5, f.z], boxes,
+    status: has('status') ? (LABELS.includes(String(b.status || '')) ? String(b.status) : '') : ex ? ex.status || '' : '',
     scripts: Array.isArray(b.scripts) ? b.scripts.slice(0, MAX_SCRIPTS).map(s => ({ name: txt(s?.name, 30) || 'Script', code: String(s?.code || '').slice(0, MAX_CODE) })) : ex?.scripts || []
   } };
 };
@@ -263,21 +243,21 @@ app.post('/api/games', (req, res) => {
   if (!user) return res.sendStatus(401);
   const b = req.body || {};
   const all = Object.values(GAMES).filter(g => g.ownerUid);
-  if (all.filter(g => g.ownerUid === user.uid).length >= 5) return res.status(400).json({ error: 'Maximum of 5 games per account' });
+  if (all.filter(g => g.ownerUid === user.uid).length >= 5) return res.status(400).json({ error: 'Maksimal 5 game per akun' });
   if (all.length >= 50) return res.status(400).json({ error: 'Server is full, try again later' });
   const built = buildGame(b);
   if (built.error) return res.status(400).json({ error: built.error });
   const thumb = b.thumb ? parseImg(b.thumb, 400 * 1024) : null;
   if (b.thumb && !thumb) return res.status(400).json({ error: 'Invalid thumbnail or file too large' });
   const id = 'u' + crypto.randomBytes(4).toString('hex');
-  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, ownerGoogle: !!user.gid, thumb, thumbV: thumb ? Date.now() : 0 };
+  GAMES[id] = { ...built.game, owner: user.name, ownerUid: user.uid, ownerGoogle: !!user.gid, thumb, thumbV: thumb ? Date.now() : 0, changelog: [] };
   saveGame(id);
   res.json({ id });
 });
 const mineGame = req => { const g = GAMES[req.params.id]; return g && g.ownerUid && g.ownerUid === sessions.get(bearer(req))?.uid ? g : null; };
 app.get('/api/games/:id/source', (req, res) => {
   const g = mineGame(req); if (!g) return res.sendStatus(403);
-  res.json({ title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, boxes: g.boxes, scripts: g.scripts || [], hasThumb: !!g.thumb });
+  res.json({ title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, boxes: g.boxes, status: g.status || '', changelog: g.changelog || [], scripts: g.scripts || [], hasThumb: !!g.thumb });
 });
 app.put('/api/games/:id', (req, res) => {
   const g = mineGame(req); if (!g) return res.sendStatus(403);
@@ -303,6 +283,29 @@ app.post('/api/games/:id/thumb', (req, res) => {
   const thumb = parseImg(req.body?.image, 400 * 1024);
   if (!thumb) return res.status(400).json({ error: 'Invalid thumbnail or file too large' });
   g.thumb = thumb; g.thumbV = Date.now();
+  saveGame(req.params.id);
+  res.json({ ok: true });
+});
+// ---------- Changelog (update notes written by the game's developer) ----------
+const clText = s => String(s || '').replace(/\r/g, '').replace(/[<>]/g, '').trim().slice(0, 400);
+app.get('/api/games/:id/changelog', (req, res) => {
+  const g = GAMES[req.params.id];
+  if (!g) return res.sendStatus(404);
+  res.json({ changelog: g.changelog || [] });
+});
+app.post('/api/games/:id/changelog', (req, res) => {
+  const g = mineGame(req); if (!g) return res.sendStatus(403);
+  const ver = txt(req.body?.ver, 10) || 'v1', text = clText(req.body?.text);
+  if (!text) return res.status(400).json({ error: 'Write the update notes first' });
+  g.changelog = g.changelog || [];
+  g.changelog.unshift({ id: crypto.randomBytes(4).toString('hex'), ver, text, ts: Date.now() });
+  g.changelog = g.changelog.slice(0, 20);
+  saveGame(req.params.id);
+  res.json({ ok: true, changelog: g.changelog });
+});
+app.delete('/api/games/:id/changelog/:cid', (req, res) => {
+  const g = mineGame(req); if (!g) return res.sendStatus(403);
+  g.changelog = (g.changelog || []).filter(e => e.id !== req.params.cid);
   saveGame(req.params.id);
   res.json({ ok: true });
 });
@@ -336,7 +339,7 @@ app.post('/api/games/:id/reviews', (req, res) => {
   if (!text) return res.status(400).json({ error: 'Write your review first' });
   const list = reviewsOf(g), up = !!req.body?.up, ex = list.find(r => r.uid === me.uid);
   if (ex) Object.assign(ex, { up, text, ts: Date.now() });
-  else if (list.length >= 500) return res.status(400).json({ error: 'This game has reached its review limit' });
+  else if (list.length >= 500) return res.status(400).json({ error: 'Review limit reached for this game' });
   else list.push({ id: crypto.randomBytes(4).toString('hex'), uid: me.uid, name: me.name, up, text, ts: Date.now(), yes: new Set(), no: new Set(), reports: new Set() });
   res.json({ ok: true });
 });
@@ -403,11 +406,11 @@ app.post('/api/forum/cat/:cat', (req, res) => {
   const title = plain(req.body?.title, 100).replace(/\s+/g, ' '), body = plain(req.body?.body, 2000);
   if (title.length < 3) return res.status(400).json({ error: 'Title must be at least 3 characters' });
   if (!body) return res.status(400).json({ error: 'Thread body cannot be empty' });
-  const nowTs = Date.now();
-  if (nowTs - (me.lastThread || 0) < 30000) return res.status(400).json({ error: 'Wait 30 seconds before creating another thread' });
-  me.lastThread = nowTs;
+  const now = Date.now();
+  if (now - (me.lastThread || 0) < 30000) return res.status(400).json({ error: 'Wait 30 seconds before creating another thread' });
+  me.lastThread = now;
   if (threads.length >= 500) threads.splice(threads.reduce((m, t, i, a) => (t.last < a[m].last ? i : m), 0), 1);
-  const t = { id: String(++tid), cat: cat.id, title, body, uid: me.uid, name: me.name, ts: nowTs, last: nowTs, views: 0, posts: [] };
+  const t = { id: String(++tid), cat: cat.id, title, body, uid: me.uid, name: me.name, ts: now, last: now, views: 0, posts: [] };
   threads.push(t);
   res.json({ id: t.id });
 });
@@ -424,11 +427,11 @@ app.post('/api/forum/thread/:id/reply', (req, res) => {
   const body = plain(req.body?.body, 2000);
   if (!body) return res.status(400).json({ error: 'Reply cannot be empty' });
   if (t.posts.length >= 300) return res.status(400).json({ error: 'This thread is full' });
-  const nowTs = Date.now();
-  if (nowTs - (me.lastReply || 0) < 5000) return res.status(400).json({ error: 'Wait a few seconds before replying again' });
-  me.lastReply = nowTs;
-  t.posts.push({ id: crypto.randomBytes(3).toString('hex'), uid: me.uid, name: me.name, body, ts: nowTs });
-  t.last = nowTs;
+  const now = Date.now();
+  if (now - (me.lastReply || 0) < 5000) return res.status(400).json({ error: 'Wait a few seconds before replying again' });
+  me.lastReply = now;
+  t.posts.push({ id: crypto.randomBytes(3).toString('hex'), uid: me.uid, name: me.name, body, ts: now });
+  t.last = now;
   res.json({ ok: true });
 });
 app.delete('/api/forum/thread/:id', (req, res) => {
@@ -447,7 +450,7 @@ app.delete('/api/forum/thread/:id/post/:pid', (req, res) => {
 });
 
 // ---------- Friends & notifications ----------
-const userCard = u => ({ uid: u.uid, name: u.name, color: u.color, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null, followers: u.followers?.size || 0, following: u.following?.size || 0, lastSeen: u.lastSeen || 0, joined: u.createdAt || 0 });
+const userCard = u => ({ uid: u.uid, name: u.name, color: u.color, av: u.avatar ? u.av : 0, game: u.game && GAMES[u.game] ? GAMES[u.game].title : null, followers: u.followers?.size || 0, following: u.following?.size || 0 });
 const friendState = (me, o) => me.friends.has(o.uid) ? 'friends' : me.reqOut.has(o.uid) ? 'sent' : me.reqIn.has(o.uid) ? 'received' : 'none';
 const needMe = (req, res) => { const me = sessions.get(bearer(req)); if (!me) res.sendStatus(401); return me; };
 const other = (req, me) => { const o = uidMap().get(req.params.uid); return o && o.uid !== me.uid ? o : null; };
@@ -459,10 +462,10 @@ function makeFriends(me, o) {
 app.get('/api/users/:uid', (req, res) => {
   const u = uidMap().get(req.params.uid); if (!u) return res.sendStatus(404);
   const me = sessions.get(bearer(req));
-  const badges = userBadgesOf(u.uid);
+  const userBadges = getUserBadges(u.uid);
   res.json({ ...userCard(u), outfit: u.outfit || null, friend: me && me.uid !== u.uid ? friendState(me, u) : 'none', followed: !!me?.following?.has(u.uid), friends: u.friends.size,
     games: Object.entries(GAMES).filter(([, g]) => g.ownerUid === u.uid).map(([id, g]) => pub(id, g, bearer(req))),
-    badges: badges.slice(0, 12), badgeTotal: badges.length });
+    badges: userBadges.slice(0, 10) }); // Show up to 10 badges in profile
 });
 app.post('/api/users/:uid/follow', (req, res) => {
   const me = needMe(req, res); if (!me) return;
@@ -485,16 +488,17 @@ app.get('/api/friends', (req, res) => {
 app.post('/api/friends/:uid/request', (req, res) => {
   const me = needMe(req, res); if (!me) return;
   const o = other(req, me); if (!o) return res.sendStatus(404);
-  if (me.friends.has(o.uid) || me.reqOut.has(o.uid)) return res.json({ ok: true });
-  if (me.reqIn.has(o.uid)) { makeFriends(me, o); return res.json({ ok: true }); } // they already asked me
-  if (me.friends.size >= 100 || me.reqOut.size >= 50) return res.status(400).json({ error: 'Friends / requests limit reached' });
+  if (me.friends.has(o.uid)) return res.json({ ok: true, state: 'friends' });
+  if (me.reqOut.has(o.uid)) return res.json({ ok: true, state: 'sent' });
+  if (me.reqIn.has(o.uid)) { makeFriends(me, o); return res.json({ ok: true, state: 'accepted' }); } // they already asked me
+  if (me.friends.size >= 100 || me.reqOut.size >= 50) return res.status(400).json({ error: 'Friend / request limit reached' });
   me.reqOut.add(o.uid); o.reqIn.set(me.uid, Date.now());
-  res.json({ ok: true });
+  res.json({ ok: true, state: 'sent' });
 });
 app.post('/api/friends/:uid/accept', (req, res) => {
   const me = needMe(req, res); if (!me) return;
   const o = other(req, me); if (!o || !me.reqIn.has(o.uid)) return res.sendStatus(404);
-  if (me.friends.size >= 100) return res.status(400).json({ error: 'Friends list is full' });
+  if (me.friends.size >= 100) return res.status(400).json({ error: 'Friend list full' });
   makeFriends(me, o); res.json({ ok: true });
 });
 app.post('/api/friends/:uid/decline', (req, res) => {
@@ -538,65 +542,88 @@ app.get('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if 
 app.post('/api/outfit', (req, res) => { const me = sessions.get(bearer(req)); if (!me) return res.sendStatus(401); me.outfit = cleanOutfit(req.body); res.json({ outfit: me.outfit }); });
 
 // ---------- Badge System API ----------
-// Public list of every badge across all games
-app.get('/api/badges', (_req, res) => {
-  const badges = allGameBadges();
+// Get all badges (public list)
+app.get('/api/badges', (req, res) => {
+  const me = sessions.get(bearer(req));
+  const badges = listAllBadges().filter(b => !b.isHidden || (me && me.uid === b.createdBy));
   res.json({ badges, total: badges.length });
 });
 
-// Badges of one game (public read: players see what they can earn; manage tab adds owner controls)
-app.get('/api/games/:id/badges', (req, res) => {
-  const g = GAMES[req.params.id]; if (!g) return res.sendStatus(404);
-  res.json({ badges: badgesOf(g).map(pubBadge), total: badgesOf(g).length, mine: !!g.ownerUid && g.ownerUid === sessions.get(bearer(req))?.uid });
+// Get badge details
+app.get('/api/badges/:id', (req, res) => {
+  const badge = getBadgeDefinition(req.params.id);
+  if (!badge) return res.sendStatus(404);
+  res.json(badge);
 });
 
-// Create a badge (game owner only)
-app.post('/api/games/:id/badges', (req, res) => {
-  const g = mineGame(req); if (!g) return res.sendStatus(403);
-  if (badgesOf(g).length >= 10) return res.status(400).json({ error: 'Maximum of 10 badges per game' });
+// Create a new badge (developer only - Google authenticated users)
+app.post('/api/badges', (req, res) => {
+  const me = sessions.get(bearer(req));
+  if (!me) return res.sendStatus(401);
+  if (!me.gid) return res.status(403).json({ error: 'Only verified accounts can create badges' });
+  
   const b = req.body || {};
-  const name = txt(b.name, 40).trim();
-  if (name.length < 2) return res.status(400).json({ error: 'Badge name must be at least 2 characters' });
-  const trigger = ['join', 'playtime', 'touch'].includes(b.trigger) ? b.trigger : 'join';
-  let value = '';
-  if (trigger === 'playtime') {
-    value = Math.round(parseFloat(b.value));
-    if (!Number.isFinite(value) || value < 1 || value > 1440) return res.status(400).json({ error: 'Playtime must be between 1 and 1440 minutes' });
-  } else if (trigger === 'touch') {
-    value = txt(b.value, 30).trim();
-    if (value.length < 1) return res.status(400).json({ error: 'Enter the name of the part players must touch' });
+  if (!b.name || String(b.name).trim().length < 2) {
+    return res.status(400).json({ error: 'Badge name must be at least 2 characters' });
   }
-  const badge = { id: 'b' + crypto.randomBytes(4).toString('hex'), name, description: txt(b.description, 200), icon: String(b.icon || '🏆').slice(0, 8) || '🏆',
-    color: HEX.test(b.color) ? b.color : '#ffd700', trigger, value, earned: {} };
-  badgesOf(g).push(badge);
-  saveGame(req.params.id);
-  res.json({ badge: pubBadge(badge), ok: true });
+  
+  const badge = createBadge(b, me);
+  res.json({ badge, ok: true });
 });
 
-// Delete a badge (game owner only)
-app.delete('/api/games/:id/badges/:bid', (req, res) => {
-  const g = mineGame(req); if (!g) return res.sendStatus(403);
-  const list = badgesOf(g), i = list.findIndex(b => b.id === req.params.bid);
-  if (i < 0) return res.sendStatus(404);
-  list.splice(i, 1);
-  saveGame(req.params.id);
-  res.sendStatus(204);
+// Award badge to a user (developer or self)
+app.post('/api/badges/:id/award', (req, res) => {
+  const me = sessions.get(bearer(req));
+  if (!me) return res.sendStatus(401);
+  
+  const badge = getBadgeDefinition(req.params.id);
+  if (!badge) return res.sendStatus(404);
+  
+  const targetUid = req.body?.uid;
+  const targetUser = uidMap().get(targetUid);
+  
+  if (!targetUser) return res.status(404).json({ error: 'User not found' });
+  
+  // Only creator can award to others, or user can award to themselves
+  if (targetUid !== me.uid && badge.createdBy !== me.uid) {
+    return res.status(403).json({ error: 'This badge cannot be given' });
+  }
+  
+  const success = awardBadge(targetUid, req.params.id);
+  if (!success) return res.status(400).json({ error: 'User already has this badge' });
+  
+  res.json({ ok: true });
 });
 
-// A user's earned badges
+// Get user's badges
 app.get('/api/users/:uid/badges', (req, res) => {
   const targetUser = uidMap().get(req.params.uid);
   if (!targetUser) return res.sendStatus(404);
-  const badges = userBadgesOf(req.params.uid);
+  
+  const badges = getUserBadges(req.params.uid);
   res.json({ badges, total: badges.length });
 });
 
-// My earned badges
+// Get my badges
 app.get('/api/me/badges', (req, res) => {
   const me = sessions.get(bearer(req));
   if (!me) return res.sendStatus(401);
-  const badges = userBadgesOf(me.uid);
+  
+  const badges = getUserBadges(me.uid);
   res.json({ badges, total: badges.length });
+});
+
+// Delete a badge (creator only)
+app.delete('/api/badges/:id', (req, res) => {
+  const me = sessions.get(bearer(req));
+  if (!me) return res.sendStatus(401);
+  
+  const badge = getBadgeDefinition(req.params.id);
+  if (!badge) return res.sendStatus(404);
+  if (badge.createdBy !== me.uid) return res.sendStatus(403);
+  
+  BADGES.delete(req.params.id);
+  res.sendStatus(204);
 });
 
 // ---------- Game stats (owner dashboard) ----------
@@ -640,7 +667,7 @@ async function db(path, opts = {}) {
 }
 const rowOf = (id, g) => ({
   id, owner_uid: g.ownerUid, owner_name: g.owner || null,
-  data: { title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, spawn: g.spawn, boxes: g.boxes, scripts: g.scripts || [], stats: g.stats || null, badges: (g.badges || []).map(({ id: bid, name, description, icon, color, trigger, value, earned }) => ({ id: bid, name, description, icon, color, trigger, value, earned })) },
+  data: { title: g.title, tagline: g.tagline, desc: g.desc, tags: g.tags, sky: g.sky, art: g.art, spawn: g.spawn, boxes: g.boxes, status: g.status || null, changelog: g.changelog || [], scripts: g.scripts || [], stats: g.stats || null },
   thumb_type: g.thumb ? g.thumb.type : null, thumb_b64: g.thumb ? g.thumb.buf.toString('base64') : null, thumb_v: g.thumbV || 0, updated_at: new Date().toISOString()
 });
 function saveGame(id) {
@@ -660,7 +687,6 @@ async function loadGames() {
     for (const r of rows) {
       if (GAMES[r.id]) continue;
       GAMES[r.id] = { ...r.data, owner: r.owner_name, ownerUid: r.owner_uid, ownerGoogle: true,
-        badges: (r.data.badges || []).map(b => ({ ...b, earned: b.earned && typeof b.earned === 'object' ? b.earned : {} })),
         thumb: r.thumb_b64 ? { type: r.thumb_type, buf: Buffer.from(r.thumb_b64, 'base64') } : null, thumbV: Number(r.thumb_v) || 0 };
     }
     console.log('Loaded ' + rows.length + ' game(s) from Supabase');
@@ -676,41 +702,19 @@ io.use((socket, next) => {
   socket.user = user; next();
 });
 io.on('connection', socket => {
-  let inst = null, lastChat = 0, lastEv = 0, lastEmote = 0, joinedAt = 0, badgeTimer = null;
-  socket.user.lastSeen = Date.now();
-  // award every unearned badge of a game and notify the player in-game
-  const grantBadges = (gid, filter) => {
-    const g = GAMES[gid]; if (!g) return;
-    badgesOf(g).forEach(b => {
-      if (filter && !filter(b)) return;
-      if (awardGameBadge(g, b, socket.user.uid))
-        socket.emit('badge', { id: b.id, name: b.name, description: b.description, icon: b.icon, color: b.color, game: g.title });
-    });
-  };
-  const playtimeSecs = gid => ((socket.user.playtime && socket.user.playtime[gid]) || 0) + (joinedAt ? (Date.now() - joinedAt) / 1000 : 0);
+  let inst = null, lastChat = 0, lastEv = 0, lastEmote = 0, joinedAt = 0;
   socket.on('join', arg => {
     const gid = typeof arg === 'string' ? arg : arg?.game;
     if (!GAMES[gid] || inst) return;
     const g = GAMES[gid];
     inst = pickInstance(gid, arg?.room);
-    socket.join(inst.id); socket.user.game = gid; socket.user.lastSeen = Date.now();
-    const me = { id: socket.id, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0, outfit: socket.user.outfit || null };
+    socket.join(inst.id); socket.user.game = gid;
+    const me = { id: socket.id, uid: socket.user.uid, name: socket.user.name, color: socket.user.color, x: g.spawn[0], y: g.spawn[1], z: g.spawn[2], ry: 0, st: 0, outfit: socket.user.outfit || null };
     inst.players.set(socket.id, me);
     trackJoin(gid, socket.user); joinedAt = Date.now();
-    socket.emit('init', { me, room: inst.id, now: Date.now(), start: inst.ts, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes, scripts: g.scripts || [], badges: badgesOf(g).map(b => ({ trigger: b.trigger, value: b.value })) }, players: [...inst.players.values()] });
-    socket.emit('wallet', walletPub(socket.user)); // BUX counter + hotbar for the game HUD
+    socket.emit('init', { me, room: inst.id, now: Date.now(), start: inst.ts, game: { title: g.title, sky: g.sky, spawn: g.spawn, boxes: g.boxes, scripts: g.scripts || [] }, players: [...inst.players.values()] });
     socket.to(inst.id).emit('join', me);
     io.to(inst.id).emit('count', inst.players.size);
-    grantBadges(gid, b => b.trigger === 'join'); // "first join" badges
-    if (badgesOf(g).some(b => b.trigger === 'playtime')) // check playtime badges every 20s while playing
-      badgeTimer = setInterval(() => grantBadges(gid, b => b.trigger === 'playtime' && playtimeSecs(gid) >= Number(b.value) * 60), 20000);
-  });
-  socket.on('badgeTouch', name => { // client touched a named part: award matching "touch" badges
-    if (!inst) return;
-    const g = GAMES[inst.game]; if (!g) return;
-    const part = txt(String(name || ''), 30);
-    if (!part) return;
-    grantBadges(inst.game, b => b.trigger === 'touch' && b.value === part);
   });
   socket.on('move', m => {
     const p = inst?.players.get(socket.id); if (!p) return;
@@ -720,7 +724,7 @@ io.on('connection', socket => {
   socket.on('chat', text => {
     if (!inst || Date.now() - lastChat < 400) return;
     lastChat = Date.now();
-    io.to(inst.id).emit('chat', { id: socket.id, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
+    io.to(inst.id).emit('chat', { id: socket.id, uid: socket.user.uid, name: socket.user.name, color: socket.user.color, text: String(text).slice(0, 140) });
   });
   socket.on('emote', e => { // /e wave, /e dance (and 'stop' when the player moves)
     if (!inst || !['wave', 'dance', 'stop'].includes(e) || Date.now() - lastEmote < 200) return;
@@ -734,15 +738,7 @@ io.on('connection', socket => {
     socket.to(inst.id).emit('ev', { from: socket.user.name, n, d });
   });
   socket.on('disconnect', () => {
-    if (badgeTimer) { clearInterval(badgeTimer); badgeTimer = null; }
-    socket.user.lastSeen = Date.now();
     if (!inst) return;
-    if (joinedAt) { // remember total playtime per game so playtime badges accumulate across sessions
-      const gid = inst.game, secs = (Date.now() - joinedAt) / 1000;
-      socket.user.playtime = socket.user.playtime || {};
-      socket.user.playtime[gid] = (socket.user.playtime[gid] || 0) + secs;
-      grantBadges(gid, b => b.trigger === 'playtime' && socket.user.playtime[gid] >= Number(b.value) * 60);
-    }
     trackLeave(inst.game, (Date.now() - joinedAt) / 1000);
     socket.user.game = null;
     inst.players.delete(socket.id);
@@ -753,4 +749,3 @@ io.on('connection', socket => {
 });
 
 loadGames().finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
-
