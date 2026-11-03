@@ -1365,7 +1365,7 @@ async function pollNotifs() {
   if (sb) { try { const { data } = await sb.auth.getSession(); if (data?.session && !(session && session.user.google)) await googleLogin(data.session.access_token); } catch (e) {} }
   if (session) { syncOutfit(); pollNotifs(); }
   try { await loadGames(); } catch (e) { games = []; }
-  if (!games.length) $('#view').innerHTML = '<div class="hint">Failed to load the game list. Make sure the Voxely server is running, then refresh the page.</div>';
+  if (!games.length) $('#view').innerHTML = '<div class="hint">Error 500 . We So Sorry We Under Maintenece On The Server Or Report This Error To Our Discord 🔧💻.</div>';
   else route();
   setInterval(() => { loadGames().catch(() => {}); if (session) pollNotifs(); }, 30000);
 })();
