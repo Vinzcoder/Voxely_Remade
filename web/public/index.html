@@ -223,11 +223,26 @@
   .gmain { position:relative; } .fpop { position:absolute; left:12px; top:12px; width:230px; max-width:calc(100% - 24px); background:rgba(4,6,11,.94); border:1px solid var(--blue); padding:10px 12px; z-index:3; }
   @media (max-width:860px) { .pgrid { grid-template-columns:1fr; } }
 </style>
+<style>
+  /* ===== fitur baru: Groups, forum grup, Admin Panel & badge admin ===== */
+  .abadge { width:16px; height:16px; vertical-align:-3px; margin-left:4px; }
+  .ggrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+  .gcard { background:var(--panel); border:1px solid var(--line); padding:14px; cursor:pointer; transition:border-color .15s, transform .15s; display:block; }
+  .gcard:hover { border-color:var(--blue); transform:translateY(-2px); }
+  .gicon { width:48px; height:48px; flex:none; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:22px; }
+  .adtabs { display:flex; gap:8px; margin:12px 0 16px; flex-wrap:wrap; }
+  .atable { border:1px solid var(--line); background:var(--panel); }
+  .arow { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; padding:10px 14px; border-top:1px solid var(--line); }
+  .arow:first-child { border-top:0; }
+  .arow b { color:var(--strong); word-break:break-word; }
+  .arow small { display:block; color:var(--dim); margin-top:2px; }
+  .apact { display:flex; gap:6px; flex:none; align-items:center; }
+</style>
 </head>
 <body>
 <header class="top"><div class="wrap topin">
   <a class="logo" href="#/" aria-label="Voxely - home"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4d8dff" d="M12 1.8 21.4 7v10L12 22.2 2.6 17V7z"/><path fill="#8fb7ff" d="M12 1.8 21.4 7 12 12.2 2.6 7z"/><path fill="#1254d6" d="M12 12.2v10L21.4 17V7z"/></svg>VOXELY</a>
-  <nav class="sub" id="nav" aria-label="Main navigation"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a></nav>
+  <nav class="sub" id="nav" aria-label="Main navigation"><a id="nGames" href="#/">Games</a><a id="nPeople" href="#/people">People</a><a id="nGroups" href="#/groups">Groups</a><a id="nForum" href="#/forum">Forum</a><a id="nAvatar" href="#/avatar">Avatar</a><a id="nMarket" href="#/marketplace">Marketplace</a></nav>
   <div class="tright"><div class="user" id="me"></div><button class="burger" aria-label="Open navigation menu" onclick="document.getElementById('nav').classList.toggle('on')">☰</button></div>
 </div></header>
 <main><div class="wrap" id="view"></div></main>
@@ -275,6 +290,7 @@ const total = () => games.reduce((n, g) => n + g.online, 0);
 let toastT; function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => (t.style.display = 'none'), 2200); }
 function soon() { toast('Coming soon'); }
 function verifiedBadge(u) { return Number(u?.followers || 0) >= 1000 ? '<svg class="verified" viewBox="0 0 24 24" aria-label="Verified"><title>Verified creator · 1,000+ followers</title><path fill="#1463ff" d="M12 1l3 2.2 3.7-.2 1.2 3.5 3.1 2-1.1 3.5 1.1 3.5-3.1 2-1.2 3.5-3.7-.2L12 23l-3-2.2-3.7.2-1.2-3.5-3.1-2 1.1-3.5L1 8.5l3.1-2 1.2-3.5L9 3.2z"/><path d="M8 12.3l2.7 2.7L16 9.7" fill="none" stroke="#fff" stroke-width="2.2"/></svg>' : ''; }
+function adminBadge(u) { return (u?.admin || String(u?.name || '').toLowerCase() === 'zerks') ? '<svg class="abadge" viewBox="0 0 24 24" aria-label="Admin"><title>Voxely Admin</title><path fill="#f5b301" d="M12 1.7l8.3 3.3v6.1c0 5.2-3.5 9.5-8.3 11.2C7.2 20.6 3.7 16.3 3.7 11.1V5L12 1.7z"/><path d="M8.3 11.7l2.5 2.5 4.9-5" fill="none" stroke="#101828" stroke-width="2.4"/></svg>' : ''; }
 function avatar(u, n) {
   const st = `width:${n}px;height:${n}px;flex:none`;
   return u.av ? `<img class="av" style="${st}" src="${S}/api/avatar/${u.uid}?v=${u.av}" alt="">` : `<span class="av" style="${st};background:${u.color}"></span>`;
@@ -304,9 +320,9 @@ async function guestLogin() {
 function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); loadGames().catch(() => {}).then(route); }
 function renderMe() {
   if (!session) { $('#me').innerHTML = '<button class="btn sm" onclick="document.getElementById(\'login\').classList.add(\'on\')">Sign in</button>'; return; }
-  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
-    <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}</b><small>${session.user.google ? 'Google account' : 'Guest account'}</small></div>
-    <a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/settings">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
+  $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}${adminBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
+    <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}${adminBadge(session.user)}</b><small>${session.user.google ? 'Google account' : 'Guest account'}</small></div>
+    ${session.user.admin || String(session.user.name || '').toLowerCase() === 'zerks' ? '<a href="#/admin" style="color:#f5b301;font-weight:700">⚙ Admin Panel</a>' : ''}<a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/groups">My Groups</a><a href="#/settings">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
 }
 document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
 
@@ -724,7 +740,7 @@ function rvForm(m) {
     <button class="btn sm" onclick="sendReview()">Post review</button> <small style="color:var(--dim)">One review per game — you can edit it anytime.</small></div>`;
 }
 function rvRow(r, gid) {
-  return `<div class="rv"><div class="au">${avatar({ uid: r.uid, av: r.av, color: r.color }, 44)}<a href="#/user/${r.uid}" style="font-size:11px;color:var(--link);word-break:break-word">${E(r.name)}</a></div>
+  return `<div class="rv"><div class="au">${avatar({ uid: r.uid, av: r.av, color: r.color }, 44)}<a href="#/user/${r.uid}" style="font-size:11px;color:var(--link);word-break:break-word">${E(r.name)}</a>${adminBadge(r)}</div>
     <div><div class="rvh"><b style="color:${r.up ? '#22c55e' : '#ff5c6c'}">${r.up ? '👍 Recommended' : '👎 Not recommended'}</b> <span>· ${ago(r.ts)}</span></div>
     <div class="rvr"><p>${E(r.text)}</p></div>
     <div class="rvf">${r.own
@@ -768,7 +784,7 @@ async function renderPeople() {
   if (!el) return;
   const q = (peopleQ || '').toLowerCase();
   const items = (list || []).filter(u => !q || u.name.toLowerCase().includes(q));
-  el.innerHTML = items.map(u => `<a class="pc" href="#/user/${u.uid}" style="margin-bottom:8px">${avatar(u, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)">${E(u.name)}</b>${verifiedBadge(u)}<small>${u.game ? 'Playing ' + E(u.game) : 'In lobby'}</small></div><small style="color:var(--link)">View profile →</small></a>`).join('') || '<div class="empty">No players found.</div>';
+  el.innerHTML = items.map(u => `<a class="pc" href="#/user/${u.uid}" style="margin-bottom:8px">${avatar(u, 40)}<div style="flex:1;min-width:0"><b style="color:var(--strong)">${E(u.name)}</b>${verifiedBadge(u)}${adminBadge(u)}<small>${u.game ? 'Playing ' + E(u.game) : 'In lobby'}</small></div><small style="color:var(--link)">View profile →</small></a>`).join('') || '<div class="empty">No players found.</div>';
 }
 
 /* ---------- other player profiles ---------- */
@@ -785,7 +801,7 @@ async function userPage(uid) {
   }[u.friend] || '';
   $('#view').innerHTML = `<span class="label">PROFILE</span>
     <div class="card pad"><div class="prof">${avatar(u, 96)}<div style="min-width:0">
-      <h2 class="ftitle" style="margin:0">${E(u.name)}${verifiedBadge(u)}</h2>
+      <h2 class="ftitle" style="margin:0">${E(u.name)}${verifiedBadge(u)}${adminBadge(u)}</h2>
       <div class="follow-stat"><b>${u.followers}</b> followers · <b>${u.following}</b> following · <b>${u.friends}</b> friends${u.game ? ' · playing <b>' + E(u.game) + '</b>' : ''}</div>
       <div class="follow-stat">${u.lastSeen && Date.now() - u.lastSeen < 120000 ? '<i class="on-dot"></i>Online now' : u.lastSeen ? 'Last online <b>' + ago(u.lastSeen) + '</b>' : ''}${u.joined ? ' · Joined <b>' + dateStr(u.joined) + '</b>' : ''}</div>
       <div class="acts">${session && session.user.uid !== u.uid ? fb + `<button class="btn sm alt" onclick="followAction('${u.uid}')">${u.followed ? 'Unfollow' : 'Follow'}</button>` : ''}</div>
@@ -893,7 +909,7 @@ async function notificationsPage() {
 
 /* ---------- Forum ---------- */
 const catIc = c => `<span class="cat-ic" style="background:${c.color}">${E((c.name || '?')[0])}</span>`;
-const threadRow = t => `<div class="fr tt" style="cursor:pointer" onclick="location.hash='#/forum/thread/${t.id}'"><span class="au">${avatar(t.author, 44)}<small style="color:var(--dim);font-size:11px;word-break:break-all">${E(t.author.name)}</small></span><span style="text-align:left;min-width:0"><span class="tl">${E(t.title)}</span><small style="color:var(--dim)">${t.replies} replies · ${t.views} views · ${ago(t.ts)}</small></span></div>`;
+const threadRow = t => `<div class="fr tt" style="cursor:pointer" onclick="location.hash='#/forum/thread/${t.id}'"><span class="au">${avatar(t.author, 44)}<small style="color:var(--dim);font-size:11px;word-break:break-all">${E(t.author.name)}${adminBadge(t.author)}</small></span><span style="text-align:left;min-width:0"><span class="tl">${E(t.title)}</span><small style="color:var(--dim)">${t.replies} replies · ${t.views} views · ${ago(t.ts)}</small></span></div>`;
 function threadList(title, list, back) {
   $('#view').innerHTML = `<span class="label">FORUM</span><div class="fhead"><h1 class="ftitle">${E(title)}</h1>${back ? `<button class="btn sm alt" onclick="location.hash='#/forum'">← Back</button>` : ''}</div>
     ${list.length ? `<div class="ftable tt">${list.map(threadRow).join('')}</div>` : '<div class="empty">No threads.</div>'}`;
@@ -936,7 +952,7 @@ async function forumThreadPage(id, nv) {
   const t = await gj('/api/forum/thread/' + id + (nv ? '?nv=1' : ''));
   if (!$('#view')) return;
   if (!t) return (location.hash = '#/forum');
-  const post = (p, own) => `<div class="post"><div class="pa">${avatar(p.author, 48)}<b style="color:var(--link);font-size:13px;word-break:break-word">${E(p.author.name)}</b><small style="color:var(--dim)">${ago(p.ts)}</small>${own ? `<button class="x" style="margin-top:4px" onclick="delPost('${id}','${p.id}')">Delete</button>` : ''}</div><div class="pb"><div class="ptext">${E(p.body)}</div></div></div>`;
+  const post = (p, own) => `<div class="post"><div class="pa">${avatar(p.author, 48)}<b style="color:var(--link);font-size:13px;word-break:break-word">${E(p.author.name)}</b>${adminBadge(p.author)}<small style="color:var(--dim)">${ago(p.ts)}</small>${own ? `<button class="x" style="margin-top:4px" onclick="delPost('${id}','${p.id}')">Delete</button>` : ''}</div><div class="pb"><div class="ptext">${E(p.body)}</div></div></div>`;
   $('#view').innerHTML = `<div class="crumb"><a href="#/forum">Forum</a> &gt; <a href="#/forum/cat/${t.category.id}">${E(t.category.name)}</a></div>
     <div class="fhead"><h1 class="ftitle" style="word-break:break-word">${E(t.title)}</h1>${t.own ? `<button class="x" onclick="delThread('${id}')">Delete thread</button>` : ''}</div>
     ${post({ author: t.author, body: t.body, ts: t.ts }, false)}
@@ -1293,6 +1309,183 @@ async function loadFriendsPlayed(id) {
   el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><b style="color:var(--strong);font-size:12px;letter-spacing:.08em">FRIENDS WHO PLAYED</b><button class="x" style="padding:2px 8px" onclick="this.closest('.fpop').style.display='none'">✕</button></div>${g.friends.map(f => `<a class="pc" href="#/user/${f.uid}" style="padding:6px;margin-top:4px;border:0;background:transparent">${avatar(f, 28)}<span style="color:var(--link)">${E(f.name)}</span></a>`).join('')}${g.friendCount > g.friends.length ? `<small style="color:var(--dim)">+${g.friendCount - g.friends.length} more</small>` : ''}`;
 }
 
+/* ---------- Groups (tab di samping People) — max 2 grup per akun, dengan forum grup ---------- */
+let groupsQ = '';
+const gIcon = g => E(String(g.icon || (g.name || 'G')[0]).toUpperCase().slice(0, 2));
+async function groupsPage() {
+  $('#view').innerHTML = `<span class="label">GROUPS</span><h1 class="ftitle">Voxely Groups</h1>
+    <div class="fsearch"><input class="search" id="gq" placeholder="Search groups…" value="${E(groupsQ)}" oninput="groupsQ=this.value;clearTimeout(window._gt);window._gt=setTimeout(renderGroups,200)"></div>
+    <div id="gmine"></div><div id="glistEl"><div class="hint">Loading groups…</div></div>`;
+  renderGroups();
+}
+function groupCard(g) {
+  return `<a class="gcard" href="#/group/${g.id}"><div style="display:flex;gap:12px;align-items:center"><span class="gicon" style="background:${g.color}">${gIcon(g)}</span>
+    <div style="min-width:0"><b style="color:var(--strong);font-size:15px">${E(g.name)}</b>
+    <small style="display:block;color:var(--dim)">${g.members} member${g.members === 1 ? '' : 's'} · ${g.threads} thread${g.threads === 1 ? '' : 's'}</small></div></div>
+    <p style="color:var(--soft);font-size:12px;margin:10px 0;min-height:32px;word-break:break-word">${E(g.desc || '')}</p>
+    <small style="color:var(--link)">by ${E(g.owner.name)}${adminBadge(g.owner)} &nbsp;→</small></a>`;
+}
+function renderGroupCreate(mine) {
+  const el = $('#gmine'); if (!el) return;
+  if (!session) { el.innerHTML = '<div class="hint">Sign in to create a group — every account can own up to <b>2 groups</b>. <button class="btn sm" onclick="needLogin()">Sign in</button></div>'; return; }
+  if (mine >= 2) { el.innerHTML = `<div class="hint"><b>Group limit reached.</b> Kamu sudah membuat <b>2 grup</b> — setiap akun hanya boleh membuat 2 grup. Hapus salah satu grup milikmu untuk membuat grup baru.</div>`; return; }
+  el.innerHTML = `<div class="card pad" style="max-width:600px"><h3 class="ft">Create a group</h3><div class="err" id="gcerr"></div>
+    <div class="hint">Sisa kuota grupmu: <b>${2 - mine}</b> dari 2 (maksimal 2 grup per akun). Nama grup harus unik — jika sudah dipakai, pilih nama lain.</div>
+    <label>Group name</label><input id="gName" maxlength="24" placeholder="Contoh: Obby Masters">
+    <label>Description</label><textarea id="gDesc" maxlength="160" style="height:52px" placeholder="Tentang apa grup ini?"></textarea>
+    <div class="row2"><div><label>Warna ikon</label><input type="color" id="gColor" value="#1463ff"></div>
+    <div><label>Ikon (1–2 huruf / emoji)</label><input id="gIcon" maxlength="2" placeholder="OM"></div></div>
+    <div class="acts"><button class="btn" onclick="createGroup()">Create group</button></div></div>`;
+}
+async function renderGroups() {
+  const el = $('#glistEl'); if (!el) return;
+  const d = await gj('/api/groups');
+  if (!el) return;
+  if (!d) { el.innerHTML = '<div class="empty">Could not load groups — the server does not have the Groups API yet.</div>'; return; }
+  renderGroupCreate(d.mine || 0);
+  const q = (groupsQ || '').toLowerCase();
+  const list = (d.groups || []).filter(g => !q || g.name.toLowerCase().includes(q) || (g.desc || '').toLowerCase().includes(q));
+  el.innerHTML = `<h3 class="sec">ALL GROUPS (${list.length})</h3>` + (list.length ? `<div class="ggrid">${list.map(groupCard).join('')}</div>` : `<div class="empty">No groups yet${q ? ' matching your search' : ''} — be the first to create one!</div>`);
+}
+async function createGroup() {
+  const r = await rq('POST', '/api/groups', { name: $('#gName')?.value.trim(), desc: $('#gDesc')?.value.trim(), color: $('#gColor')?.value || '#1463ff', icon: ($('#gIcon')?.value || '').trim() });
+  if (!r.ok) return ($('#gcerr').textContent = r.data.error || 'Failed to create group');
+  toast('Group created!');
+  groupsQ = ''; renderGroups();
+}
+async function groupJoin(id) {
+  if (needLogin()) return;
+  const r = await rq('POST', `/api/groups/${id}/join`);
+  if (!r.ok) return toast(r.data.error || 'Failed to join');
+  toast('You joined the group!'); groupPage(id);
+}
+async function groupLeave(id) {
+  const r = await rq('POST', `/api/groups/${id}/leave`);
+  if (!r.ok) return toast(r.data.error || 'Failed to leave');
+  toast('You left the group'); groupPage(id);
+}
+async function groupDelete(id) {
+  if (!confirm('Delete this group permanently? The group forum will be deleted too.')) return;
+  const r = await rq('DELETE', `/api/groups/${id}`);
+  if (!r.ok) return toast(r.data.error || 'Failed to delete group');
+  toast('Group deleted'); location.hash = '#/groups';
+}
+const gThreadRow = t => `<div class="fr tt" style="cursor:pointer" onclick="location.hash='#/group/${t.gid}/thread/${t.id}'"><span class="au">${avatar(t.author, 44)}<small style="color:var(--dim);font-size:11px;word-break:break-all">${E(t.author.name)}${adminBadge(t.author)}</small></span><span style="text-align:left;min-width:0"><span class="tl">${E(t.title)}</span><small style="color:var(--dim)">${t.replies} replies · ${t.views} views · ${ago(t.ts)}</small></span></div>`;
+async function groupPage(id) {
+  $('#view').innerHTML = '<span class="label">GROUP</span><div class="hint">Loading group…</div>';
+  const d = await gj('/api/groups/' + encodeURIComponent(id));
+  if (!$('#view')) return;
+  if (!d) return (location.hash = '#/groups');
+  const g = d.group;
+  const canDelete = d.own || session?.user?.admin || String(session?.user?.name || '').toLowerCase() === 'zerks';
+  $('#view').innerHTML = `<div class="crumb"><a href="#/groups">Groups</a> &gt; ${E(g.name)}</div>
+    <div class="card pad"><div class="prof"><span class="gicon" style="background:${g.color};width:64px;height:64px;font-size:28px">${gIcon(g)}</span>
+      <div style="flex:1;min-width:0"><h1 class="ftitle" style="margin:0">${E(g.name)}</h1>
+      <div class="follow-stat"><b>${d.members.length}</b> members · created ${dateStr(g.created)} · owner <a href="#/user/${g.owner.uid}" style="color:var(--link)">${E(g.owner.name)}</a>${adminBadge(g.owner)}${g.own ? ' · <b style="color:#22c55e">your group</b>' : ''}</div>
+      <p style="color:var(--soft);margin-top:8px;white-space:pre-wrap;word-break:break-word">${E(g.desc || '')}</p>
+      <div class="acts">${session ? (d.joined ? `<button class="btn sm alt" onclick="groupLeave('${g.id}')">✓ Joined — leave</button>` : `<button class="btn sm" onclick="groupJoin('${g.id}')">＋ Join group</button>`) : `<button class="btn sm" onclick="needLogin()">Sign in to join</button>`}
+        ${canDelete ? `<button class="x" onclick="groupDelete('${g.id}')">Delete group</button>` : ''}</div></div></div></div>
+    <h3 class="sec">GROUP FORUM</h3>
+    ${session ? `<div class="card pad" style="max-width:640px;margin-bottom:14px"><h3 class="ft">Start a new thread</h3><div class="err" id="gterr"></div>
+      <label>Title</label><input id="gtTitle" maxlength="100" placeholder="Judul thread">
+      <label>Body</label><textarea id="gtBody" style="height:90px" placeholder="Tulis isi postinganmu…"></textarea>
+      <div class="acts"><button class="btn" onclick="postGroupThread('${g.id}')">Post to group forum</button></div></div>` : '<div class="hint">Sign in to post in this group forum.</div>'}
+    ${d.threads.length ? `<div class="ftable tt">${d.threads.map(gThreadRow).join('')}</div>` : '<div class="empty">No threads in this group forum yet. Be the first!</div>'}
+    <h3 class="sec">MEMBERS (${d.members.length})</h3>
+    ${d.members.length ? `<div class="frow" style="flex-wrap:wrap">${d.members.map(m => `<a class="au" href="#/user/${m.uid}">${avatar(m, 48)}<small style="color:var(--link);font-size:11px;word-break:break-word">${E(m.name)}${adminBadge(m)}</small></a>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No members yet.</div>'}`;
+}
+async function postGroupThread(gid) {
+  const r = await rq('POST', `/api/groups/${gid}/forum`, { title: $('#gtTitle').value, body: $('#gtBody').value });
+  if (!r.ok) return ($('#gterr').textContent = r.data.error || 'Failed to create thread');
+  toast('Thread posted');
+  groupThreadPage(gid, r.data.id);
+}
+async function groupThreadPage(gid, tid, nv) {
+  const t = await gj(`/api/groups/${encodeURIComponent(gid)}/forum/${encodeURIComponent(tid)}${nv ? '?nv=1' : ''}`);
+  if (!$('#view')) return;
+  if (!t) return (location.hash = '#/group/' + gid);
+  const post = (p, own) => `<div class="post"><div class="pa">${avatar(p.author, 48)}<b style="color:var(--link);font-size:13px;word-break:break-word">${E(p.author.name)}</b>${adminBadge(p.author)}<small style="color:var(--dim)">${ago(p.ts)}</small>${own ? `<button class="x" style="margin-top:4px" onclick="delGroupPost('${gid}','${tid}','${p.id}')">Delete</button>` : ''}</div><div class="pb"><div class="ptext">${E(p.body)}</div></div></div>`;
+  const canDel = t.own || t.isOwner || session?.user?.admin || String(session?.user?.name || '').toLowerCase() === 'zerks';
+  $('#view').innerHTML = `<div class="crumb"><a href="#/groups">Groups</a> &gt; <a href="#/group/${gid}">${E(t.groupName)}</a></div>
+    <div class="fhead"><h1 class="ftitle" style="word-break:break-word">${E(t.title)}</h1>${canDel ? `<button class="x" onclick="delGroupThread('${gid}','${tid}')">Delete thread</button>` : ''}</div>
+    ${post({ author: t.author, body: t.body, ts: t.ts }, false)}
+    <h3 class="sec">${t.replies} REPLIES</h3>
+    ${t.posts.map(p => post(p, p.own)).join('') || '<div class="empty">No replies yet.</div>'}
+    ${session ? `<div class="card pad" style="margin-top:14px"><label>Reply</label><textarea id="grBody" style="height:90px"></textarea><div class="acts"><button class="btn" onclick="replyGroupThread('${gid}','${tid}')">Send</button></div></div>` : '<div class="hint" style="margin-top:14px">Sign in to reply to this thread.</div>'}`;
+}
+async function replyGroupThread(gid, tid) {
+  const r = await rq('POST', `/api/groups/${gid}/forum/${tid}/reply`, { body: $('#grBody').value });
+  if (!r.ok) return toast(r.data.error || 'Failed to reply');
+  groupThreadPage(gid, tid, 1);
+}
+async function delGroupPost(gid, tid, pid) {
+  if (!confirm('Delete this reply?')) return;
+  await rq('DELETE', `/api/groups/${gid}/forum/${tid}/post/${pid}`);
+  groupThreadPage(gid, tid, 1);
+}
+async function delGroupThread(gid, tid) {
+  if (!confirm('Delete this thread?')) return;
+  await rq('DELETE', `/api/groups/${gid}/forum/${tid}`);
+  toast('Thread deleted'); groupPage(gid);
+}
+
+/* ---------- Admin Panel — khusus untuk user bernama "Zerks" ---------- */
+let ADM = null, admTab = 'users';
+async function adminPage() {
+  if (!session) return (location.hash = '#/');
+  const iAmAdmin = session.user.admin || String(session.user.name || '').toLowerCase() === 'zerks';
+  if (!iAmAdmin) {
+    $('#view').innerHTML = `<span class="label">ADMIN PANEL</span><div class="notice"><b style="color:var(--strong);font-size:18px">Access denied</b><small>Admin panel ini khusus untuk user <b>Zerks</b>. Akunmu tidak punya akses admin.</small></div>`;
+    return;
+  }
+  $('#view').innerHTML = '<span class="label">ADMIN PANEL</span><div class="hint">Loading admin data…</div>';
+  const d = await gj('/api/admin/overview');
+  if (!$('#view')) return;
+  if (!d) { $('#view').innerHTML = '<span class="label">ADMIN PANEL</span><div class="empty">Admin API not available — update the server first.</div>'; return; }
+  ADM = d;
+  const tabs = [['users', `Users (${d.users.length})`], ['groups', `Groups (${d.groups.length})`], ['threads', `Group threads (${d.threads.length})`], ['stats', 'Stats']].map(([k, n]) => `<button class="vb ${admTab === k ? 'on' : ''}" onclick="admTab='${k}';adminPage()">${n}</button>`).join('');
+  let body = '';
+  if (admTab === 'users') body = `<div class="atable">${d.users.map(u => `<div class="arow"><div><b>${E(u.name)}${adminBadge(u)}</b><small>${u.google ? 'Google account' : 'Guest account'} · ${u.uid.slice(0, 10)}… · ${u.groups} group${u.groups === 1 ? '' : 's'} · ${u.joined ? 'joined ' + dateStr(u.joined) : 'old account'}</small></div>
+    <div class="apact"><a class="btn sm alt" href="#/user/${u.uid}">View</a><button class="btn sm alt" onclick="adminRename('${u.uid}')">Rename</button>${u.uid === session.user.uid ? '<small style="color:var(--dim)">this is you</small>' : `<button class="x" onclick="adminDeleteUser('${u.uid}')">Delete</button>`}</div></div>`).join('')}</div>`;
+  if (admTab === 'groups') body = d.groups.length ? `<div class="atable">${d.groups.map(g => `<div class="arow"><div><b>${E(g.name)}</b><small>owner ${E(g.ownerName)} · ${g.members} members · ${g.threads} threads · created ${dateStr(g.created)}</small></div>
+    <div class="apact"><a class="btn sm alt" href="#/group/${g.id}">View</a><button class="x" onclick="adminDeleteGroup('${g.id}')">Delete</button></div></div>`).join('')}</div>` : '<div class="empty">No groups yet.</div>';
+  if (admTab === 'threads') body = d.threads.length ? `<div class="atable">${d.threads.map(t => `<div class="arow"><div><b>${E(t.title)}</b><small>in group ${E(t.groupName)} · by ${E(t.authorName)} · ${t.replies} replies · ${ago(t.ts)}</small></div>
+    <div class="apact"><a class="btn sm alt" href="#/group/${t.gid}/thread/${t.id}">View</a><button class="x" onclick="adminDeleteThread('${t.gid}','${t.id}')">Delete</button></div></div>`).join('')}</div>` : '<div class="empty">No group threads yet.</div>';
+  if (admTab === 'stats') body = `<div class="stgrid">${Object.entries(d.stats).map(([k, v]) => `<div class="stc"><b>${v}</b><small>${k.toUpperCase()}</small></div>`).join('')}</div>
+    <div class="hint" style="margin-top:14px">Panel ini hanya muncul untuk akun <b>Zerks</b>. Semua aksi di sini langsung berlaku di server.</div>`;
+  $('#view').innerHTML = `<span class="label">ADMIN PANEL</span>
+    <div class="fhead"><h1 class="ftitle">Voxely Admin</h1><small style="color:var(--dim)">Signed in as <b style="color:#f5b301">Zerks</b>${adminBadge(session.user)}</small></div>
+    <div class="adtabs">${tabs}</div>${body}`;
+}
+async function adminRename(uid) {
+  const u = (ADM?.users || []).find(x => x.uid === uid); if (!u) return;
+  const name = prompt('Rename user "' + u.name + '" to:', u.name);
+  if (!name || name.trim() === u.name) return;
+  const r = await rq('POST', `/api/admin/user/${uid}/rename`, { name: name.trim() });
+  if (!r.ok) return toast(r.data.error || 'Failed to rename');
+  toast('User renamed'); adminPage();
+}
+async function adminDeleteUser(uid) {
+  const u = (ADM?.users || []).find(x => x.uid === uid); if (!u) return;
+  if (!confirm(`Delete user "${u.name}" permanently? Their groups and posts will be removed too.`)) return;
+  const r = await rq('DELETE', `/api/admin/user/${uid}`);
+  if (!r.ok) return toast(r.data.error || 'Failed to delete user');
+  toast('User deleted'); adminPage();
+}
+async function adminDeleteGroup(gid) {
+  const g = (ADM?.groups || []).find(x => x.id === gid); if (!g) return;
+  if (!confirm(`Delete group "${g.name}" permanently?`)) return;
+  const r = await rq('DELETE', `/api/admin/group/${gid}`);
+  if (!r.ok) return toast(r.data.error || 'Failed to delete group');
+  toast('Group deleted'); adminPage();
+}
+async function adminDeleteThread(gid, tid) {
+  if (!confirm('Delete this thread permanently?')) return;
+  const r = await rq('DELETE', `/api/groups/${gid}/forum/${tid}`);
+  if (!r.ok) return toast(r.data.error || 'Failed to delete thread');
+  toast('Thread deleted'); adminPage();
+}
+
 /* ---------- router ---------- */
 function route() {
   scrollTo(0, 0);
@@ -1300,13 +1493,16 @@ function route() {
   V3D.disposeAll(); // free the WebGL previews of the previous page
   const h = location.hash.replace(/^#\/?/, '');
   const p = h.split('/');
-  ['nGames', 'nPeople', 'nForum', 'nAvatar', 'nMarket'].forEach(id => document.getElementById(id)?.classList.remove('on'));
+  ['nGames', 'nPeople', 'nGroups', 'nForum', 'nAvatar', 'nMarket'].forEach(id => document.getElementById(id)?.classList.remove('on'));
   document.getElementById('nav')?.classList.remove('on');
-  const nav = { '': 'nGames', game: 'nGames', people: 'nPeople', user: 'nPeople', forum: 'nForum', avatar: 'nAvatar', marketplace: 'nMarket' }[p[0] || ''];
+  const nav = { '': 'nGames', game: 'nGames', people: 'nPeople', user: 'nPeople', groups: 'nGroups', group: 'nGroups', forum: 'nForum', avatar: 'nAvatar', marketplace: 'nMarket' }[p[0] || ''];
   if (nav) document.getElementById(nav)?.classList.add('on');
   if (!p[0]) return home();
   if (p[0] === 'game') return gamePage(p[1]);
   if (p[0] === 'people') return peoplePage();
+  if (p[0] === 'groups') return groupsPage();
+  if (p[0] === 'group') { if (p[2] === 'thread') return groupThreadPage(p[1], p[3]); return groupPage(p[1]); }
+  if (p[0] === 'admin') return adminPage();
   if (p[0] === 'user') return userPage(p[1]);
   if (p[0] === 'avatar') return avatarPage();
   if (p[0] === 'marketplace') return marketplacePage();
