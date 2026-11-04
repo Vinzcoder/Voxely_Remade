@@ -222,9 +222,22 @@
   .frow { display:flex; gap:14px; overflow-x:auto; padding-bottom:14px; } .frow .au { flex:none; width:72px; }
   .gmain { position:relative; } .fpop { position:absolute; left:12px; top:12px; width:230px; max-width:calc(100% - 24px); background:rgba(4,6,11,.94); border:1px solid var(--blue); padding:10px 12px; z-index:3; }
   @media (max-width:860px) { .pgrid { grid-template-columns:1fr; } }
+  /* ===== Ban System: ban button in the Admin Panel + full-screen ban message ===== */
+  .bantag { display:inline-block; color:#ff5c6c; border:1px solid #5b1a1a; background:rgba(229,72,77,.08); font-size:11px; font-weight:700; letter-spacing:.06em; padding:2px 8px; margin-left:8px; vertical-align:1px; white-space:nowrap; }
+  .arow.bannedRow { background:rgba(229,72,77,.05); border-left:3px solid #e5484d; }
+  .ban-field { display:block; color:var(--dim); font-size:12px; margin:12px 0 4px; }
+  .bsel { width:100%; background:var(--input); border:1px solid var(--line); color:var(--strong); padding:10px; font:inherit; margin-bottom:12px; }
+  #banScreen { z-index:90; }
+  #banScreen .box { border-color:#5b1a1a; text-align:center; }
+  .ban-x { font-size:44px; line-height:1; margin-bottom:12px; }
+  .ban-title { font-size:26px; font-weight:800; color:#ff5c6c; letter-spacing:.4px; margin-bottom:6px; }
+  .ban-sorry { color:var(--soft); margin-bottom:20px; }
+  .ban-card { display:inline-block; text-align:left; border:1px dashed #5b1a1a; background:rgba(229,72,77,.06); padding:16px 26px; }
+  .ban-row { padding:4px 0; font-size:15px; color:var(--strong); }
+  .ban-row .bk { color:#ff8f8f; font-weight:700; margin-right:8px; }
 </style>
 <style>
-  /* ===== fitur baru: Groups, forum grup, Admin Panel & badge admin ===== */
+  /* ===== new features: Groups, group forum, Admin Panel & admin badge ===== */
   .abadge { width:16px; height:16px; vertical-align:-3px; margin-left:4px; }
   .ggrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
   .gcard { background:var(--panel); border:1px solid var(--line); padding:14px; cursor:pointer; transition:border-color .15s, transform .15s; display:block; }
@@ -258,6 +271,37 @@
   <input id="nick" maxlength="16" placeholder="Your name (leave empty = random)"><div id="loginErr" style="color:#ff5c6c;margin-bottom:10px"></div>
   <button class="btn" id="guestBtn">Continue as Guest</button>
   <button class="btn alt" id="skipBtn" style="margin-top:8px">Browse without signing in</button>
+</div></div>
+<!-- Full-screen ban message — shown when a banned account tries to log in -->
+<div class="veil" id="banScreen"><div class="box">
+  <div class="ban-x">❌</div>
+  <div class="ban-title">Account Banned</div>
+  <div class="ban-sorry">We Are So Sorry Ban You Account</div>
+  <div class="ban-card">
+    <div class="ban-row"><span class="bk">Reason :</span><span id="banReasonTxt"></span></div>
+    <div class="ban-row"><span class="bk">Time :</span><span id="banTimeTxt"></span></div>
+  </div>
+</div></div>
+<!-- Ban modal — Admin Panel asks for a Reason + Duration before banning -->
+<div class="veil" id="banModal"><div class="box" style="border-color:#5b1a1a">
+  <h3 style="color:#ff5c6c">Ban Account</h3>
+  <p>You are banning <b id="banTarget" style="color:var(--strong)"></b>. They will see a ban message when they try to log in.</p>
+  <label class="ban-field" for="banReasonInput">Reason</label>
+  <input id="banReasonInput" maxlength="200" placeholder="e.g. Cheating in games">
+  <label class="ban-field" for="banDurationSel">Duration</label>
+  <select id="banDurationSel" class="bsel">
+    <option value="1h">1 hour</option>
+    <option value="6h">6 hours</option>
+    <option value="12h">12 hours</option>
+    <option value="1d" selected>1 day</option>
+    <option value="3d">3 days</option>
+    <option value="7d">7 days</option>
+    <option value="30d">30 days</option>
+    <option value="permanent">Permanent</option>
+  </select>
+  <div id="banErr" style="color:#ff5c6c;margin-bottom:10px"></div>
+  <button class="btn" id="banConfirmBtn" style="background:#e5484d">Ban User</button>
+  <button class="btn alt" style="margin-top:8px" onclick="document.getElementById('banModal').classList.remove('on')">Cancel</button>
 </div></div>
 <div class="veil" id="launch"><div class="box">
   <h3 id="lTitle"></h3><p id="lText"></p>
@@ -314,8 +358,43 @@ function pickImage(w, h, cb, maxB) { // choose a file, crop to w x h, return a s
 
 async function guestLogin() {
   const r = await fetch(S + '/api/guest', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: $('#nick').value }) });
-  const d = await r.json().catch(() => ({})); if (!r.ok) return ($('#loginErr').textContent = d.error || 'Login failed'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
+  const d = await r.json().catch(() => ({}));
+  // BAN SYSTEM: a banned account gets the full-screen ban message instead of the site
+  if (r.status === 403 && d.banned) return showBanScreen(d);
+  if (!r.ok) return ($('#loginErr').textContent = d.error || 'Login failed'); $('#loginErr').textContent = ''; session = d; localStorage.setItem('voxely', JSON.stringify(session));
   $('#login').classList.remove('on'); renderMe(); if (sb) sb.auth.signOut().catch(() => {}); loadGames().catch(() => {}).then(route); syncOutfit(); pollNotifs();
+}
+// ---------- Ban System (frontend) ----------
+function showBanScreen(d) {
+  $('#banReasonTxt').textContent = d.reason || 'Rule violation';
+  $('#banTimeTxt').textContent = d.time || 'Permanent';
+  $('#login').classList.remove('on');
+  $('#banScreen').classList.add('on');
+}
+let banTargetUid = null, banTargetName = '';
+function adminBanUser(uid) {
+  const u = (ADM?.users || []).find(x => x.uid === uid); if (!u) return;
+  banTargetUid = uid; banTargetName = u.name;
+  $('#banTarget').textContent = u.name;
+  $('#banReasonInput').value = ''; $('#banDurationSel').value = '1d'; $('#banErr').textContent = '';
+  $('#banModal').classList.add('on');
+}
+async function confirmBan() {
+  const reason = $('#banReasonInput').value.trim();
+  if (!reason) return ($('#banErr').textContent = 'Reason is required');
+  const r = await rq('POST', `/api/admin/user/${banTargetUid}/ban`, { reason, duration: $('#banDurationSel').value });
+  if (!r.ok) return ($('#banErr').textContent = r.data.error || 'Failed to ban user');
+  $('#banModal').classList.remove('on');
+  toast('"' + banTargetName + '" has been banned');
+  adminPage();
+}
+async function adminUnbanUser(uid) {
+  const u = (ADM?.users || []).find(x => x.uid === uid); if (!u) return;
+  if (!confirm('Unban "' + u.name + '"? They will be able to log in again.')) return;
+  const r = await rq('POST', `/api/admin/user/${uid}/unban`, {});
+  if (!r.ok) return toast(r.data.error || 'Failed to unban user');
+  toast('"' + u.name + '" has been unbanned');
+  adminPage();
 }
 function logout(manual) { localStorage.removeItem('voxely'); session = null; renderMe(); if (manual && sb) sb.auth.signOut(); $('#login').classList.add('on'); loadGames().catch(() => {}).then(route); }
 function renderMe() {
@@ -1328,13 +1407,13 @@ function groupCard(g) {
 function renderGroupCreate(mine) {
   const el = $('#gmine'); if (!el) return;
   if (!session) { el.innerHTML = '<div class="hint">Sign in to create a group — every account can own up to <b>2 groups</b>. <button class="btn sm" onclick="needLogin()">Sign in</button></div>'; return; }
-  if (mine >= 2) { el.innerHTML = `<div class="hint"><b>Group limit reached.</b> Kamu sudah membuat <b>2 grup</b> — setiap akun hanya boleh membuat 2 grup. Hapus salah satu grup milikmu untuk membuat grup baru.</div>`; return; }
+  if (mine >= 2) { el.innerHTML = `<div class="hint"><b>Group limit reached.</b> You have already created <b>2 groups</b> — each account can only create 2 groups. Delete one of your own groups to create a new one.</div>`; return; }
   el.innerHTML = `<div class="card pad" style="max-width:600px"><h3 class="ft">Create a group</h3><div class="err" id="gcerr"></div>
-    <div class="hint">Sisa kuota grupmu: <b>${2 - mine}</b> dari 2 (maksimal 2 grup per akun). Nama grup harus unik — jika sudah dipakai, pilih nama lain.</div>
-    <label>Group name</label><input id="gName" maxlength="24" placeholder="Contoh: Obby Masters">
-    <label>Description</label><textarea id="gDesc" maxlength="160" style="height:52px" placeholder="Tentang apa grup ini?"></textarea>
-    <div class="row2"><div><label>Warna ikon</label><input type="color" id="gColor" value="#1463ff"></div>
-    <div><label>Ikon (1–2 huruf / emoji)</label><input id="gIcon" maxlength="2" placeholder="OM"></div></div>
+    <div class="hint">Your remaining group quota: <b>${2 - mine}</b> of 2 (max 2 groups per account). Group names must be unique — if a name is already taken, choose another one.</div>
+    <label>Group name</label><input id="gName" maxlength="24" placeholder="e.g. Obby Masters">
+    <label>Description</label><textarea id="gDesc" maxlength="160" style="height:52px" placeholder="What is this group about?"></textarea>
+    <div class="row2"><div><label>Icon color</label><input type="color" id="gColor" value="#1463ff"></div>
+    <div><label>Icon (1–2 letters / emoji)</label><input id="gIcon" maxlength="2" placeholder="OM"></div></div>
     <div class="acts"><button class="btn" onclick="createGroup()">Create group</button></div></div>`;
 }
 async function renderGroups() {
@@ -1429,13 +1508,13 @@ async function delGroupThread(gid, tid) {
   toast('Thread deleted'); groupPage(gid);
 }
 
-/* ---------- Admin Panel — khusus untuk user bernama "Zerks" ---------- */
+/* ---------- Admin Panel — exclusive to the user named "Zerks" ---------- */
 let ADM = null, admTab = 'users';
 async function adminPage() {
   if (!session) return (location.hash = '#/');
   const iAmAdmin = session.user.admin || String(session.user.name || '').toLowerCase() === 'zerks';
   if (!iAmAdmin) {
-    $('#view').innerHTML = `<span class="label">ADMIN PANEL</span><div class="notice"><b style="color:var(--strong);font-size:18px">Access denied</b><small>Admin panel ini khusus untuk user <b>Zerks</b>. Akunmu tidak punya akses admin.</small></div>`;
+    $('#view').innerHTML = `<span class="label">ADMIN PANEL</span><div class="notice"><b style="color:var(--strong);font-size:18px">Access denied</b><small>This admin panel is exclusive to the user <b>Zerks</b>. Your account does not have admin access.</small></div>`;
     return;
   }
   $('#view').innerHTML = '<span class="label">ADMIN PANEL</span><div class="hint">Loading admin data…</div>';
@@ -1445,14 +1524,17 @@ async function adminPage() {
   ADM = d;
   const tabs = [['users', `Users (${d.users.length})`], ['groups', `Groups (${d.groups.length})`], ['threads', `Group threads (${d.threads.length})`], ['stats', 'Stats']].map(([k, n]) => `<button class="vb ${admTab === k ? 'on' : ''}" onclick="admTab='${k}';adminPage()">${n}</button>`).join('');
   let body = '';
-  if (admTab === 'users') body = `<div class="atable">${d.users.map(u => `<div class="arow"><div><b>${E(u.name)}${adminBadge(u)}</b><small>${u.google ? 'Google account' : 'Guest account'} · ${u.uid.slice(0, 10)}… · ${u.groups} group${u.groups === 1 ? '' : 's'} · ${u.joined ? 'joined ' + dateStr(u.joined) : 'old account'}</small></div>
-    <div class="apact"><a class="btn sm alt" href="#/user/${u.uid}">View</a><button class="btn sm alt" onclick="adminRename('${u.uid}')">Rename</button>${u.uid === session.user.uid ? '<small style="color:var(--dim)">this is you</small>' : `<button class="x" onclick="adminDeleteUser('${u.uid}')">Delete</button>`}</div></div>`).join('')}</div>`;
+  if (admTab === 'users') body = `<div class="atable">${d.users.map(u => {
+    const banned = !!u.banned;
+    return `<div class="arow${banned ? ' bannedRow' : ''}"><div><b>${E(u.name)}${adminBadge(u)}</b>${banned ? `<span class="bantag">BANNED · ${E(u.ban?.time || '')}</span>` : ''}<small>${u.google ? 'Google account' : 'Guest account'} · ${u.uid.slice(0, 10)}… · ${u.groups} group${u.groups === 1 ? '' : 's'} · ${u.joined ? 'joined ' + dateStr(u.joined) : 'old account'}${banned ? ` · Reason: ${E(u.ban?.reason || '')}` : ''}</small></div>
+    <div class="apact"><a class="btn sm alt" href="#/user/${u.uid}">View</a><button class="btn sm alt" onclick="adminRename('${u.uid}')">Rename</button>${u.uid === session.user.uid ? '<small style="color:var(--dim)">this is you</small>' : banned ? `<button class="btn sm alt" onclick="adminUnbanUser('${u.uid}')">Unban</button>` : `<button class="x" onclick="adminBanUser('${u.uid}')">Ban</button>`}</div></div>`;
+  }).join('')}</div>`;
   if (admTab === 'groups') body = d.groups.length ? `<div class="atable">${d.groups.map(g => `<div class="arow"><div><b>${E(g.name)}</b><small>owner ${E(g.ownerName)} · ${g.members} members · ${g.threads} threads · created ${dateStr(g.created)}</small></div>
     <div class="apact"><a class="btn sm alt" href="#/group/${g.id}">View</a><button class="x" onclick="adminDeleteGroup('${g.id}')">Delete</button></div></div>`).join('')}</div>` : '<div class="empty">No groups yet.</div>';
   if (admTab === 'threads') body = d.threads.length ? `<div class="atable">${d.threads.map(t => `<div class="arow"><div><b>${E(t.title)}</b><small>in group ${E(t.groupName)} · by ${E(t.authorName)} · ${t.replies} replies · ${ago(t.ts)}</small></div>
     <div class="apact"><a class="btn sm alt" href="#/group/${t.gid}/thread/${t.id}">View</a><button class="x" onclick="adminDeleteThread('${t.gid}','${t.id}')">Delete</button></div></div>`).join('')}</div>` : '<div class="empty">No group threads yet.</div>';
   if (admTab === 'stats') body = `<div class="stgrid">${Object.entries(d.stats).map(([k, v]) => `<div class="stc"><b>${v}</b><small>${k.toUpperCase()}</small></div>`).join('')}</div>
-    <div class="hint" style="margin-top:14px">Panel ini hanya muncul untuk akun <b>Zerks</b>. Semua aksi di sini langsung berlaku di server.</div>`;
+    <div class="hint" style="margin-top:14px">This panel only appears for the <b>Zerks</b> account. Every action here takes effect on the server immediately.</div>`;
   $('#view').innerHTML = `<span class="label">ADMIN PANEL</span>
     <div class="fhead"><h1 class="ftitle">Voxely Admin</h1><small style="color:var(--dim)">Signed in as <b style="color:#f5b301">Zerks</b>${adminBadge(session.user)}</small></div>
     <div class="adtabs">${tabs}</div>${body}`;
@@ -1464,13 +1546,6 @@ async function adminRename(uid) {
   const r = await rq('POST', `/api/admin/user/${uid}/rename`, { name: name.trim() });
   if (!r.ok) return toast(r.data.error || 'Failed to rename');
   toast('User renamed'); adminPage();
-}
-async function adminDeleteUser(uid) {
-  const u = (ADM?.users || []).find(x => x.uid === uid); if (!u) return;
-  if (!confirm(`Delete user "${u.name}" permanently? Their groups and posts will be removed too.`)) return;
-  const r = await rq('DELETE', `/api/admin/user/${uid}`);
-  if (!r.ok) return toast(r.data.error || 'Failed to delete user');
-  toast('User deleted'); adminPage();
 }
 async function adminDeleteGroup(gid) {
   const g = (ADM?.groups || []).find(x => x.id === gid); if (!g) return;
@@ -1532,11 +1607,13 @@ function route() {
 }
 addEventListener('hashchange', route);
 
-/* ---------- login google (supabase) & boot ---------- */
+/* ---------- Google login (Supabase) & boot ---------- */
 async function googleLogin(at) {
   try {
     const r = await fetch(S + '/api/login/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ access_token: at }) });
     const d = await r.json().catch(() => ({}));
+    // BAN SYSTEM: a banned Google account also gets the full-screen ban message
+    if (r.status === 403 && d.banned) return showBanScreen(d);
     if (!r.ok) return;
     session = d; localStorage.setItem('voxely', JSON.stringify(session));
     renderMe(); syncOutfit(); pollNotifs(); $('#login').classList.remove('on'); loadGames().catch(() => {}).then(route);
@@ -1548,6 +1625,7 @@ $('#googleBtn').onclick = async () => {
   if (error) $('#loginErr').textContent = error.message;
 };
 $('#guestBtn').onclick = guestLogin; $('#skipBtn').onclick = () => $('#login').classList.remove('on'); $('#nick').onkeydown = e => { if (e.key === 'Enter') guestLogin(); };
+$('#banConfirmBtn').onclick = confirmBan; $('#banReasonInput').onkeydown = e => { if (e.key === 'Enter') confirmBan(); };
 
 async function pollNotifs() {
   if (!session) return;
@@ -1555,7 +1633,16 @@ async function pollNotifs() {
   if (d) { nCount = d.unread || 0; renderMe(); }
 }
 (async function boot() {
-  if (session) { const ok = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }).then(r => r.ok).catch(() => true); if (!ok) { localStorage.removeItem('voxely'); session = null; } }
+  if (session) {
+    // check the session — if the account was banned, show the ban message screen
+    let rr = null;
+    try { rr = await fetch(S + '/api/me', { headers: { Authorization: 'Bearer ' + session.token } }); } catch (e) { rr = null; }
+    if (rr && rr.status === 403) {
+      const dd = await rr.json().catch(() => ({}));
+      if (dd.banned) { localStorage.removeItem('voxely'); session = null; renderMe(); return showBanScreen(dd); }
+    }
+    if (!rr || !rr.ok) { localStorage.removeItem('voxely'); session = null; }
+  }
   renderMe();
   if (!session) $('#login').classList.add('on');
   if (sb) { try { const { data } = await sb.auth.getSession(); if (data?.session && !(session && session.user.google)) await googleLogin(data.session.access_token); } catch (e) {} }
