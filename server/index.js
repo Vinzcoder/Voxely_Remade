@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
 
 const PORT = process.env.PORT || 3000;
@@ -9,12 +10,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-// ---------- Admin (khusus user bernama "Zerks") ----------
-// Siapa pun yang login dengan username ini otomatis dapat badge admin
-// (admin: true di semua objek user -> frontend menampilkan logo admin
-// di samping username) dan akses penuh ke /api/admin/*.
+// ---------- Admin (exclusive to the user named "Zerks") ----------
+// Anyone who logs in with this username automatically gets the admin badge
+// (admin: true on every user object -> the frontend shows the admin logo
+// next to the username) and full access to /api/admin/*.
 const ADMIN_NAME = 'zerks';
-const DUP_NAME_ERROR = 'silahkan pilih nama yang lain';
+const DUP_NAME_ERROR = 'Please choose another name';
 const isAdmin = u => !!u && String(u.name || '').toLowerCase() === ADMIN_NAME;
 
 // ---------- Badge System ----------
@@ -110,6 +111,42 @@ function pickInstance(gid, want) {
 
 // ---------- Guest login ----------
 const sessions = new Map();
+
+// ---------- Ban System ----------
+// The admin (Zerks) bans an account with a REASON + DURATION from the Admin Panel.
+// A banned user who opens the website and tries to log in gets:
+//   ❌ Account Banned
+//   We Are So Sorry Ban You Account
+//   Reason : <reason>
+//   Time   : <remaining time | Permanent>
+// Bans are keyed by lowercased username (so re-login with the same name is blocked)
+// and persisted to voxely-bans.json so they survive server restarts.
+const BAN_DURATIONS = { '1h': 36e5, '6h': 6 * 36e5, '12h': 12 * 36e5, '1d': 864e5, '3d': 3 * 864e5, '7d': 7 * 864e5, '30d': 30 * 864e5 };
+const BANS_FILE = path.join(__dirname, 'voxely-bans.json');
+const BANS = new Map(); // key (lowercased username) -> { key, uid, name, reason, bannedAt, until, permanent, by }
+const banKey = n => String(n || '').trim().toLowerCase();
+function loadBans() { try { for (const b of JSON.parse(fs.readFileSync(BANS_FILE, 'utf8'))) BANS.set(b.key, b); } catch (e) { /* no bans yet */ } }
+function saveBans() { try { fs.writeFileSync(BANS_FILE, JSON.stringify([...BANS.values()], null, 1)); } catch (e) { console.error('saveBans failed:', e.message); } }
+const fmtRemaining = ms => {
+  if (ms <= 0) return 'Expired';
+  // unit thresholds so a fresh "1 day" ban reads "1 day" (not "24 hours")
+  const mins = ms / 6e4;
+  if (mins < 45) { const m = Math.ceil(mins); return m + (m === 1 ? ' minute' : ' minutes'); }
+  const hours = ms / 36e5;
+  if (hours < 23) { const h = Math.ceil(hours); return h + (h === 1 ? ' hour' : ' hours'); }
+  const d = Math.ceil(ms / 864e5); return d + (d === 1 ? ' day' : ' days');
+};
+function activeBan(name) { // returns the active ban, auto-expires it when the duration passed
+  const k = banKey(name), b = BANS.get(k);
+  if (!b) return null;
+  if (!b.permanent && Date.now() >= b.until) { BANS.delete(k); saveBans(); return null; }
+  return b;
+}
+const banPayload = b => ({ reason: b.reason, permanent: !!b.permanent, until: b.until || null, time: b.permanent ? 'Permanent' : fmtRemaining(b.until - Date.now()) });
+const banResponse = (res, b) => res.status(403).json({ banned: true, error: 'Account Banned', ...banPayload(b) });
+const killSessionsOf = name => { const k = banKey(name); [...sessions.entries()].forEach(([tok, u]) => { if (banKey(u.name) === k) sessions.delete(tok); }); };
+loadBans();
+
 const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 app.use((req, res, next) => {
   res.set({ 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS' });
@@ -126,14 +163,22 @@ const parseImg = (s, max) => { const m = IMG.exec(String(s || '')); if (!m) retu
 const sendImg = (img, res) => img ? res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=300', 'X-Content-Type-Options': 'nosniff' }).send(img.buf) : res.sendStatus(404);
 
 app.get('/api/me', (req, res) => {
-  const u = sessions.get((req.headers.authorization || '').replace('Bearer ', ''));
-  u ? res.json(pubUser(u)) : res.sendStatus(401);
+  const tok = (req.headers.authorization || '').replace('Bearer ', '');
+  const u = sessions.get(tok);
+  if (!u) return res.sendStatus(401);
+  // if the account got banned while still logged in, end the session + return the ban info
+  const ban = activeBan(u.name);
+  if (ban) { sessions.delete(tok); return banResponse(res, ban); }
+  res.json(pubUser(u));
 });
 app.post('/api/guest', (req, res) => {
   const raw = String(req.body?.name || '').trim();
   let name = cleanName(raw);
   if (raw) {
     if (name.length < 2) return res.status(400).json({ error: 'Name must be at least 2 characters (letters/numbers)' });
+    // BAN SYSTEM: a banned user trying to log in with their name gets the ban message
+    const ban = activeBan(name);
+    if (ban) return banResponse(res, ban);
     if (nameTaken(name)) return res.status(400).json({ error: DUP_NAME_ERROR });
   } else {
     do { name = 'Guest' + Math.floor(1000 + Math.random() * 9000); } while (nameTaken(name));
@@ -165,11 +210,14 @@ app.post('/api/login/google', async (req, res) => {
     let base = cleanName(m.full_name || m.name || String(info.email || '').split('@')[0]);
     if (base.length < 2) base = 'Player';
     let name = base;
-    while (nameTaken(name)) name = base.slice(0, 12) + Math.floor(100 + Math.random() * 900);
+    while (nameTaken(name) || BANS.has(banKey(name))) name = base.slice(0, 12) + Math.floor(100 + Math.random() * 900);
     user = { name, color: COLORS[Math.floor(Math.random() * COLORS.length)], uid: crypto.createHash('sha256').update(info.id).digest('hex').slice(0, 8),
       game: null, gid: info.id, friends: new Set(), reqIn: new Map(), reqOut: new Set(), followers: new Set(), following: new Set(), notes: [] };
     byGoogle.set(info.id, user);
   }
+  // BAN SYSTEM: banned Google accounts cannot log in either
+  const ban = activeBan(user.name);
+  if (ban) return banResponse(res, ban);
   const token = crypto.randomBytes(16).toString('hex');
   sessions.set(token, user);
   res.json({ token, user: pubUser(user) });
@@ -753,8 +801,21 @@ app.get('/api/admin/overview', (req, res) => {
       forumPosts: threads.reduce((n, t) => n + t.posts.length, 0),
       badges: BADGES.size
     },
-    users: [...users.values()].map(u => ({ ...userCard(u), google: !!u.gid, level: levelOf(u), joined: u.joined || null, lastSeen: u.lastSeen || null, groups: myGroupCount(u.uid) }))
-      .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0)),
+    users: (() => {
+      const seen = new Set();
+      const list = [];
+      [...users.values()].forEach(u => {
+        seen.add(u.uid);
+        const ban = activeBan(u.name);
+        list.push({ ...userCard(u), google: !!u.gid, level: levelOf(u), joined: u.joined || null, lastSeen: u.lastSeen || null, groups: myGroupCount(u.uid), banned: !!ban, ban: ban ? banPayload(ban) : null });
+      });
+      // banned users whose session was killed stay visible in the panel (from the ban records)
+      [...BANS.values()].forEach(b => {
+        if (seen.has(b.uid)) return;
+        list.push({ uid: b.uid, name: b.name, color: '#4a5568', av: 0, game: null, admin: false, followers: 0, following: 0, google: false, level: 1, joined: b.bannedAt, lastSeen: null, groups: myGroupCount(b.uid), banned: true, ban: banPayload(b) });
+      });
+      return list.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+    })(),
     groups: allGroups.map(g => ({ id: g.id, name: g.name, desc: g.desc, color: g.color, icon: g.icon, ownerName: users.get(g.ownerUid)?.name || g.ownerName || 'Voxely', members: g.members.size, threads: g.threads.length, created: g.created }))
       .sort((a, b) => b.created - a.created),
     threads: groupThreadList.map(t => {
@@ -771,6 +832,9 @@ app.post('/api/admin/user/:uid/rename', (req, res) => {
   if (target.name.toLowerCase() !== name.toLowerCase() && nameTaken(name)) return res.status(400).json({ error: DUP_NAME_ERROR });
   const old = target.name;
   target.name = name;
+  // keep an existing ban attached to this user when the name changes
+  const oldBan = BANS.get(banKey(old));
+  if (oldBan) { BANS.delete(banKey(old)); oldBan.name = name; oldBan.key = banKey(name); BANS.set(oldBan.key, oldBan); saveBans(); }
   Object.entries(GAMES).forEach(([gid, g]) => { if (g.ownerUid === target.uid) { g.owner = name; saveGame(gid); } });
   GROUPS.forEach(g => {
     if (g.ownerUid === target.uid) g.ownerName = name;
@@ -780,11 +844,39 @@ app.post('/api/admin/user/:uid/rename', (req, res) => {
   threads.forEach(t => { if (t.uid === target.uid) t.name = name; t.posts.forEach(p => { if (p.uid === target.uid) p.name = name; }); });
   res.json({ ok: true, old, name });
 });
+// BAN: replaces the old delete button — asks for a Reason + Duration
+app.post('/api/admin/user/:uid/ban', (req, res) => {
+  const me = needAdmin(req, res); if (!me) return;
+  const target = uidMap().get(req.params.uid);
+  if (!target) return res.sendStatus(404);
+  if (target.uid === me.uid) return res.status(400).json({ error: 'You cannot ban your own admin account' });
+  if (isAdmin(target)) return res.status(400).json({ error: 'Admin accounts cannot be banned' });
+  const reason = txt(req.body?.reason, 200);
+  if (!reason) return res.status(400).json({ error: 'Reason is required' });
+  const duration = String(req.body?.duration || '');
+  if (duration !== 'permanent' && !BAN_DURATIONS[duration]) return res.status(400).json({ error: 'Choose a valid duration' });
+  const ban = { key: banKey(target.name), uid: target.uid, name: target.name, reason, bannedAt: Date.now(), until: BAN_DURATIONS[duration] ? Date.now() + BAN_DURATIONS[duration] : null, permanent: duration === 'permanent', by: me.name };
+  BANS.set(ban.key, ban); saveBans();
+  killSessionsOf(target.name); // sign the banned user out of every device
+  res.json({ ok: true, ban: banPayload(ban) });
+});
+app.post('/api/admin/user/:uid/unban', (req, res) => {
+  const me = needAdmin(req, res); if (!me) return;
+  const target = uidMap().get(req.params.uid);
+  // the target may be offline (session already killed by the ban) -> look in the ban records too
+  const rec = [...BANS.values()].find(b => b.uid === req.params.uid);
+  if (!target && !rec) return res.sendStatus(404);
+  if (rec) BANS.delete(rec.key);
+  if (target) BANS.delete(banKey(target.name));
+  saveBans();
+  res.json({ ok: true, unbanned: !!(rec || target) });
+});
 app.delete('/api/admin/user/:uid', (req, res) => {
   const me = needAdmin(req, res); if (!me) return;
   const target = uidMap().get(req.params.uid);
   if (!target) return res.sendStatus(404);
   if (target.uid === me.uid) return res.status(400).json({ error: 'You cannot delete your own admin account' });
+  BANS.delete(banKey(target.name)); saveBans(); // a deleted account no longer needs its ban record
   // hapus grup buatan user ini
   [...GROUPS.entries()].forEach(([id, g]) => { if (g.ownerUid === target.uid) GROUPS.delete(id); });
   // hapus jejaknya di grup lain & forum
@@ -959,7 +1051,6 @@ async function loadGames() {
   } catch (e) { console.error('load games failed:', e.message); }
 }
 
-const fs = require('fs');
 const WEB = [path.join(__dirname, 'web'), path.join(__dirname, '..', 'web')].find(p => fs.existsSync(path.join(p, 'index.html'))) || __dirname;
 app.get('/config.js', (req, res, next) => {
   if (WEB !== __dirname && fs.existsSync(path.join(WEB, 'config.js'))) return next();
@@ -1047,3 +1138,4 @@ function seedGroups() {
 
 seedGroups();
 loadGames().finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
+
