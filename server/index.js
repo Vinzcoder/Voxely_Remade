@@ -14,7 +14,7 @@ const io = new Server(server, { cors: { origin: '*' } });
 // Anyone who logs in with this username automatically gets the admin badge
 // (admin: true on every user object -> the frontend shows the admin logo
 // next to the username) and full access to /api/admin/*.
-const ADMIN_NAME = 'zerks', 'vin';
+const ADMIN_NAMES = new Set(['zerks', 'vin']);
 const DUP_NAME_ERROR = 'Please choose another name';
 const isAdmin = u => !!u && String(u.name || '').toLowerCase() === ADMIN_NAME;
 
