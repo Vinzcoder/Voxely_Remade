@@ -1198,11 +1198,6 @@ io.on('connection', socket => {
 async function seedGroups() {
   const seeds = [
     ['Voxely Official', 'Official news, updates and events from the Voxely team.', '📢', '#5b8def'],
-    ['Builders Club', 'Show off your builds, share tips and get feedback from other builders.', '🧱', '#f97316'],
-    ['Obby Masters', 'For parkour fans — post your hardest obbies and speedrun times here.', '🏃', '#22c55e'],
-    ['Scripters Hub', 'Help each other with scripts, game logic and the Developer Portal.', '💻', '#8b5cf6'],
-    ['Music Lounge', 'Talk about music, share your favorite tracks and playlists.', '🎵', '#ec4899'],
-    ['Food Corner', 'Food talk, recipes and snack reviews. Pizza lovers welcome.', '🍕', '#eab308']
   ];
   for (const [name, desc, icon, color] of seeds) {
     if (isGroupNameTaken(name)) continue;
