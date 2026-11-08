@@ -510,6 +510,15 @@ const MAX_GROUPS_PER_ACCOUNT = 2;
 const MAX_GROUPS_TOTAL = 200;
 const MAX_MEMBERS_PER_GROUP = 100;
 const GROUPS = new Map(); // id -> group
+// Group data is kept in memory for fast reads, then mirrored to Supabase for
+// durability. The REST helper and SUPA_SECRET are initialized later in this file.
+const groupStorageReady = () => !!SUPA_SECRET;
+const groupStorageError = res => res.status(503).json({ error: 'Group storage is unavailable. Set SUPABASE_SECRET_KEY on the server.' });
+const iso = ms => new Date(ms).toISOString();
+const putGroup = g => db('groups?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: g.id, name: g.name, description: g.desc, color: g.color, icon: g.icon, owner_uid: g.ownerUid, owner_name: g.ownerName, created_at: iso(g.created) }) });
+const putGroupMember = (gid, uid, m) => db('group_members?on_conflict=group_id,user_uid', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ group_id: gid, user_uid: uid, user_name: m.name, role: m.role, joined_at: iso(m.at) }) });
+const putGroupThread = (gid, t) => db('group_threads?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: t.id, group_id: gid, title: t.title, body: t.body, author_uid: t.uid, author_name: t.name, views: t.views, created_at: iso(t.ts), updated_at: iso(t.last) }) });
+const putGroupPost = (tid, p) => db('group_posts?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: p.id, thread_id: tid, author_uid: p.uid, author_name: p.name, body: p.body, created_at: iso(p.ts) }) });
 const cleanGroupName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 24);
 const isGroupNameTaken = (n, except) => [...GROUPS.values()].some(g => g !== except && g.name.toLowerCase() === String(n || '').toLowerCase());
 const myGroupCount = uid => [...GROUPS.values()].filter(g => g.ownerUid === uid).length;
@@ -525,8 +534,9 @@ app.get('/api/groups', (req, res) => {
   list.sort((a, b) => b.members.size - a.members.size || b.created - a.created);
   res.json({ mine: me ? myGroupCount(me.uid) : 0, limit: MAX_GROUPS_PER_ACCOUNT, total: list.length, groups: list.slice(0, 120).map(g => groupCard(users, g)) });
 });
-app.post('/api/groups', (req, res) => {
+app.post('/api/groups', async (req, res) => {
   const me = meOf(req); if (!me) return res.sendStatus(401);
+  if (!groupStorageReady()) return groupStorageError(res);
   const b = req.body || {};
   const name = cleanGroupName(b.name);
   if (name.length < 3) return res.status(400).json({ error: 'Group name must be at least 3 characters' });
@@ -543,6 +553,13 @@ app.post('/api/groups', (req, res) => {
     members: new Map([[me.uid, { name: me.name, role: 'owner', at: Date.now() }]]),
     threads: []
   };
+  try {
+    await putGroup(g);
+    await putGroupMember(g.id, me.uid, g.members.get(me.uid));
+  } catch (e) {
+    console.error('create group failed:', e.message);
+    return res.status(503).json({ error: 'Could not save the group. Please try again.' });
+  }
   GROUPS.set(g.id, g);
   res.json({ id: g.id, group: groupCard(users, g) });
 });
@@ -560,32 +577,43 @@ app.get('/api/groups/:id', (req, res) => {
     threads: g.threads.slice().sort(byLast).slice(0, 100).map(t => gThreadItem(users, g, t))
   });
 });
-app.post('/api/groups/:id/join', (req, res) => {
+app.post('/api/groups/:id/join', async (req, res) => {
   const me = meOf(req); if (!me) return res.sendStatus(401);
+  if (!groupStorageReady()) return groupStorageError(res);
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   if (!g.members.has(me.uid)) {
     if (g.members.size >= MAX_MEMBERS_PER_GROUP) return res.status(400).json({ error: 'This group is full' });
-    g.members.set(me.uid, { name: me.name, role: 'member', at: Date.now() });
+    const member = { name: me.name, role: 'member', at: Date.now() };
+    try { await putGroupMember(g.id, me.uid, member); }
+    catch (e) { console.error('join group failed:', e.message); return res.status(503).json({ error: 'Could not join this group. Please try again.' }); }
+    g.members.set(me.uid, member);
   }
   res.json({ ok: true });
 });
-app.post('/api/groups/:id/leave', (req, res) => {
+app.post('/api/groups/:id/leave', async (req, res) => {
   const me = meOf(req); if (!me) return res.sendStatus(401);
+  if (!groupStorageReady()) return groupStorageError(res);
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   if (g.ownerUid === me.uid) return res.status(400).json({ error: 'Owner cannot leave — delete the group instead' });
+  try { await db('group_members?group_id=eq.' + encodeURIComponent(g.id) + '&user_uid=eq.' + encodeURIComponent(me.uid), { method: 'DELETE' }); }
+  catch (e) { console.error('leave group failed:', e.message); return res.status(503).json({ error: 'Could not leave this group. Please try again.' }); }
   g.members.delete(me.uid);
   res.json({ ok: true });
 });
-app.delete('/api/groups/:id', (req, res) => {
+app.delete('/api/groups/:id', async (req, res) => {
   const me = meOf(req); if (!me) return res.sendStatus(401);
+  if (!groupStorageReady()) return groupStorageError(res);
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   if (g.ownerUid !== me.uid && !isAdmin(me)) return res.sendStatus(403); // owner atau admin (Zerks)
+  try { await db('groups?id=eq.' + encodeURIComponent(g.id), { method: 'DELETE' }); }
+  catch (e) { console.error('delete group failed:', e.message); return res.status(503).json({ error: 'Could not delete this group. Please try again.' }); }
   GROUPS.delete(g.id);
   res.sendStatus(204);
 });
 // ----- Forum di dalam grup -----
-app.post('/api/groups/:id/forum', (req, res) => {
+app.post('/api/groups/:id/forum', async (req, res) => {
   const me = meOf(req); if (!me) return res.sendStatus(401);
+  if (!groupStorageReady()) return groupStorageError(res);
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   if (!g.members.has(me.uid) && !isAdmin(me)) return res.status(403).json({ error: 'Join this group before posting in its forum' });
   const title = plain(req.body?.title, 100).replace(/\s+/g, ' '), body = plain(req.body?.body, 2000);
@@ -596,13 +624,18 @@ app.post('/api/groups/:id/forum', (req, res) => {
   me.lastThread = now;
   if (g.threads.length >= 200) g.threads.splice(g.threads.reduce((m, t, i, a) => (t.last < a[m].last ? i : m), 0), 1);
   const t = { id: crypto.randomBytes(4).toString('hex'), title, body, uid: me.uid, name: me.name, ts: now, last: now, views: 0, posts: [] };
+  try { await putGroupThread(g.id, t); }
+  catch (e) { console.error('create group thread failed:', e.message); return res.status(503).json({ error: 'Could not save the thread. Please try again.' }); }
   g.threads.push(t);
   res.json({ id: t.id });
 });
 app.get('/api/groups/:id/forum/:tid', (req, res) => {
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   const t = g.threads.find(x => x.id === req.params.tid); if (!t) return res.sendStatus(404);
-  if (!req.query.nv) t.views++;
+  if (!req.query.nv) {
+    t.views++;
+    if (groupStorageReady()) putGroupThread(g.id, t).catch(e => console.error('save group thread view failed:', e.message));
+  }
   const users = uidMap(), me = meOf(req);
   res.json({ ...gThreadItem(users, g, t), groupName: g.name, body: t.body,
     own: me?.uid === t.uid,
@@ -610,8 +643,9 @@ app.get('/api/groups/:id/forum/:tid', (req, res) => {
     canDelete: !!me && (me.uid === t.uid || g.ownerUid === me.uid || isAdmin(me)),
     posts: t.posts.map(p => ({ id: p.id, body: p.body, ts: p.ts, own: me?.uid === p.uid, author: liteUser(users, p.uid, p.name) })) });
 });
-app.post('/api/groups/:id/forum/:tid/reply', (req, res) => {
+app.post('/api/groups/:id/forum/:tid/reply', async (req, res) => {
   const me = meOf(req); if (!me) return res.sendStatus(401);
+  if (!groupStorageReady()) return groupStorageError(res);
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   const t = g.threads.find(x => x.id === req.params.tid); if (!t) return res.sendStatus(404);
   if (!g.members.has(me.uid) && !isAdmin(me)) return res.status(403).json({ error: 'Join this group before replying here' });
@@ -621,27 +655,37 @@ app.post('/api/groups/:id/forum/:tid/reply', (req, res) => {
   const now = Date.now();
   if (now - (me.lastReply || 0) < 5000) return res.status(400).json({ error: 'Wait a few seconds before replying again' });
   me.lastReply = now;
-  t.posts.push({ id: crypto.randomBytes(3).toString('hex'), uid: me.uid, name: me.name, body, ts: now });
+  const post = { id: crypto.randomBytes(3).toString('hex'), uid: me.uid, name: me.name, body, ts: now };
+  const previousLast = t.last;
   t.last = now;
+  try { await putGroupPost(t.id, post); await putGroupThread(g.id, t); }
+  catch (e) { t.last = previousLast; console.error('create group reply failed:', e.message); return res.status(503).json({ error: 'Could not save the reply. Please try again.' }); }
+  t.posts.push(post);
   res.json({ ok: true });
 });
-app.delete('/api/groups/:id/forum/:tid', (req, res) => {
+app.delete('/api/groups/:id/forum/:tid', async (req, res) => {
   const me = meOf(req);
+  if (!groupStorageReady()) return groupStorageError(res);
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   const i = g.threads.findIndex(x => x.id === req.params.tid); if (i < 0) return res.sendStatus(404);
   const t = g.threads[i];
   // boleh hapus: penulis thread, owner grup, atau admin (Zerks)
   if (!me || (t.uid !== me.uid && g.ownerUid !== me.uid && !isAdmin(me))) return res.sendStatus(403);
+  try { await db('group_threads?id=eq.' + encodeURIComponent(t.id), { method: 'DELETE' }); }
+  catch (e) { console.error('delete group thread failed:', e.message); return res.status(503).json({ error: 'Could not delete the thread. Please try again.' }); }
   g.threads.splice(i, 1);
   res.sendStatus(204);
 });
-app.delete('/api/groups/:id/forum/:tid/post/:pid', (req, res) => {
+app.delete('/api/groups/:id/forum/:tid/post/:pid', async (req, res) => {
   const me = meOf(req);
+  if (!groupStorageReady()) return groupStorageError(res);
   const g = GROUPS.get(req.params.id); if (!g) return res.sendStatus(404);
   const t = g.threads.find(x => x.id === req.params.tid); if (!t) return res.sendStatus(404);
   const i = t.posts.findIndex(p => p.id === req.params.pid); if (i < 0) return res.sendStatus(404);
   // boleh hapus: penulis reply, owner grup, atau admin (Zerks)
   if (!me || (t.posts[i].uid !== me.uid && g.ownerUid !== me.uid && !isAdmin(me))) return res.sendStatus(403);
+  try { await db('group_posts?id=eq.' + encodeURIComponent(t.posts[i].id), { method: 'DELETE' }); }
+  catch (e) { console.error('delete group reply failed:', e.message); return res.status(503).json({ error: 'Could not delete the reply. Please try again.' }); }
   t.posts.splice(i, 1);
   res.sendStatus(204);
 });
@@ -894,9 +938,13 @@ app.delete('/api/admin/user/:uid', (req, res) => {
   if (target.gid) byGoogle.delete(target.gid);
   res.json({ ok: true });
 });
-app.delete('/api/admin/group/:gid', (req, res) => {
+app.delete('/api/admin/group/:gid', async (req, res) => {
   const me = needAdmin(req, res); if (!me) return;
   if (!GROUPS.has(req.params.gid)) return res.sendStatus(404);
+  if (groupStorageReady()) {
+    try { await db('groups?id=eq.' + encodeURIComponent(req.params.gid), { method: 'DELETE' }); }
+    catch (e) { console.error('admin delete group failed:', e.message); return res.status(503).json({ error: 'Could not delete the group. Please try again.' }); }
+  }
   GROUPS.delete(req.params.gid);
   res.json({ ok: true });
 });
@@ -1051,6 +1099,38 @@ async function loadGames() {
   } catch (e) { console.error('load games failed:', e.message); }
 }
 
+async function loadGroups() {
+  if (!SUPA_SECRET) { console.log('SUPABASE_SECRET_KEY not set -> groups are kept in memory only'); return; }
+  try {
+    const [rows, members, threadRows, posts] = await Promise.all([
+      db('groups?select=*&order=created_at.asc'),
+      db('group_members?select=*'),
+      db('group_threads?select=*&order=created_at.asc'),
+      db('group_posts?select=*&order=created_at.asc')
+    ]);
+    const threadById = new Map();
+    for (const r of rows || []) {
+      GROUPS.set(r.id, { id: r.id, name: r.name, desc: r.description, color: r.color, icon: r.icon,
+        ownerUid: r.owner_uid, ownerName: r.owner_name, created: new Date(r.created_at).getTime(), members: new Map(), threads: [] });
+    }
+    for (const m of members || []) {
+      const g = GROUPS.get(m.group_id);
+      if (g) g.members.set(m.user_uid, { name: m.user_name, role: m.role, at: new Date(m.joined_at).getTime() });
+    }
+    for (const t of threadRows || []) {
+      const g = GROUPS.get(t.group_id); if (!g) continue;
+      const thread = { id: t.id, title: t.title, body: t.body, uid: t.author_uid, name: t.author_name,
+        ts: new Date(t.created_at).getTime(), last: new Date(t.updated_at).getTime(), views: Number(t.views) || 0, posts: [] };
+      g.threads.push(thread); threadById.set(thread.id, thread);
+    }
+    for (const p of posts || []) {
+      const t = threadById.get(p.thread_id);
+      if (t) t.posts.push({ id: p.id, uid: p.author_uid, name: p.author_name, body: p.body, ts: new Date(p.created_at).getTime() });
+    }
+    console.log('Loaded ' + GROUPS.size + ' group(s) from Supabase');
+  } catch (e) { console.error('load groups failed:', e.message); }
+}
+
 const WEB = [path.join(__dirname, 'web'), path.join(__dirname, '..', 'web')].find(p => fs.existsSync(path.join(p, 'index.html'))) || __dirname;
 app.get('/config.js', (req, res, next) => {
   if (WEB !== __dirname && fs.existsSync(path.join(WEB, 'config.js'))) return next();
@@ -1115,8 +1195,7 @@ io.on('connection', socket => {
 });
 
 // ---------- Seed: macam-macam grup resmi biar tab Groups tidak kosong ----------
-function seedGroups() {
-  if (GROUPS.size) return;
+async function seedGroups() {
   const seeds = [
     ['Voxely Official', 'Official news, updates and events from the Voxely team.', '📢', '#5b8def'],
     ['Builders Club', 'Show off your builds, share tips and get feedback from other builders.', '🧱', '#f97316'],
@@ -1125,17 +1204,21 @@ function seedGroups() {
     ['Music Lounge', 'Talk about music, share your favorite tracks and playlists.', '🎵', '#ec4899'],
     ['Food Corner', 'Food talk, recipes and snack reviews. Pizza lovers welcome.', '🍕', '#eab308']
   ];
-  seeds.forEach(([name, desc, icon, color], i) => {
-    const id = 'g' + crypto.randomBytes(4).toString('hex');
-    GROUPS.set(id, {
+  for (const [name, desc, icon, color] of seeds) {
+    if (isGroupNameTaken(name)) continue;
+    const id = 'official-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const g = {
       id, name, desc, icon, color, ownerUid: null, ownerName: 'Voxely Team',
-      created: Date.now() - (seeds.length - i) * 864e5,
+      created: Date.now(),
       members: new Map(), threads: []
-    });
-  });
-  console.log('Seeded ' + seeds.length + ' official groups');
+    };
+    if (groupStorageReady()) await putGroup(g);
+    GROUPS.set(id, g);
+  }
+  console.log('Ensured official groups are available');
 }
 
-seedGroups();
-loadGames().finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
+Promise.all([loadGames(), loadGroups()]).then(seedGroups).catch(e => console.error('load persistent data failed:', e.message))
+  .finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
+
 
