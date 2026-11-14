@@ -1137,7 +1137,140 @@ app.get('/config.js', (req, res, next) => {
   const origin = (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host');
   res.type('js').send('window.VOXELY=' + JSON.stringify({ server: origin, supabaseUrl: SUPA_URL, supabaseKey: SUPA_KEY, download: process.env.CLIENT_DOWNLOAD_URL || '' }) + ';');
 });
-app.get(['/', '/index.html'], (_req, res) => fs.existsSync(path.join(WEB, 'index.html')) ? res.sendFile(path.join(WEB, 'index.html')) : res.send('Voxely game server is running'));
+// ---------- Status Page (like status.statsig.com) ----------
+// Replaces the old plain-text "Voxely game server is running" fallback: when no
+// web/ frontend exists, the root URL now serves a full status page — service
+// cards, green "Fully Operational" pills, "xx.xx% uptime in last 30 days" and
+// 90 daily uptime bars (one per day), just like the Statsig status page.
+const STATUS_FILE = path.join(__dirname, 'voxely-status.json');
+const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+// dayKey() helper already defined above (admin stats section) -> reused here
+const STATUS = { first: 0, days: {} }; // days: 'YYYY-MM-DD' -> minutes the server stayed up that day
+function loadStatus() {
+  try {
+    const j = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
+    STATUS.first = Number(j.first) || 0;
+    STATUS.days = (j.days && typeof j.days === 'object' && !Array.isArray(j.days)) ? j.days : {};
+  } catch (e) { /* first run: no history yet */ }
+}
+function saveStatus() { try { fs.writeFileSync(STATUS_FILE, JSON.stringify({ first: STATUS.first, days: STATUS.days }, null, 1)); } catch (e) { /* ignore */ } }
+loadStatus();
+if (!STATUS.first) STATUS.first = Date.now();
+const bumpStatus = () => { const k = dayKey(Date.now()); STATUS.days[k] = (STATUS.days[k] || 0) + 1; saveStatus(); };
+bumpStatus(); // count the boot minute right away so today's bar turns green instantly
+setInterval(bumpStatus, 60000).unref();
+// Uptime % over the last 30 days: every minute the process is down simply never
+// gets recorded, so restarts/outages lower the number automatically.
+function uptime30() {
+  const now = Date.now();
+  const start = Math.max(STATUS.first || now, now - 30 * 864e5);
+  const totalMin = (now - start) / 6e4;
+  if (totalMin < 1) return 100;
+  let upMin = 0;
+  for (let i = 0; i <= 30; i++) {
+    const ts = now - i * 864e5, k = dayKey(ts);
+    if (k < dayKey(start)) break;
+    const d = new Date(ts); d.setHours(0, 0, 0, 0);
+    const elapsed = Math.max(0, Math.min(now, d.getTime() + 864e5) - Math.max(start, d.getTime())) / 6e4;
+    upMin += Math.min(STATUS.days[k] || 0, elapsed);
+  }
+  return Math.max(0, Math.min(100, upMin / totalMin * 100));
+}
+// Live DATABASE check (Supabase): green when reachable, amber when the secret
+// key is missing (memory-only mode), red when it cannot be reached.
+async function checkDatabase() {
+  if (!SUPA_SECRET) return { state: 'degraded', note: 'SUPABASE_SECRET_KEY not set -> memory only' };
+  try {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 2500);
+    const r = await fetch(SUPA_URL + '/rest/v1/groups?select=id&limit=1', { headers: { apikey: SUPA_SECRET }, signal: ctl.signal });
+    clearTimeout(t);
+    return r.ok ? { state: 'ok', note: '' } : { state: 'down', note: 'HTTP ' + r.status };
+  } catch (e) { return { state: 'down', note: 'unreachable' }; }
+}
+const STATUS_PILL = { ok: 'Fully Operational', degraded: 'Degraded Performance', down: 'Major Outage' };
+const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+async function statusPageHTML(origin) {
+  const db = await checkDatabase();
+  const up = uptime30().toFixed(2);
+  const players = [...instances.values()].reduce((n, i) => n + i.players.size, 0);
+  const services = [
+    { name: 'API', url: origin + '/api/games', state: 'ok', note: '' },
+    { name: 'GAME SERVER', url: origin + '/api/people', state: 'ok', note: instances.size + ' instance(s), ' + players + ' player(s) online' },
+    { name: 'WEBSOCKET', url: origin + '/socket.io', state: 'ok', note: '' },
+    { name: 'DATABASE', url: SUPA_URL, state: db.state, note: db.note }
+  ];
+  const bars = [];
+  for (let i = 89; i >= 0; i--) { // oldest on the left -> newest on the right
+    const ts = Date.now() - i * 864e5, k = dayKey(ts), min = STATUS.days[k] || 0;
+    const dt = new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    bars.push(min > 0
+      ? '<div class="bar up" title="' + dt + ' — server up ' + Math.floor(min / 60) + 'h ' + (min % 60) + 'm"></div>'
+      : '<div class="bar nodata" title="' + dt + ' — no data"></div>');
+  }
+  const card = services.map(s => [
+    '<div class="svc">',
+    '<div class="r1"><span class="name">' + s.name + '</span>',
+    '<span class="pill ' + s.state + '">' + STATUS_PILL[s.state] + '</span>',
+    '<span class="up30">' + up + '% uptime in last 30 days</span></div>',
+    '<div class="url">' + escHtml(s.url) + (s.note ? ' <span class="note">· ' + escHtml(s.note) + '</span>' : '') + '</div>',
+    '<div class="bars">' + bars.join('') + '</div>',
+    '</div>'
+  ].join('')).join('');
+  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
+    '<title>Voxely Status</title>\n<style>\n' +
+    '*{margin:0;padding:0;box-sizing:border-box}\n' +
+    'body{background:#f1f2f4;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1f2937;min-height:100vh;padding:56px 16px}\n' +
+    '.card{max-width:860px;margin:0 auto;background:#fff;border:1px solid #e6e8ec;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.05);padding:34px 44px 10px}\n' +
+    '.head{display:flex;align-items:center;gap:10px;padding-bottom:18px;border-bottom:1px solid #eceef1}\n' +
+    '.logo{width:30px;height:30px;border-radius:8px;background:#1463ff;color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex:none}\n' +
+    '.brand{font-size:19px;font-weight:800;letter-spacing:.5px;color:#111827}\n' +
+    '.sys{font-size:12px;font-weight:600;letter-spacing:2.5px;color:#9ca3af;margin-left:8px}\n' +
+    '.svc{padding:20px 0 18px;border-bottom:1px solid #eceef1}\n' +
+    '.svc:last-of-type{border-bottom:none}\n' +
+    '.r1{display:flex;align-items:center;gap:10px}\n' +
+    '.name{font-size:13px;font-weight:700;letter-spacing:.3px;color:#111827}\n' +
+    '.pill{font-size:10px;font-weight:600;color:#fff;background:#22c55e;border-radius:999px;padding:3px 10px;letter-spacing:.2px;white-space:nowrap}\n' +
+    '.pill.degraded{background:#f59e0b}.pill.down{background:#ef4444}\n' +
+    '.up30{margin-left:auto;font-size:11px;color:#9ca3af;white-space:nowrap}\n' +
+    '.url{font-size:12px;color:#6b7280;margin-top:5px;word-break:break-all}\n' +
+    '.note{color:#9ca3af}\n' +
+    '.bars{display:grid;grid-template-columns:repeat(90,1fr);gap:2px;margin-top:14px}\n' +
+    '.bar{height:16px;border-radius:2px;background:#22c55e;min-width:2px}\n' +
+    '.bar.nodata{background:#e5e7eb}\n' +
+    '.foot{text-align:center;font-size:11px;color:#9ca3af;padding-top:24px;line-height:1.8}\n' +
+    '.foot a{color:#6b7280;text-decoration:underline}\n' +
+    '@media(max-width:640px){.card{padding:24px 18px 6px}.up30{display:none}.bars{grid-template-columns:repeat(45,1fr)}.bar{height:14px}.bars{gap:3px;margin-bottom:6px}}\n' +
+    '</style>\n</head>\n<body>\n' +
+    '<div class="card">\n<div class="head"><div class="logo">V</div><span class="brand">VOXELY</span><span class="sys">SYSTEM STATUS</span></div>\n' +
+    card + '\n</div>\n' +
+    '<div class="foot">This is an open-source status page<br>Forked from <a href="https://github.com/statsig-io/status-page" rel="noopener">Statusig&#39;s Status Page Template</a></div>\n' +
+    '</body>\n</html>';
+}
+const serveStatus = async (req, res) => {
+  try {
+    const origin = (req.headers['x-forwarded-proto'] || req.protocol) + '://' + req.get('host');
+    res.set('Cache-Control', 'no-store').send(await statusPageHTML(origin));
+  } catch (e) { console.error('status page failed:', e.message); res.status(500).send('Status page error'); }
+};
+app.get(['/', '/index.html'], (req, res) => fs.existsSync(path.join(WEB, 'index.html')) ? res.sendFile(path.join(WEB, 'index.html')) : serveStatus(req, res));
+app.get('/status', serveStatus); // always available, even with the web client installed
+app.get('/api/status', async (_req, res) => {
+  const db = await checkDatabase();
+  const players = [...instances.values()].reduce((n, i) => n + i.players.size, 0);
+  res.set('Cache-Control', 'no-store').json({
+    status: db.state === 'ok' ? 'operational' : 'degraded',
+    services: [
+      { name: 'API', state: 'ok' },
+      { name: 'GAME SERVER', state: 'ok', instances: instances.size, players },
+      { name: 'WEBSOCKET', state: 'ok' },
+      { name: 'DATABASE', state: db.state, note: db.note || undefined }
+    ],
+    uptime30: +uptime30().toFixed(2),
+    firstSeen: STATUS.first || null,
+    now: Date.now()
+  });
+});
 if (WEB !== __dirname) app.use(express.static(WEB, { index: false, dotfiles: 'ignore' }));
 
 // ---------- Multiplayer ----------
