@@ -1349,4 +1349,3 @@ async function seedGroups() {
 Promise.all([loadGames(), loadGroups()]).then(seedGroups).catch(e => console.error('load persistent data failed:', e.message))
   .finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
 
-
