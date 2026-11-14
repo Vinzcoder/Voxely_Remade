@@ -1143,7 +1143,6 @@ app.get('/config.js', (req, res, next) => {
 // cards, green "Fully Operational" pills, "xx.xx% uptime in last 30 days" and
 // 90 daily uptime bars (one per day), just like the Statsig status page.
 const STATUS_FILE = path.join(__dirname, 'voxely-status.json');
-const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 // dayKey() helper already defined above (admin stats section) -> reused here
 const STATUS = { first: 0, days: {} }; // days: 'YYYY-MM-DD' -> minutes the server stayed up that day
 function loadStatus() {
