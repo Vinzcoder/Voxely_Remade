@@ -154,6 +154,109 @@ app.use((req, res, next) => {
   next();
 });
 app.use((req, res, next) => { const u = sessions.get((req.headers.authorization || '').replace('Bearer ', '')); if (u) { u.joined = u.joined || Date.now(); u.lastSeen = Date.now(); } next(); });
+// ---------- Toolbox (model / script / animation clip / avatar buatan pemain) ----------
+// Dipasang SEBELUM express.json 1 MB di bawah: router ini punya parser sendiri (maks 15 MB). Semua kode ada di file ini.
+const toolbox = (() => {
+/* Voxely Toolbox API — letakkan di folder yang sama dengan server.js.
+   Menyimpan model / script / animation clip / avatar buatan pemain supaya pemain lain bisa memakainya.
+
+   Satu item = dua file di `dir`:  <id>.meta.json (kecil, dimuat ke memori)  +  <id>.data.json (isi, dibaca saat diminta).
+
+   Endpoint (semua butuh  Authorization: Bearer <token>):
+     GET    /api/toolbox?type=&q=&mine=1&sort=new|popular&page=1   daftar (tanpa data)
+     GET    /api/toolbox/:id                                        item lengkap + data
+     POST   /api/toolbox        { type, name, desc, tags, data, thumb }   -> { id }
+     DELETE /api/toolbox/:id                                        pemilik atau admin
+     POST   /api/toolbox/:id/use                                    penghitung pemakaian
+*/
+const express = require('express'), fs = require('fs'), path = require('path'), crypto = require('crypto');
+
+const TYPES = ['model', 'script', 'animation', 'avatar'];
+const PAGE = 24, MAX_ITEM_BYTES = 12 * 1024 * 1024, MAX_PER_USER = 100, MAX_ITEMS = 1500, UPLOADS_PER_HOUR = 30;
+const MAX_TOTAL_BYTES = (Number(process.env.TOOLBOX_MAX_MB) || 600) * 1024 * 1024;
+const ID = /^[a-f0-9]{16}$/, HEX = /^#[0-9a-f]{6}$/i;
+const THUMB = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const txt = (v, n) => String(v == null ? '' : v).replace(/[<>]/g, '').trim().slice(0, n);
+
+return function toolbox({ auth, dir, canModerate = () => false, nameOf = () => null }) {
+  fs.mkdirSync(dir, { recursive: true });
+  const metaPath = id => path.join(dir, id + '.meta.json'), dataPath = id => path.join(dir, id + '.data.json');
+  const index = new Map();                                   // id -> meta
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.meta.json')) continue;
+    try { const m = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')); if (ID.test(m.id) && fs.existsSync(dataPath(m.id))) index.set(m.id, m); } catch (e) { /* korup: lewati */ }
+  }
+  let totalBytes = [...index.values()].reduce((n, m) => n + (m.size || 0), 0);
+  const dirty = new Set(); let flushT = null;
+  const writeAtomic = (file, body) => { fs.writeFileSync(file + '.tmp', body); fs.renameSync(file + '.tmp', file); };
+  const touch = id => { dirty.add(id); if (!flushT) flushT = setTimeout(() => { flushT = null; dirty.forEach(i => { const m = index.get(i); if (m) try { writeAtomic(metaPath(i), JSON.stringify(m)); } catch (e) { console.error('toolbox meta save failed:', e.message); } }); dirty.clear(); }, 20000); flushT.unref && flushT.unref(); };
+  const removeItem = id => { const m = index.get(id); if (!m) return; index.delete(id); totalBytes -= m.size || 0; dirty.delete(id); for (const p of [metaPath(id), dataPath(id)]) try { fs.unlinkSync(p); } catch (e) {} };
+
+  const view = (m, uid) => ({ id: m.id, type: m.type, name: m.name, desc: m.desc, tags: m.tags, author: nameOf(m.authorId) || m.author, authorId: m.authorId, size: m.size, likes: 0, uses: m.uses || 0, createdAt: m.createdAt, thumb: m.thumb || '', mine: m.authorId === uid });
+  const hits = new Map();
+
+  const r = express.Router();
+  r.use(express.json({ limit: '15mb' }));                    // dipasang SEBELUM parser global 1 MB di server.js
+  r.use((req, res, next) => { const u = auth(req); if (!u || !u.uid) return res.status(401).json({ error: 'Login required' }); req.u = u; next(); });
+
+  r.get('/', (req, res) => {
+    const type = TYPES.includes(req.query.type) ? req.query.type : '', mine = req.query.mine === '1', q = String(req.query.q || '').toLowerCase().trim().slice(0, 40);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const list = [...index.values()].filter(m => (!type || m.type === type) && (!mine || m.authorId === req.u.uid) && (!q || (m.name + ' ' + (m.tags || []).join(' ') + ' ' + (nameOf(m.authorId) || m.author)).toLowerCase().includes(q)));
+    list.sort(req.query.sort === 'popular' ? (a, b) => (b.uses || 0) - (a.uses || 0) || b.createdAt - a.createdAt : (a, b) => b.createdAt - a.createdAt);
+    res.json({ total: list.length, items: list.slice((page - 1) * PAGE, page * PAGE).map(m => view(m, req.u.uid)) });
+  });
+
+  r.get('/:id', (req, res) => {
+    const m = ID.test(req.params.id) && index.get(req.params.id); if (!m) return res.status(404).json({ error: 'Item not found' });
+    fs.readFile(dataPath(m.id), 'utf8', (err, s) => { if (err) return res.status(404).json({ error: 'Item not found' }); try { res.json({ ...view(m, req.u.uid), data: JSON.parse(s) }); } catch (e) { res.status(500).json({ error: 'Item is corrupted' }); } });
+  });
+
+  r.post('/', (req, res) => {
+    const b = req.body || {}, now = Date.now(), h = (hits.get(req.u.uid) || []).filter(t => now - t < 3600e3);
+    if (h.length >= UPLOADS_PER_HOUR) return res.status(429).json({ error: 'Too many uploads, try again later' });
+    const name = txt(b.name, 60);
+    if (!TYPES.includes(b.type) || name.length < 3 || b.data == null || typeof b.data !== 'object') return res.status(400).json({ error: 'Invalid item' });
+    const d = b.data;
+    if (b.type === 'model' && !(Array.isArray(d.parts) && d.parts.length >= 1 && d.parts.length <= 1500)) return res.status(400).json({ error: 'A model needs 1-1500 parts' });
+    if (b.type === 'script' && !(typeof d.code === 'string' && d.code.length >= 1 && d.code.length <= 60000)) return res.status(400).json({ error: 'Script is empty or longer than 60000 characters' });
+    if (b.type === 'animation' && !(d.tracks && typeof d.tracks === 'object' && typeof d.name === 'string')) return res.status(400).json({ error: 'Invalid animation clip' });
+    if (b.type === 'avatar' && !(typeof d.b64 === 'string' && /^[A-Za-z0-9+/=]+$/.test(d.b64) && /\.(glb|gltf|vrm)$/i.test(String(d.name || '')))) return res.status(400).json({ error: 'Invalid avatar file' });
+    const body = JSON.stringify(d), size = Buffer.byteLength(body);
+    if (size > MAX_ITEM_BYTES) return res.status(413).json({ error: 'Item is larger than 12 MB' });
+    if ([...index.values()].filter(m => m.authorId === req.u.uid).length >= MAX_PER_USER) return res.status(403).json({ error: 'You can keep up to ' + MAX_PER_USER + ' items in the Toolbox' });
+    if (index.size >= MAX_ITEMS || totalBytes + size > MAX_TOTAL_BYTES) return res.status(507).json({ error: 'The Toolbox is full, try again later' });
+    const id = crypto.randomBytes(8).toString('hex');
+    const meta = { id, type: b.type, name, desc: txt(b.desc, 300), tags: (Array.isArray(b.tags) ? b.tags : []).slice(0, 5).map(t => txt(t, 20)).filter(Boolean),
+      author: txt(req.u.name, 40), authorId: req.u.uid, size, uses: 0, createdAt: now, thumb: typeof b.thumb === 'string' && b.thumb.length <= 40000 && THUMB.test(b.thumb) ? b.thumb : '' };
+    try { writeAtomic(dataPath(id), body); writeAtomic(metaPath(id), JSON.stringify(meta)); }
+    catch (e) { console.error('toolbox save failed:', e.message); try { fs.unlinkSync(dataPath(id)); } catch (x) {} return res.status(500).json({ error: 'Could not save the item' }); }
+    index.set(id, meta); totalBytes += size; h.push(now); hits.set(req.u.uid, h);
+    res.json({ id });
+  });
+
+  r.delete('/:id', (req, res) => {
+    const m = ID.test(req.params.id) && index.get(req.params.id); if (!m) return res.status(404).json({ error: 'Item not found' });
+    if (m.authorId !== req.u.uid && !canModerate(req.u)) return res.status(403).json({ error: 'This item is not yours' });
+    removeItem(m.id); res.json({ ok: true });
+  });
+
+  r.post('/:id/use', (req, res) => { const m = ID.test(req.params.id) && index.get(req.params.id); if (m) { m.uses = (m.uses || 0) + 1; touch(m.id); } res.json({ ok: true }); });
+
+  r.use((err, _req, res, _next) => res.status(err.type === 'entity.too.large' ? 413 : 400).json({ error: err.type === 'entity.too.large' ? 'Item is too large' : 'Bad request' }));
+
+  r.purgeUser = uid => { [...index.values()].filter(m => m.authorId === uid).forEach(m => removeItem(m.id)); };   // dipanggil saat admin menghapus akun
+  r.stats = () => ({ items: index.size, bytes: totalBytes });
+  return r;
+};
+
+})()({
+  dir: process.env.TOOLBOX_DIR || path.join(__dirname, 'voxely-toolbox'),
+  auth: req => { const u = sessions.get((req.headers.authorization || '').replace('Bearer ', '')); return u ? { uid: u.uid, name: u.name, admin: isAdmin(u) } : null; },
+  canModerate: u => !!u.admin,                                   // admin (Zerks / Vin) boleh menghapus item siapa pun
+  nameOf: uid => { for (const u of sessions.values()) if (u.uid === uid) return u.name; return null; }   // nama terbaru kalau pemiliknya sedang online
+});
+app.use('/api/toolbox', toolbox);
 app.use(express.json({ limit: '1mb' }));
 const cleanName = s => String(s || '').replace(/[^\p{L}\p{N}_ .-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
 const nameTaken = (n, exceptTok) => { const me = sessions.get(exceptTok); return [...sessions.values()].some(u => u !== me && u.name.toLowerCase() === n.toLowerCase()); };
@@ -936,6 +1039,7 @@ app.delete('/api/admin/user/:uid', (req, res) => {
   // cabut semua sesi login user ini
   [...sessions.entries()].forEach(([tok, u]) => { if (u.uid === target.uid) sessions.delete(tok); });
   if (target.gid) byGoogle.delete(target.gid);
+  toolbox.purgeUser(target.uid);
   res.json({ ok: true });
 });
 app.delete('/api/admin/group/:gid', async (req, res) => {
@@ -1158,93 +1262,113 @@ if (!STATUS.first) STATUS.first = Date.now();
 const bumpStatus = () => { const k = dayKey(Date.now()); STATUS.days[k] = (STATUS.days[k] || 0) + 1; saveStatus(); };
 bumpStatus(); // count the boot minute right away so today's bar turns green instantly
 setInterval(bumpStatus, 60000).unref();
-// Uptime % over the last 30 days: every minute the process is down simply never
-// gets recorded, so restarts/outages lower the number automatically.
-function uptime30() {
-  const now = Date.now();
-  const start = Math.max(STATUS.first || now, now - 30 * 864e5);
-  const totalMin = (now - start) / 6e4;
-  if (totalMin < 1) return 100;
-  let upMin = 0;
-  for (let i = 0; i <= 30; i++) {
-    const ts = now - i * 864e5, k = dayKey(ts);
-    if (k < dayKey(start)) break;
-    const d = new Date(ts); d.setHours(0, 0, 0, 0);
-    const elapsed = Math.max(0, Math.min(now, d.getTime() + 864e5) - Math.max(start, d.getTime())) / 6e4;
-    upMin += Math.min(STATUS.days[k] || 0, elapsed);
-  }
-  return Math.max(0, Math.min(100, upMin / totalMin * 100));
+// ---------- Halaman status (HTML-nya dirender oleh fungsi di bawah) ----------
+const renderStatusPage = (() => {
+/* Halaman status Voxely. Fungsi murni: terima data hasil pengecekan, kembalikan HTML. */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const WORD = { ok: 'Operational', degraded: 'Degraded', down: 'Outage' };
+const HEADLINE = { ok: 'All systems operational', degraded: 'Some systems are degraded', down: 'Service disruption' };
+const fmtPct = p => (p >= 99.995 ? '100' : p.toFixed(p >= 99 ? 2 : 1));
+const fmtDate = k => new Date(k + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const fmtSince = ms => { const s = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return d ? d + 'd ' + h + 'h' : h ? h + 'h ' + m + 'm' : m + 'm'; };
+
+function render({ services, days, uptime30, players, rooms, bootedAt, now = Date.now() }) {
+  const overall = services.some(s => s.state === 'down') ? 'down' : services.some(s => s.state === 'degraded') ? 'degraded' : 'ok';
+  const rows = services.map(s => `<li class="row"><span class="dot ${s.state}" aria-hidden="true"></span><div class="who"><b>${esc(s.name)}</b><small>${esc(s.detail || '')}</small></div><span class="ms">${s.ms == null ? '' : esc(s.ms) + ' ms'}</span><span class="st ${s.state}">${WORD[s.state]}</span></li>`).join('');
+  const bars = days.map(d => {
+    const cls = d.pct === null ? 'none' : d.pct >= 99.5 ? 'good' : d.pct >= 95 ? 'warn' : 'bad';
+    const tip = d.pct === null ? fmtDate(d.date) + ' · no data' : fmtDate(d.date) + ' · ' + fmtPct(d.pct) + '% up';
+    return `<i class="${cls}" title="${esc(tip)}"></i>`;
+  }).join('');
+  const t = new Date(now).toISOString().slice(11, 19);
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="60"><meta name="color-scheme" content="dark light">
+<title>${overall === 'ok' ? '' : '(!) '}Voxely status</title>
+<style>
+:root{--bg:#080c14;--panel:#0e1420;--line:#1c2535;--text:#e8edf6;--mute:#8592a8;--ok:#34d27b;--warn:#f0b429;--bad:#f0584b;--none:#1a2232;--accent:#1463ff}
+@media (prefers-color-scheme:light){:root{--bg:#f6f7f9;--panel:#fff;--line:#e3e6ec;--text:#141a26;--mute:#677286;--ok:#15a05a;--warn:#c98a06;--bad:#d63b2e;--none:#e8ebf0}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:720px;margin:0 auto;padding:56px 20px 64px}
+.top{display:flex;align-items:baseline;gap:10px;color:var(--mute);font-size:13px}
+.top b{color:var(--text);font-size:15px;letter-spacing:.02em}
+.top .sq{width:10px;height:10px;background:var(--accent);display:inline-block;transform:translateY(1px)}
+h1{font-size:30px;font-weight:650;letter-spacing:-.02em;margin:28px 0 6px;display:flex;align-items:center;gap:12px}
+h1 .dot{width:14px;height:14px}
+.sub{color:var(--mute);font-size:13px}
+h2{font-size:12px;font-weight:600;color:var(--mute);letter-spacing:.08em;text-transform:uppercase;margin:44px 0 10px}
+ul{list-style:none;padding:0;border:1px solid var(--line);background:var(--panel)}
+.row{display:grid;grid-template-columns:14px 1fr auto 104px;gap:14px;align-items:center;padding:14px 16px}
+.row+.row{border-top:1px solid var(--line)}
+.who b{font-weight:600;display:block}.who small{color:var(--mute);font-size:13px}
+.ms{color:var(--mute);font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.st{font-size:13px;font-weight:600;text-align:right}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);justify-self:center}
+.dot.degraded,.st.degraded{color:var(--warn)}.dot.degraded{background:var(--warn)}.dot.down{background:var(--bad)}
+.st.ok{color:var(--ok)}.st.down{color:var(--bad)}
+h1 .dot.ok{box-shadow:0 0 0 5px color-mix(in srgb,var(--ok) 22%,transparent)}
+.big{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.big strong{font-size:34px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.big span{color:var(--mute);font-size:13px}
+.bars{display:grid;grid-template-columns:repeat(90,1fr);gap:2px;height:34px}
+.bars i{background:var(--ok);border-radius:1px}.bars i.warn{background:var(--warn)}.bars i.bad{background:var(--bad)}.bars i.none{background:var(--none)}
+.bars i:hover{outline:2px solid var(--text);outline-offset:1px}
+.axis{display:flex;justify-content:space-between;color:var(--mute);font-size:12px;margin-top:8px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:44px}
+.facts div{background:var(--panel);padding:14px 16px}.facts b{display:block;font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}.facts span{color:var(--mute);font-size:12px}
+footer{margin-top:40px;color:var(--mute);font-size:12px;display:flex;gap:16px;flex-wrap:wrap}footer a{color:inherit}
+@media (max-width:560px){.row{grid-template-columns:14px 1fr 92px}.ms{display:none}.bars{grid-template-columns:repeat(45,1fr)}.bars i:nth-child(-n+45){display:none}h1{font-size:25px}}
+</style></head><body><main>
+<div class="top"><span class="sq"></span><b>Voxely</b><span>status</span></div>
+<h1><span class="dot ${overall}"></span>${HEADLINE[overall]}</h1>
+<p class="sub">Checked at ${t} UTC. This page refreshes every minute.</p>
+<h2>Services</h2><ul>${rows}</ul>
+<h2>Uptime, last 90 days</h2>
+<div class="big"><strong>${fmtPct(uptime30)}%</strong><span>over the last 30 days</span></div>
+<div class="bars" role="img" aria-label="Daily uptime for the last 90 days">${bars}</div>
+<div class="axis"><span>90 days ago</span><span>Today</span></div>
+<div class="facts"><div><b>${esc(players)}</b><span>players online</span></div><div><b>${esc(rooms)}</b><span>active rooms</span></div><div><b>${esc(fmtSince(now - bootedAt))}</b><span>since last restart</span></div></div>
+<footer><span>Uptime counts minutes the game server process was running; restarts and outages lower it.</span><a href="/api/status">JSON</a></footer>
+</main></body></html>`;
 }
-// Live DATABASE check (Supabase): green when reachable, amber when the secret
-// key is missing (memory-only mode), red when it cannot be reached.
+return render;
+
+})();
+// Uptime per hari (UTC) selama 90 hari. Persen satu hari = menit proses server berjalan / menit yang mungkin.
+// Menit saat server mati tidak pernah tercatat, jadi restart dan gangguan menurunkan angkanya otomatis.
+function uptimeDays(n = 90) {
+  const now = Date.now(), first = STATUS.first || now, today = Date.parse(dayKey(now)), out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const start = today - i * 864e5, key = dayKey(start), from = Math.max(start, first), to = Math.min(start + 864e5, now);
+    if (to <= from) { out.push({ date: key, pct: null, possible: 0, up: 0 }); continue; }
+    const possible = (to - from) / 6e4, up = Math.min(STATUS.days[key] || 0, possible);
+    out.push({ date: key, pct: Math.min(100, up / possible * 100), possible, up });
+  }
+  return out;
+}
+const uptime30 = () => { const d = uptimeDays(30).filter(x => x.pct !== null), p = d.reduce((n, x) => n + x.possible, 0); return p < 1 ? 100 : Math.min(100, d.reduce((n, x) => n + x.up, 0) / p * 100); };
+// Cek DATABASE (Supabase) sungguhan, dengan waktu respons.
 async function checkDatabase() {
-  if (!SUPA_SECRET) return { state: 'degraded', note: 'SUPABASE_SECRET_KEY not set -> memory only' };
+  if (!SUPA_SECRET) return { state: 'degraded', note: 'SUPABASE_SECRET_KEY not set, running from memory', ms: null };
+  const t0 = Date.now(), ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 2500);
   try {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 2500);
     const r = await fetch(SUPA_URL + '/rest/v1/groups?select=id&limit=1', { headers: { apikey: SUPA_SECRET }, signal: ctl.signal });
-    clearTimeout(t);
-    return r.ok ? { state: 'ok', note: '' } : { state: 'down', note: 'HTTP ' + r.status };
-  } catch (e) { return { state: 'down', note: 'unreachable' }; }
+    return r.ok ? { state: 'ok', note: '', ms: Date.now() - t0 } : { state: 'down', note: 'HTTP ' + r.status, ms: Date.now() - t0 };
+  } catch (e) { return { state: 'down', note: 'Unreachable', ms: null }; }
+  finally { clearTimeout(timer); }
 }
-const STATUS_PILL = { ok: 'Fully Operational', degraded: 'Degraded Performance', down: 'Major Outage' };
-const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-async function statusPageHTML(origin) {
-  const db = await checkDatabase();
-  const up = uptime30().toFixed(2);
-  const players = [...instances.values()].reduce((n, i) => n + i.players.size, 0);
-  const services = [
-    { name: 'API', url: origin + '/api/games', state: 'ok', note: '' },
-    { name: 'GAME SERVER', url: origin + '/api/people', state: 'ok', note: instances.size + ' instance(s), ' + players + ' player(s) online' },
-    { name: 'WEBSOCKET', url: origin + '/socket.io', state: 'ok', note: '' },
-    { name: 'DATABASE', url: SUPA_URL, state: db.state, note: db.note }
-  ];
-  const bars = [];
-  for (let i = 89; i >= 0; i--) { // oldest on the left -> newest on the right
-    const ts = Date.now() - i * 864e5, k = dayKey(ts), min = STATUS.days[k] || 0;
-    const dt = new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    bars.push(min > 0
-      ? '<div class="bar up" title="' + dt + ' — server up ' + Math.floor(min / 60) + 'h ' + (min % 60) + 'm"></div>'
-      : '<div class="bar nodata" title="' + dt + ' — no data"></div>');
-  }
-  const card = services.map(s => [
-    '<div class="svc">',
-    '<div class="r1"><span class="name">' + s.name + '</span>',
-    '<span class="pill ' + s.state + '">' + STATUS_PILL[s.state] + '</span>',
-    '<span class="up30">' + up + '% uptime in last 30 days</span></div>',
-    '<div class="url">' + escHtml(s.url) + (s.note ? ' <span class="note">· ' + escHtml(s.note) + '</span>' : '') + '</div>',
-    '<div class="bars">' + bars.join('') + '</div>',
-    '</div>'
-  ].join('')).join('');
-  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
-    '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
-    '<title>Voxely Status</title>\n<style>\n' +
-    '*{margin:0;padding:0;box-sizing:border-box}\n' +
-    'body{background:#f1f2f4;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1f2937;min-height:100vh;padding:56px 16px}\n' +
-    '.card{max-width:860px;margin:0 auto;background:#fff;border:1px solid #e6e8ec;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.05);padding:34px 44px 10px}\n' +
-    '.head{display:flex;align-items:center;gap:10px;padding-bottom:18px;border-bottom:1px solid #eceef1}\n' +
-    '.logo{width:30px;height:30px;border-radius:8px;background:#1463ff;color:#fff;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex:none}\n' +
-    '.brand{font-size:19px;font-weight:800;letter-spacing:.5px;color:#111827}\n' +
-    '.sys{font-size:12px;font-weight:600;letter-spacing:2.5px;color:#9ca3af;margin-left:8px}\n' +
-    '.svc{padding:20px 0 18px;border-bottom:1px solid #eceef1}\n' +
-    '.svc:last-of-type{border-bottom:none}\n' +
-    '.r1{display:flex;align-items:center;gap:10px}\n' +
-    '.name{font-size:13px;font-weight:700;letter-spacing:.3px;color:#111827}\n' +
-    '.pill{font-size:10px;font-weight:600;color:#fff;background:#22c55e;border-radius:999px;padding:3px 10px;letter-spacing:.2px;white-space:nowrap}\n' +
-    '.pill.degraded{background:#f59e0b}.pill.down{background:#ef4444}\n' +
-    '.up30{margin-left:auto;font-size:11px;color:#9ca3af;white-space:nowrap}\n' +
-    '.url{font-size:12px;color:#6b7280;margin-top:5px;word-break:break-all}\n' +
-    '.note{color:#9ca3af}\n' +
-    '.bars{display:grid;grid-template-columns:repeat(90,1fr);gap:2px;margin-top:14px}\n' +
-    '.bar{height:16px;border-radius:2px;background:#22c55e;min-width:2px}\n' +
-    '.bar.nodata{background:#e5e7eb}\n' +
-    '.foot{text-align:center;font-size:11px;color:#9ca3af;padding-top:24px;line-height:1.8}\n' +
-    '.foot a{color:#6b7280;text-decoration:underline}\n' +
-    '@media(max-width:640px){.card{padding:24px 18px 6px}.up30{display:none}.bars{grid-template-columns:repeat(45,1fr)}.bar{height:14px}.bars{gap:3px;margin-bottom:6px}}\n' +
-    '</style>\n</head>\n<body>\n' +
-    '<div class="card">\n<div class="head"><div class="logo">V</div><span class="brand">VOXELY</span><span class="sys">SYSTEM STATUS</span></div>\n' +
-    card + '\n</div>\n' +
-    '<div class="foot">This is an open-source status page<br>Forked from <a href="https://github.com/statsig-io/status-page" rel="noopener">Statusig&#39;s Status Page Template</a></div>\n' +
-    '</body>\n</html>';
+const BOOTED_AT = Date.now();
+async function statusPageHTML() {
+  const db = await checkDatabase(), players = [...instances.values()].reduce((n, i) => n + i.players.size, 0);
+  return renderStatusPage({
+    services: [
+      { name: 'API', detail: 'Responding', state: 'ok' },                                              // kalau halaman ini tampil, API hidup
+      { name: 'Realtime', detail: io.engine.clientsCount + ' connection' + (io.engine.clientsCount === 1 ? '' : 's'), state: 'ok' },
+      { name: 'Game servers', detail: instances.size + ' room' + (instances.size === 1 ? '' : 's') + ', ' + players + ' player' + (players === 1 ? '' : 's'), state: 'ok' },
+      { name: 'Database', detail: db.note || 'Supabase', state: db.state, ms: db.ms },
+    ],
+    days: uptimeDays(90).map(({ date, pct }) => ({ date, pct })), uptime30: uptime30(), players, rooms: instances.size, bootedAt: BOOTED_AT
+  });
 }
 const serveStatus = async (req, res) => {
   try {
@@ -1347,4 +1471,3 @@ async function seedGroups() {
 
 Promise.all([loadGames(), loadGroups()]).then(seedGroups).catch(e => console.error('load persistent data failed:', e.message))
   .finally(() => server.listen(PORT, () => console.log(`Voxely game server: http://localhost:${PORT}`)));
-
