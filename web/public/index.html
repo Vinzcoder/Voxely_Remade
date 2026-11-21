@@ -1,9 +1,36 @@
 <!doctype html>
+<!--
+  VOXELY — updated frontend (index.html)
+
+  NEW ENDPOINTS THE SERVER SHOULD ADD (everything else is unchanged):
+  1. Profile skin (visible to everyone on your profile page):
+     POST /api/profile  { skin: { accent: "#1463ff", pattern: "grid|dots|stripes|plain", banner: <dataURL|null> } }
+       — save it on the user object and return the updated user (same as name/about/avatar).
+       — GET /api/users/:uid must then include "skin" so other visitors see the look.
+  2. Group roles:
+     GET  /api/groups/:id      → add "role" ("owner"|"admin"|"member"|null) for the caller
+                                 and "role" on each member entry.
+     POST /api/groups/:id/role     { uid, role: "admin"|"member" }   (owner only)
+     POST /api/groups/:id/kick     { uid }   (owner, or admin kicking a member)
+  3. Group games:
+     GET    /api/groups/:id   → also return "games": [game objects with id,title,tagline,
+                                tags,art,thumb,online,status…] so the page can render cards.
+     POST   /api/groups/:id/games     { gameId }   (admins/owner only)
+     DELETE /api/groups/:id/games/:gameId        (admins/owner only)
+     POST   /api/games  → accept an optional "group" (group id) field, and list that game in
+                          the group; /api/games may attach "group": {id,name} for attribution.
+
+  Until the server supports them the UI still works: role falls back to owner/joined flags,
+  games list shows empty, and profile skin is kept in localStorage for the owner.
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Voxely</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>(function(){try{var t=JSON.parse(localStorage.getItem("voxelyTheme")||"null");if(t&&t.v){var r=document.documentElement;for(var k in t.v)r.style.setProperty(k,t.v[k]);r.style.colorScheme=t.l?"light":"dark";}}catch(e){}})();</script>
 <style>
   :root { --bg:#04060b; --panel:#0a0f1a; --panel3:#071127; --input:#050913; --row2:#0d1524; --hover:#101c33; --track:#0b1428; --alt:#1b2a4a; --line:#15233f; --blue:#1463ff; --blue2:#0a3fb8; --blue-hover:#3a82ff; --link:#6fa8ff; --text:#e6edf7; --dim:#7d8aa3; --soft:#b6c2d9; --strong:#ffffff; --on:#ffffff; --notice1:#0f2a5c; --notice2:#0a1c3d; }
@@ -251,6 +278,192 @@
   .arow small { display:block; color:var(--dim); margin-top:2px; }
   .apact { display:flex; gap:6px; flex:none; align-items:center; }
 </style>
+<style>
+  /* ==================================================================
+     VOXELY DESIGN LAYER — hand-tuned look on top of the theme variables
+     (accent-safe: every effect is derived from the active theme vars,
+      so all 6 site themes keep working with this layer on top)
+     ================================================================== */
+  :root { --fd:"Chakra Petch","Bahnschrift","Segoe UI",Arial,sans-serif; --fb:"Figtree","Segoe UI",Arial,sans-serif; }
+  html { scrollbar-color: var(--alt) var(--track); }
+  body { font:14px/1.55 var(--fb); }
+  /* faint "voxel graph paper" texture behind the whole site */
+  body::before { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background: linear-gradient(color-mix(in srgb,var(--blue) 6%,transparent) 1px,transparent 1px),
+                linear-gradient(90deg,color-mix(in srgb,var(--blue) 6%,transparent) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(1100px 560px at 50% -8%,#000 0%,transparent 78%);
+            mask-image:radial-gradient(1100px 560px at 50% -8%,#000 0%,transparent 78%); }
+  ::selection { background:color-mix(in srgb,var(--blue) 75%,transparent); color:#fff; }
+  ::-webkit-scrollbar { width:12px; height:12px; }
+  ::-webkit-scrollbar-thumb { background:var(--alt); border:3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background:var(--blue-hover); }
+  ::-webkit-scrollbar-track { background:transparent; }
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline:2px solid var(--link); outline-offset:2px; }
+
+  /* ---- header ---- */
+  .top { background:color-mix(in srgb,var(--panel3) 86%,transparent); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+  .top::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; opacity:.7;
+    background:linear-gradient(90deg,transparent,var(--blue) 22%,color-mix(in srgb,var(--link) 85%,#fff) 50%,var(--blue) 78%,transparent); }
+  .logo { font-family:var(--fd); letter-spacing:4px; text-shadow:0 2px 12px color-mix(in srgb,var(--blue) 45%,transparent); }
+  .logo svg { transition:transform .4s cubic-bezier(.34,1.56,.64,1); filter:drop-shadow(0 2px 6px rgba(0,0,0,.45)); }
+  .logo:hover svg { transform:rotate(90deg) scale(1.1); }
+  @media (min-width:861px) {
+    .sub a { font-family:var(--fd); font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; }
+    .sub a.on { border-bottom-color:transparent; }
+    .sub a::after { content:""; position:absolute; left:50%; right:50%; bottom:-1px; height:2px; background:var(--blue); transition:left .18s ease,right .18s ease; }
+    .sub a:hover::after, .sub a.on::after { left:0; right:0; }
+  }
+  .burger { clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px)); }
+
+  /* ---- buttons: the signature cut-corner + blocky press feel ---- */
+  .btn { font-family:var(--fb); font-weight:800; letter-spacing:.02em;
+    clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,9px 100%,0 calc(100% - 9px));
+    background:linear-gradient(180deg,color-mix(in srgb,var(--blue) 86%,#fff 14%),var(--blue2));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -3px 0 rgba(0,0,0,.28);
+    transition:transform .1s ease,filter .1s ease; }
+  .btn:hover { filter:brightness(1.13); transform:translateY(-1px); background:linear-gradient(180deg,color-mix(in srgb,var(--blue-hover) 86%,#fff 14%),var(--blue)); }
+  .btn:active { transform:translateY(1px); filter:brightness(.92); }
+  .btn.alt { background:var(--alt); color:var(--strong); box-shadow:inset 0 1px 0 rgba(255,255,255,.12); }
+  .btn.sm { letter-spacing:.01em; }
+  .x { clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px)); }
+  .x:hover { background:#c0392b; }
+  .vb { clip-path:polygon(0 0,calc(100% - 7px) 0,100% 7px,100% 100%,7px 100%,0 calc(100% - 7px)); font-weight:700; }
+
+  /* ---- typography ---- */
+  .ft, .ftitle, .gtitle, .box h3, .car h2, .pbname, .stc b { font-family:var(--fd); }
+  .car h2 { font-size:30px; line-height:1.08; text-wrap:balance; }
+  .ftable .fh { font-family:var(--fd); font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px)); }
+  .num, .fr > span, .act .n, .cb, .fh span { font-variant-numeric:tabular-nums; }
+  .label { font-family:var(--fd); font-size:12px; letter-spacing:.2em; }
+  .label::before { content:""; width:10px; height:10px; flex:none; background:var(--blue);
+    box-shadow:4px 4px 0 color-mix(in srgb,var(--blue) 30%,transparent); }
+  .label::after { width:56px; }
+  .crumb { font-family:var(--fd); font-size:11px; letter-spacing:.1em; text-transform:uppercase; }
+  h3.sec { font-family:var(--fd); letter-spacing:.18em; text-transform:uppercase; font-size:12px; }
+  .empty { border:1px dashed var(--line); text-align:center; font-family:var(--fd); letter-spacing:.05em; }
+  .hint { border-left:3px solid var(--blue); background:linear-gradient(90deg,color-mix(in srgb,var(--blue) 9%,transparent),transparent 65%); }
+  .ftag { background:var(--blue); color:#fff; padding:3px 12px 3px 10px; font-family:var(--fd); font-size:11px;
+    clip-path:polygon(0 0,100% 0,100% 100%,10px 100%,0 calc(100% - 8px)); }
+  .tag { clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+    background:color-mix(in srgb,var(--blue) 16%,transparent); font-weight:700; font-size:11px; letter-spacing:.05em; }
+
+  /* ---- cards & grids ---- */
+  .card { transition:border-color .18s ease,box-shadow .18s ease; }
+  .gc:hover, .gcard:hover, .market-card:hover { box-shadow:5px 5px 0 0 color-mix(in srgb,var(--blue) 34%,transparent); }
+  .gc .art img, .trend .art img { transition:transform .3s ease; }
+  .gc:hover .art img, .trend:hover .art img { transform:scale(1.06); }
+  .gc .in b, .trend .in b { font-family:var(--fd); }
+  .arr { clip-path:polygon(0 0,100% 0,100% 100%,10px 100%,0 calc(100% - 10px)); border:1px solid rgba(255,255,255,.14); }
+  .dots b { transition:width .25s ease; } .dots b.on { width:40px; }
+  .on-dot { border-radius:50%; animation:pulseDot 2.4s infinite; }
+  @keyframes pulseDot { 0% { box-shadow:0 0 0 0 rgba(34,197,94,.55); } 70% { box-shadow:0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow:0 0 0 0 rgba(34,197,94,0); } }
+
+  /* ---- forms ---- */
+  .pad input:not([type=color]):focus, .pad textarea:focus, .pad select:focus, .search:focus, .box input:focus, .bsel:focus, .fsearch .search:focus {
+    border-color:var(--blue); box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 25%,transparent); outline:none; }
+  input[type=color] { cursor:pointer; }
+
+  /* ---- modals & toast ---- */
+  .veil { backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+  .box { clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px)); }
+  #toast { clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px); font-weight:700;
+    box-shadow:0 10px 40px rgba(0,0,0,.5); animation:toastIn .25s ease; }
+  @keyframes toastIn { from { transform:translate(-50%,14px); opacity:0; } }
+
+  /* ---- footer ---- */
+  .footin { position:relative; }
+  .fbrand b { font-family:var(--fd); letter-spacing:5px; }
+  .fbrand::before { content:""; display:inline-block; width:12px; height:12px; margin-right:10px; background:var(--blue);
+    box-shadow:5px 5px 0 color-mix(in srgb,var(--blue) 30%,transparent); vertical-align:baseline; }
+  .foot nav a { font-family:var(--fd); font-size:11px; letter-spacing:.12em; text-transform:uppercase; }
+
+  /* ---- page entrance ---- */
+  #view > * { animation:pageIn .3s ease both; }
+  @keyframes pageIn { from { opacity:0; transform:translateY(9px); } }
+
+  /* ==================================================================
+     PROFILE SKIN — the customizable profile banner every visitor sees
+     ================================================================== */
+  .pcard { background:var(--panel); border:1px solid var(--line); overflow:hidden; }
+  .pband { position:relative; min-height:190px; display:flex; align-items:flex-end; overflow:hidden;
+    background:linear-gradient(125deg, color-mix(in srgb,var(--pac) 80%,#000 12%), color-mix(in srgb,var(--pac) 38%,var(--panel)) 58%, var(--panel)); }
+  .pband .pbimg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .pbveil { position:absolute; inset:0; background:linear-gradient(180deg, color-mix(in srgb,var(--pac) 22%,transparent), transparent 42%, color-mix(in srgb,var(--panel) 92%,transparent) 94%); }
+  .pband.pat-grid::after { content:""; position:absolute; inset:0; background:
+    linear-gradient(color-mix(in srgb,#fff 13%,transparent) 1px,transparent 1px),
+    linear-gradient(90deg,color-mix(in srgb,#fff 13%,transparent) 1px,transparent 1px); background-size:22px 22px; }
+  .pband.pat-dots::after { content:""; position:absolute; inset:0;
+    background-image:radial-gradient(color-mix(in srgb,#fff 25%,transparent) 2px,transparent 2.6px); background-size:17px 17px; }
+  .pband.pat-stripes::after { content:""; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg,color-mix(in srgb,#fff 11%,transparent) 0 2px,transparent 2px 26px); }
+  .pbin { position:relative; display:flex; gap:18px; align-items:flex-end; padding:0 22px 16px; width:100%; flex-wrap:wrap; z-index:2; }
+  .pbin .av { border:3px solid color-mix(in srgb,var(--pac) 65%,#fff); box-shadow:0 8px 26px rgba(0,0,0,.5); margin-bottom:4px; }
+  .pbid { flex:1; min-width:220px; }
+  .pbname { font-family:var(--fd); font-size:30px; color:#fff; line-height:1.05; margin:0 0 7px; text-shadow:0 2px 14px rgba(0,0,0,.6); }
+  .pbstats { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:7px; }
+  .pbstats span { background:rgba(0,0,0,.42); border:1px solid color-mix(in srgb,#fff 20%,transparent); color:#fff; font-size:12px; padding:3px 10px;
+    clip-path:polygon(0 0,100% 0,100% 100%,8px 100%,0 calc(100% - 8px)); }
+  .pbstats b { font-family:var(--fd); }
+  .pbplay b { color:#fff; }
+  .pbmeta { color:rgba(255,255,255,.88); font-size:12px; margin-bottom:9px; text-shadow:0 1px 6px rgba(0,0,0,.55); }
+  .pbin .acts { margin:0; }
+  .pbin .acts .btn { backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  /* skin editor controls */
+  .skacc { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:6px; }
+  .skacc button { width:36px; height:36px; border:2px solid transparent; cursor:pointer;
+    clip-path:polygon(0 0,100% 0,100% 100%,8px 100%,0 calc(100% - 8px)); }
+  .skacc button.on { border-color:var(--strong); }
+  .skacc input[type=color] { width:44px; height:36px; padding:2px; }
+  .patpick { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+
+  /* ==================================================================
+     GROUP ROLES + GROUP GAMES
+     ================================================================== */
+  .rolechip { display:inline-flex; align-items:center; font-family:var(--fd); font-size:10px; font-weight:700; letter-spacing:.12em; padding:2px 9px;
+    clip-path:polygon(0 0,100% 0,100% 100%,7px 100%,0 calc(100% - 7px)); }
+  .rolechip.owner { background:#f5b301; color:#191002; }
+  .rolechip.admin { background:var(--blue); color:#fff; }
+  .rolechip.member { background:var(--alt); color:var(--strong); }
+  .rolechip.you { outline:1px dashed var(--strong); outline-offset:2px; }
+  .gmrow { display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .gmrow:hover { background:var(--hover); }
+  .gmrow .gmid { flex:1; min-width:180px; }
+  .gmrow .gmid a { color:var(--strong); font-weight:600; }
+  .gmrow .gmid small { display:block; color:var(--dim); font-size:11px; margin-top:1px; }
+  .gmacts { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .gperm { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:10px; margin:10px 0; }
+  .gperm > div { background:var(--panel3); border:1px solid var(--line); border-top:3px solid var(--blue); padding:12px; }
+  .gperm b { font-family:var(--fd); display:flex; align-items:center; gap:8px; font-size:13px; letter-spacing:.08em; color:var(--strong); }
+  .gperm small { display:block; color:var(--dim); margin-top:6px; line-height:1.5; }
+  .gperm .rolechip { flex:none; }
+  .gmg { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .gmg .gc { position:relative; }
+  .gmg .rmgame { position:absolute; top:8px; right:8px; z-index:3; background:rgba(3,7,14,.78); border:1px solid #5b1a1a; color:#ff8f8f; }
+  .edgroup { display:inline-flex; align-items:center; gap:8px; background:color-mix(in srgb,var(--blue) 15%,transparent); border:1px solid var(--blue); color:var(--link); font-family:var(--fd); font-size:12px; letter-spacing:.08em; padding:5px 12px; }
+  .ghero .gicon { box-shadow:inset 0 -5px 0 rgba(0,0,0,.28), 6px 6px 0 color-mix(in srgb,var(--blue) 28%,transparent); }
+  .gstat { display:inline-flex; align-items:center; gap:6px; background:var(--panel3); border:1px solid var(--line); padding:4px 12px; font-size:12px; color:var(--soft); }
+  .gstat b { font-family:var(--fd); color:var(--strong); }
+
+  /* ---- profile & settings combined page ---- */
+  .pset { display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:18px; margin-top:18px; align-items:start; }
+  .pset .span { grid-column:1/-1; }
+  .thm { clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px)); }
+  .thm.on { border-color:var(--blue); box-shadow:4px 4px 0 color-mix(in srgb,var(--blue) 30%,transparent); }
+  .thm b { font-family:var(--fd); letter-spacing:.04em; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #view > *, .logo svg, .gc .art img { animation:none !important; transition:none !important; }
+    .on-dot { animation:none; }
+  }
+  @media (max-width:860px) {
+    .pband { min-height:150px; }
+    .pbname { font-size:24px; }
+    .pbin { padding:0 14px 12px; gap:12px; }
+    .pbin .av { width:64px !important; height:64px !important; }
+  }
+</style>
 </head>
 <body>
 <header class="top"><div class="wrap topin">
@@ -310,6 +523,14 @@
   <button class="btn alt" onclick="document.getElementById('launch').classList.remove('on')">Close</button>
 </div></div>
 <div id="toast"></div>
+<!-- Group: pick one of your games to feature on the group page -->
+<div class="veil" id="gAdd"><div class="box" style="width:430px;max-height:82vh;overflow:auto">
+  <h3>Add a game to this group</h3>
+  <p>Pick one of the games you own. Every group member will be able to find and play it from the group page.</p>
+  <div id="gAddList"></div>
+  <a class="btn alt sm" style="margin-top:10px" href="#/dev/new/GID" id="gAddNew" onclick="document.getElementById('gAdd').classList.remove('on')">＋ Create a new game for this group</a>
+  <button class="btn alt" style="margin-top:8px" onclick="document.getElementById('gAdd').classList.remove('on')">Cancel</button>
+</div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/config.js"></script>
@@ -401,7 +622,7 @@ function renderMe() {
   if (!session) { $('#me').innerHTML = '<button class="btn sm" onclick="document.getElementById(\'login\').classList.add(\'on\')">Sign in</button>'; return; }
   $('#me').innerHTML = `<button onclick="event.stopPropagation();$('#menu').classList.toggle('on')">${avatar(session.user, 28)}${E(session.user.name)}${verifiedBadge(session.user)}${adminBadge(session.user)}<span class="bdg">${nCount || ''}</span> ▾</button>
     <div class="menu" id="menu"><div class="mh"><b>${E(session.user.name)}${adminBadge(session.user)}</b><small>${session.user.google ? 'Google account' : 'Guest account'}</small></div>
-    ${session.user.admin || String(session.user.name || '').toLowerCase() === 'zerks' ? '<a href="#/admin" style="color:#f5b301;font-weight:700">⚙ Admin Panel</a>' : ''}<a href="#/profile">Profile</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/groups">My Groups</a><a href="#/settings">Settings</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
+    ${session.user.admin || String(session.user.name || '').toLowerCase() === 'zerks' ? '<a href="#/admin" style="color:#f5b301;font-weight:700">⚙ Admin Panel</a>' : ''}<a href="#/profile">Profile &amp; Settings</a><a href="#/notifications">Notifications<span class="bdg">${nCount || ''}</span></a><a href="#/friends">Friends</a><a href="#/groups">My Groups</a><a href="#/dev">Developer Portal</a><a class="out" onclick="logout(true)">Logout</a></div>`;
 }
 document.addEventListener('click', () => $('#menu')?.classList.remove('on'));
 
@@ -492,13 +713,39 @@ function applyTheme(id) {
   r.style.colorScheme = t.l ? 'light' : 'dark';
   localStorage.setItem('voxelyTheme', JSON.stringify({ id, l: t.l, v }));
 }
-function settingsPage() {
-  let cur = 'blue-dark'; try { cur = JSON.parse(localStorage.getItem('voxelyTheme')).id || cur; } catch (e) {}
-  const card = ([id, t]) => `<button class="thm ${id === cur ? 'on' : ''}" onclick="applyTheme('${id}');settingsPage()"><span class="sw3">${[0, 1, 9, 13].map(i => `<i style="background:${t.v[i]}"></i>`).join('')}</span><b>${t.n}</b><small>${t.d || (t.l ? 'Light' : 'Dark')}</small></button>`;
-  $('#view').innerHTML = `<span class="label">SETTINGS</span><div class="card pad" style="max-width:780px"><h3 class="ft">Theme</h3>
-    <div class="hint">Pick a color theme for the Voxely website. Your choice is saved in this browser.</div>
-    <div class="thmgrid">${Object.entries(THEMES).map(card).join('')}</div></div>`;
+/* ---------- profile skin — the customizable look every visitor of your profile sees ---------- */
+const SKINS = [['#1463ff','Ocean'],['#00b8d9','Cyan'],['#22c55e','Slime'],['#e63946','Lava'],['#f5b301','Gold'],['#8b5cf6','Cosmic'],['#ec4899','Bubble'],['#111827','Shadow']];
+const PATS = [['grid','Blueprint grid'],['dots','Halftone dots'],['stripes','Speed stripes'],['plain','Clean']];
+let mySkin = { accent:'#1463ff', pattern:'grid', banner:null };
+function skLoad(u) { // server copy wins; browser copy is the fallback
+  let s = (u && u.skin) || null;
+  if (!s) { try { s = JSON.parse(localStorage.getItem('voxelySkin')) || null; } catch (e) {} }
+  mySkin = { accent:'#1463ff', pattern:'grid', banner:null, ...(s || {}) };
 }
+function skPaint() { // live-preview the profile banner on the Profile & Settings page
+  const b = $('#pvBand'); if (!b) return;
+  b.style.setProperty('--pac', mySkin.accent || '#1463ff');
+  b.className = 'pband pat-' + (mySkin.pattern || 'plain');
+  const im = b.querySelector('.pbimg');
+  if (mySkin.banner) { if (im) im.src = mySkin.banner; else b.insertAdjacentHTML('afterbegin', `<img class="pbimg" src="${mySkin.banner}" alt="">`); }
+  else if (im) im.remove();
+  document.querySelectorAll('.skacc button[data-acc]').forEach(x => x.classList.toggle('on', x.dataset.acc.toLowerCase() === String(mySkin.accent).toLowerCase()));
+  document.querySelectorAll('.patpick button[data-pat]').forEach(x => x.classList.toggle('on', x.dataset.pat === String(mySkin.pattern)));
+}
+function skSet(k, v) { mySkin[k] = v; skPaint(); }
+function skBanner() { pickImage(900, 220, d => { mySkin.banner = d; skPaint(); toast('Banner ready — press Save profile look'); }, 90000); }
+function skBannerRm() { mySkin.banner = null; skPaint(); }
+async function saveSkin() {
+  const skin = { accent: mySkin.accent, pattern: mySkin.pattern, banner: mySkin.banner || null };
+  const r = await rq('POST', '/api/profile', { skin });
+  localStorage.setItem('voxelySkin', JSON.stringify(skin));
+  if (!r.ok) return toast(r.data.error || 'Could not save on the server — retry later');
+  if (r.data && r.data.skin) mySkin = { ...mySkin, ...r.data.skin };
+  session.user.skin = { accent: mySkin.accent, pattern: mySkin.pattern, banner: mySkin.banner || null };
+  localStorage.setItem('voxely', JSON.stringify(session));
+  toast('Profile look saved — everyone sees it now');
+}
+const themeGrid = cur => `<div class="thmgrid">${Object.entries(THEMES).map(([id, t]) => `<button class="thm ${id === cur ? 'on' : ''}" onclick="applyTheme('${id}');profilePage()"><span class="sw3">${[0, 1, 9, 13].map(i => `<i style="background:${t.v[i]}"></i>`).join('')}</span><b>${t.n}</b><small>${t.d || (t.l ? 'Light' : 'Dark')}</small></button>`).join('')}</div>`;
 
 /* ---------- 3D avatar preview — the exact same R6 character model the game client uses ---------- */
 const OUT0C = { skin: { head: '#e6eaf2', torso: '#e6eaf2', armL: '#e6eaf2', armR: '#e6eaf2', legL: '#e6eaf2', legR: '#e6eaf2' }, face: 'smile', hat: 'none', hatColor: '#e63946' };
@@ -878,13 +1125,15 @@ async function userPage(uid) {
     received: `<button class="btn sm" onclick="friendAction('${u.uid}','accept')">Accept request</button>`,
     friends: `<button class="btn sm alt" onclick="friendAction('${u.uid}','remove')">Remove friend</button>`
   }[u.friend] || '';
+  const sk = u.skin || {}, acc = sk.accent || '#1463ff';
   $('#view').innerHTML = `<span class="label">PROFILE</span>
-    <div class="card pad"><div class="prof">${avatar(u, 96)}<div style="min-width:0">
-      <h2 class="ftitle" style="margin:0">${E(u.name)}${verifiedBadge(u)}${adminBadge(u)}</h2>
-      <div class="follow-stat"><b>${u.followers}</b> followers · <b>${u.following}</b> following · <b>${u.friends}</b> friends${u.game ? ' · playing <b>' + E(u.game) + '</b>' : ''}</div>
-      <div class="follow-stat">${u.lastSeen && Date.now() - u.lastSeen < 120000 ? '<i class="on-dot"></i>Online now' : u.lastSeen ? 'Last online <b>' + ago(u.lastSeen) + '</b>' : ''}${u.joined ? ' · Joined <b>' + dateStr(u.joined) + '</b>' : ''}</div>
-      <div class="acts">${session && session.user.uid !== u.uid ? fb + `<button class="btn sm alt" onclick="followAction('${u.uid}')">${u.followed ? 'Unfollow' : 'Follow'}</button>` : ''}</div>
-    </div></div></div>
+    <div class="pcard" style="--pac:${E(acc)}"><div class="pband pat-${E(sk.pattern || 'grid')}">${sk.banner ? `<img class="pbimg" src="${E(sk.banner)}" alt="">` : ''}<div class="pbveil"></div>
+    <div class="pbin">${avatar(u, 92)}<div class="pbid">
+      <h1 class="pbname">${E(u.name)}${verifiedBadge(u)}${adminBadge(u)}</h1>
+      <div class="pbstats"><span><b>${u.followers}</b> followers</span><span><b>${u.following}</b> following</span><span><b>${u.friends}</b> friends</span>${u.game ? `<span class="pbplay"><i class="on-dot"></i>playing <b>${E(u.game)}</b></span>` : ''}</div>
+      <div class="pbmeta">${u.lastSeen && Date.now() - u.lastSeen < 120000 ? '<i class="on-dot"></i>Online now' : u.lastSeen ? 'Last online ' + ago(u.lastSeen) : ''}${u.joined ? ' · Joined ' + dateStr(u.joined) : ''}</div>
+      ${session && session.user.uid !== u.uid ? `<div class="acts">${fb}<button class="btn sm alt" onclick="followAction('${u.uid}')">${u.followed ? 'Unfollow' : 'Follow'}</button></div>` : ''}
+    </div></div></div></div>
     ${u.badges?.length ? `<h3 class="sec">BADGES</h3><div class="badge-grid">${u.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span></div>`).join('')}</div>` : ''}
     <div class="pgrid"><div class="card pad"><canvas id="uav" width="320" height="400"></canvas></div>
     <div class="card pad"><h3 class="ft">About</h3><p style="color:var(--soft);margin:8px 0 16px;white-space:pre-wrap;word-break:break-word">${u.about ? E(u.about) : '<span style="color:var(--dim)">No description yet.</span>'}</p>
@@ -912,23 +1161,52 @@ async function followAction(uid) {
   userPage(uid);
 }
 
-/* ---------- own profile ---------- */
+/* ---------- own profile — now merged with Settings into one page ---------- */
 async function profilePage() {
   if (!session) return (location.hash = '#/');
   const u = session.user;
   const mine = await gj('/api/me/badges');
   if (!$('#view')) return;
-  $('#view').innerHTML = `<span class="label">PROFILE</span>
-    <div class="card pad" style="max-width:640px">
-      <div class="prof">${avatar(u, 96)}<div><h2 class="ftitle" style="margin:0">${E(u.name)}</h2><small style="color:var(--dim)">${u.google ? 'Google account' : 'Guest account'}</small></div></div>
-      <label style="margin-top:16px">Display name</label>
+  skLoad(u);
+  let cur = 'blue-dark'; try { cur = JSON.parse(localStorage.getItem('voxelyTheme')).id || cur; } catch (e) {}
+  $('#view').innerHTML = `<span class="label">PROFILE &amp; SETTINGS</span>
+    <div class="pcard" style="--pac:${E(mySkin.accent)}"><div class="pband pat-${E(mySkin.pattern || 'grid')}" id="pvBand">${mySkin.banner ? `<img class="pbimg" src="${mySkin.banner}" alt="">` : ''}<div class="pbveil"></div>
+    <div class="pbin">${avatar(u, 92)}<div class="pbid">
+      <h1 class="pbname">${E(u.name)}${verifiedBadge(u)}${adminBadge(u)}</h1>
+      <div class="pbstats"><span><b>${u.followers || 0}</b> followers</span><span><b>${u.following || 0}</b> following</span><span><b>${u.friends || 0}</b> friends</span></div>
+      <div class="pbmeta">${u.google ? 'Google account' : 'Guest account'}${u.joined ? ' · Joined ' + dateStr(u.joined) : ''} · <a href="#/user/${u.uid}" style="color:#fff;text-decoration:underline">view as visitor</a></div>
+    </div></div></div></div>
+    <div class="pset">
+    <div class="card pad"><h3 class="ft">1 · Identity</h3>
+      <label>Display name</label>
       <div style="display:flex;gap:8px"><input id="pfName" value="${E(u.name)}" maxlength="16" style="flex:1"><button class="btn sm" onclick="saveName()">Save</button></div>
-      <label>About me</label><textarea id="pfAbout" maxlength="200" style="height:70px">${E(u.about || '')}</textarea><div class="acts"><button class="btn sm" onclick="saveAbout()">Save about</button><a class="btn sm alt" href="#/user/${u.uid}">View public profile</a></div>
-      <div class="shirt-upload" style="margin-top:14px"><button class="btn sm alt" onclick="saveAvatar()">Change profile photo</button><button class="x" onclick="rmAvatar()">Remove photo</button><small style="color:var(--dim)">Used as the small avatar across the whole site</small></div>
-      <div class="sep2"></div>
-      <h3 class="ft">My badges</h3>
-      ${mine?.badges?.length ? `<div class="badge-grid" style="margin-top:10px">${mine.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name">${E(b.name)}</span></div>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No badges yet.</div>'}
+      <label>About me</label><textarea id="pfAbout" maxlength="200" style="height:70px">${E(u.about || '')}</textarea>
+      <div class="acts"><button class="btn sm" onclick="saveAbout()">Save about</button></div>
+      <div class="shirt-upload" style="margin-top:14px"><button class="btn sm alt" onclick="saveAvatar()">Change profile photo</button><button class="x" onclick="rmAvatar()">Remove photo</button><small style="color:var(--dim)">Shown next to your name across the whole site</small></div>
+    </div>
+    <div class="card pad"><h3 class="ft">2 · Profile look <small style="color:var(--link);font-family:var(--fb);font-size:11px;letter-spacing:0">— visible to everyone</small></h3>
+      <div class="hint">These colors and the banner are what <b>any visitor of your profile page sees</b> — not just you. The preview above updates live.</div>
+      <label>Accent color</label>
+      <div class="skacc">${SKINS.map(([c, n]) => `<button type="button" data-acc="${c}" title="${n}" aria-label="${n}" style="background:${c}" onclick="skSet('accent','${c}')"></button>`).join('')}<input type="color" value="${E(mySkin.accent)}" title="Custom color" oninput="skSet('accent',this.value)"></div>
+      <label>Banner pattern</label>
+      <div class="patpick">${PATS.map(([k, n]) => `<button type="button" class="vb ${mySkin.pattern === k ? 'on' : ''}" data-pat="${k}" onclick="skSet('pattern','${k}')">${n}</button>`).join('')}</div>
+      <label>Banner image</label>
+      <div class="shirt-upload"><button class="btn sm alt" onclick="skBanner()">Upload banner</button><button class="x" onclick="skBannerRm()">Remove</button><small style="color:var(--dim)">Optional — 900×220, covers the color banner</small></div>
+      <div class="acts"><button class="btn sm" onclick="saveSkin()">Save profile look</button></div>
+    </div>
+    <div class="card pad span"><h3 class="ft">3 · Site theme</h3>
+      <div class="hint">Changes the colors of the whole Voxely site <b>in this browser only</b> — your profile look above is the part other people see.</div>
+      ${themeGrid(cur)}
+    </div>
+    <div class="card pad"><h3 class="ft">4 · Account</h3>
+      <dl class="info" style="padding:0;line-height:1.5"><dt>ACCOUNT TYPE</dt><dd>${u.google ? 'Google account' : 'Guest account'}</dd><dt>USER ID</dt><dd style="word-break:break-all">${E(u.uid)}</dd></dl>
+      <div class="acts"><button class="x" onclick="logout(true)">Sign out</button></div>
+    </div>
+    <div class="card pad"><h3 class="ft">5 · My badges</h3>
+      ${mine?.badges?.length ? `<div class="badge-grid" style="margin-top:10px">${mine.badges.map(b => `<div class="badge-item"><span class="badge-icon">${E(b.icon)}</span><span class="badge-name" title="${E(b.description || '')}">${E(b.name)}</span></div>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No badges yet.</div>'}
+    </div>
     </div>`;
+  skPaint();
 }
 async function saveAbout() {
   const r = await rq('POST', '/api/profile', { about: $('#pfAbout').value });
@@ -1058,26 +1336,27 @@ async function devPage() {
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
     ${devTabs('games')}<div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="openStudio('new')">＋ New game in Studio</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
     <div class="hint">You can create up to 5 games. Build the world in Voxely Studio, set a release label (WIP / ALPHA / BETA), then log every update in the changelog so players know what's new.</div>
-    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b><small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="openStudio('${id}')">Edit in Voxely Studio</button><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Quick Web Editor</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
+    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b>${g.group ? `<span class="edgroup" style="margin-left:8px">⚒ ${E(g.group.name || String(g.group))}</span>` : ''}<small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="openStudio('${id}')">Edit in Voxely Studio</button><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Quick Web Editor</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
 }
 async function delGame(id) { if (!confirm('Delete this game permanently?')) return; await rq('DELETE', '/api/games/' + id); await loadGames(); devPage(); toast('Game deleted'); }
 
-async function editPage(id) {
+async function editPage(id, gid) {
   if (!session) return (location.hash = '#/');
   if (id) {
     const src = await gj('/api/games/' + id + '/source');
     if (!src) return (location.hash = '#/dev');
-    ED = { id, ...src, boxes: (src.boxes || []).map(b => ({ ...b })), scripts: (src.scripts || []).map(s => ({ ...s })), thumb: null, hasThumb: src.hasThumb };
+    ED = { id, ...src, boxes: (src.boxes || []).map(b => ({ ...b })), scripts: (src.scripts || []).map(s => ({ ...s })), thumb: null, hasThumb: src.hasThumb, group: src.group || null, groupName: src.groupName || '' };
   } else {
-    ED = { id: null, title: '', tagline: '', desc: '', tags: [], sky: '#7ec8ff', art: ['#1463ff', '#0a0f1a'], status: '',
+    ED = { id: null, group: gid || null, groupName: '', title: '', tagline: '', desc: '', tags: [], sky: '#7ec8ff', art: ['#1463ff', '#0a0f1a'], status: '',
       boxes: [{ x: 0, y: -0.5, z: 0, w: 20, h: 1, d: 20, c: '#5cb85c', n: 'Ground', l: 0, r: 0, t: 0, cc: 1, k: 0, sp: 0 }], scripts: [], thumb: null, hasThumb: false };
   }
+  if (ED.group && !ED.groupName) { const gd = await gj('/api/groups/' + ED.group); ED.groupName = gd?.group?.name || ''; }
   EDsel = 0;
   renderEditor();
 }
 function renderEditor() {
   const isNew = !ED.id;
-  $('#view').innerHTML = `<span class="label">VOXELY STUDIO</span><div class="fhead"><h1 class="ftitle">${isNew ? 'Create new game' : 'Edit game'}</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="saveGameEd()">💾 Save</button><button class="btn sm alt" onclick="location.hash='#/dev'">Cancel</button></div></div>
+  $('#view').innerHTML = `<span class="label">VOXELY STUDIO</span><div class="fhead"><h1 class="ftitle">${isNew ? 'Create new game' : 'Edit game'}</h1>${ED.group ? `<span class="edgroup">⚒ GROUP GAME${ED.groupName ? ' · ' + E(ED.groupName) : ''}</span>` : ''}<div class="acts" style="margin:0"><button class="btn sm" onclick="saveGameEd()">💾 Save</button><button class="btn sm alt" onclick="location.hash='#/dev'">Cancel</button></div></div>
   <div class="card pad"><h3 class="ft">1 · Game info</h3>
     <div class="row2">
       <div><label>Title</label><input id="edTitle" maxlength="30" value="${E(ED.title)}"></div>
@@ -1235,6 +1514,7 @@ async function saveGameEd() {
     tags: $('#edTags').value.split(',').map(s => s.trim()).filter(Boolean),
     sky: $('#edSky').value, art: [$('#edArt1').value, $('#edArt2').value],
     status: $('#edStatus').value,
+    group: ED.group || null,
     boxes: ED.boxes,
     scripts: ED.scripts.filter(s => (s.code || '').trim())
   };
@@ -1400,7 +1680,7 @@ async function groupsPage() {
 function groupCard(g) {
   return `<a class="gcard" href="#/group/${g.id}"><div style="display:flex;gap:12px;align-items:center"><span class="gicon" style="background:${g.color}">${gIcon(g)}</span>
     <div style="min-width:0"><b style="color:var(--strong);font-size:15px">${E(g.name)}</b>
-    <small style="display:block;color:var(--dim)">${g.members} member${g.members === 1 ? '' : 's'} · ${g.threads} thread${g.threads === 1 ? '' : 's'}</small></div></div>
+    <small style="display:block;color:var(--dim)">${g.members} member${g.members === 1 ? '' : 's'} · ${g.games ?? 0} game${(g.games ?? 0) === 1 ? '' : 's'} · ${g.threads} thread${g.threads === 1 ? '' : 's'}</small></div></div>
     <p style="color:var(--soft);font-size:12px;margin:10px 0;min-height:32px;word-break:break-word">${E(g.desc || '')}</p>
     <small style="color:var(--link)">by ${E(g.owner.name)}${adminBadge(g.owner)} &nbsp;→</small></a>`;
 }
@@ -1449,6 +1729,38 @@ async function groupDelete(id) {
   if (!r.ok) return toast(r.data.error || 'Failed to delete group');
   toast('Group deleted'); location.hash = '#/groups';
 }
+/* ---- group roles & group games ---- */
+const gRank = { owner: 0, admin: 1, member: 2 };
+async function gSetRole(gid, uid, role) {
+  const r = await rq('POST', `/api/groups/${gid}/role`, { uid, role });
+  if (!r.ok) return toast(r.data.error || 'Failed to change role');
+  toast(role === 'admin' ? 'Promoted to Admin' : 'Role set to Member'); groupPage(gid);
+}
+async function gKick(gid, uid) {
+  if (!confirm('Remove this member from the group?')) return;
+  const r = await rq('POST', `/api/groups/${gid}/kick`, { uid });
+  if (!r.ok) return toast(r.data.error || 'Failed to remove member');
+  toast('Member removed'); groupPage(gid);
+}
+async function gAddGame(gid, gameId) {
+  const r = await rq('POST', `/api/groups/${gid}/games`, { gameId });
+  $('#gAdd')?.classList.remove('on');
+  if (!r.ok) return toast(r.data.error || 'Failed to add game');
+  toast('Game added to the group'); groupPage(gid);
+}
+async function gRemoveGame(gid, gameId) {
+  if (!confirm('Remove this game from the group? The game itself is NOT deleted.')) return;
+  const r = await rq('DELETE', `/api/groups/${gid}/games/${gameId}`);
+  if (!r.ok) return toast(r.data.error || 'Failed to remove game');
+  toast('Game removed from the group'); groupPage(gid);
+}
+function gAddModal(gid) {
+  if (needLogin()) return;
+  const mine = games.filter(x => x.mine);
+  $('#gAddNew').href = '#/dev/new/' + gid;
+  $('#gAddList').innerHTML = mine.length ? mine.map(x => `<div class="mrow"><span style="flex:1;min-width:0"><b style="color:var(--strong)">${E(x.title)}</b><small style="color:var(--dim)">${x.online} online · ${x.visits || 0} visits</small></span><button class="btn sm" onclick="gAddGame('${gid}','${x.id}')">Add</button></div>`).join('') : '<div class="empty">You have no games yet — create one first.</div>';
+  $('#gAdd').classList.add('on');
+}
 const gThreadRow = t => `<div class="fr tt" style="cursor:pointer" onclick="location.hash='#/group/${t.gid}/thread/${t.id}'"><span class="au">${avatar(t.author, 44)}<small style="color:var(--dim);font-size:11px;word-break:break-all">${E(t.author.name)}${adminBadge(t.author)}</small></span><span style="text-align:left;min-width:0"><span class="tl">${E(t.title)}</span><small style="color:var(--dim)">${t.replies} replies · ${t.views} views · ${ago(t.ts)}</small></span></div>`;
 async function groupPage(id) {
   $('#view').innerHTML = '<span class="label">GROUP</span><div class="hint">Loading group…</div>';
@@ -1456,22 +1768,45 @@ async function groupPage(id) {
   if (!$('#view')) return;
   if (!d) return (location.hash = '#/groups');
   const g = d.group;
-  const canDelete = d.own || session?.user?.admin || String(session?.user?.name || '').toLowerCase() === 'zerks';
+  const gGames = d.games || [];
+  const myRole = d.role || (d.own ? 'owner' : d.joined ? 'member' : null);
+  const canManage = myRole === 'owner' || myRole === 'admin';
+  const canDelete = myRole === 'owner' || session?.user?.admin || String(session?.user?.name || '').toLowerCase() === 'zerks';
+  const roleOf = m => m.role || (g.owner.uid === m.uid ? 'owner' : 'member');
+  const members = (d.members || []).slice().sort((a, b) => (gRank[roleOf(a)] ?? 2) - (gRank[roleOf(b)] ?? 2));
+  const mRow = m => {
+    const r = roleOf(m), isMe = !!(session && m.uid === session.user.uid);
+    const acts = [];
+    if (myRole === 'owner' && r !== 'owner')
+      acts.push(`<button class="btn sm alt" onclick="gSetRole('${g.id}','${m.uid}','${r === 'admin' ? 'member' : 'admin'}')">${r === 'admin' ? '↓ Demote to Member' : '↑ Promote to Admin'}</button>`);
+    if ((myRole === 'owner' || (myRole === 'admin' && r === 'member')) && !isMe)
+      acts.push(`<button class="x" onclick="gKick('${g.id}','${m.uid}')">Kick</button>`);
+    return `<div class="gmrow">${avatar(m, 44)}<div class="gmid"><a href="#/user/${m.uid}">${E(m.name)}</a>${adminBadge(m)}<small>${isMe ? 'This is you' : r === 'owner' ? 'Owns this group' : r === 'admin' ? 'Adds games · manages the forum' : 'Plays games · posts in the forum'}</small></div><span class="rolechip ${r}${isMe ? ' you' : ''}">${r.toUpperCase()}</span><div class="gmacts">${acts.join('')}</div></div>`;
+  };
   $('#view').innerHTML = `<div class="crumb"><a href="#/groups">Groups</a> &gt; ${E(g.name)}</div>
-    <div class="card pad"><div class="prof"><span class="gicon" style="background:${g.color};width:64px;height:64px;font-size:28px">${gIcon(g)}</span>
+    <div class="card pad ghero"><div class="prof"><span class="gicon" style="background:${g.color};width:64px;height:64px;font-size:28px">${gIcon(g)}</span>
       <div style="flex:1;min-width:0"><h1 class="ftitle" style="margin:0">${E(g.name)}</h1>
-      <div class="follow-stat"><b>${d.members.length}</b> members · created ${dateStr(g.created)} · owner <a href="#/user/${g.owner.uid}" style="color:var(--link)">${E(g.owner.name)}</a>${adminBadge(g.owner)}${g.own ? ' · <b style="color:#22c55e">your group</b>' : ''}</div>
-      <p style="color:var(--soft);margin-top:8px;white-space:pre-wrap;word-break:break-word">${E(g.desc || '')}</p>
+      <div class="follow-stat" style="margin-top:8px"><span class="gstat"><b>${members.length}</b> members</span><span class="gstat"><b>${gGames.length}</b> games</span><span class="gstat"><b>${(d.threads || []).length}</b> threads</span><span class="gstat">created <b>${dateStr(g.created)}</b></span></div>
+      <p style="color:var(--soft);margin-top:10px;white-space:pre-wrap;word-break:break-word">${E(g.desc || '')}</p>
       <div class="acts">${session ? (d.joined ? `<button class="btn sm alt" onclick="groupLeave('${g.id}')">✓ Joined — leave</button>` : `<button class="btn sm" onclick="groupJoin('${g.id}')">＋ Join group</button>`) : `<button class="btn sm" onclick="needLogin()">Sign in to join</button>`}
+        ${myRole ? `<span class="rolechip ${myRole}">YOU · ${myRole.toUpperCase()}</span>` : ''}
         ${canDelete ? `<button class="x" onclick="groupDelete('${g.id}')">Delete group</button>` : ''}</div></div></div></div>
+    <h3 class="sec">GROUP GAMES (${gGames.length})</h3>
+    ${canManage ? `<div class="acts" style="margin:0 0 12px"><button class="btn sm" onclick="gAddModal('${g.id}')">＋ Add my game</button><button class="btn sm alt" onclick="location.hash='#/dev/new/${g.id}'">＋ Create group game</button><small style="color:var(--dim)">Admins build the group's game library</small></div>` : `<div class="hint" style="margin-bottom:12px">Games made together by this group. ${session && !d.joined ? '<b>Join the group</b> to team up — ' : ''}admins can add games here.</div>`}
+    ${gGames.length ? `<div class="gmg">${gGames.map(x => `<a class="gc" href="#/game/${x.id}">${art(x)}<div class="in"><b>${E(x.title)}${lbl(x)}</b><small>${x.online} online · Free</small></div>${canManage ? `<button class="rmgame x" title="Remove from group" onclick="event.preventDefault();event.stopPropagation();gRemoveGame('${g.id}','${x.id}')">✕</button>` : ''}</a>`).join('')}</div>` : '<div class="empty">No games in this group yet.</div>'}
     <h3 class="sec">GROUP FORUM</h3>
     ${session ? `<div class="card pad" style="max-width:640px;margin-bottom:14px"><h3 class="ft">Start a new thread</h3><div class="err" id="gterr"></div>
-      <label>Title</label><input id="gtTitle" maxlength="100" placeholder="Judul thread">
-      <label>Body</label><textarea id="gtBody" style="height:90px" placeholder="Tulis isi postinganmu…"></textarea>
+      <label>Title</label><input id="gtTitle" maxlength="100" placeholder="Thread title">
+      <label>Body</label><textarea id="gtBody" style="height:90px" placeholder="Write your post…"></textarea>
       <div class="acts"><button class="btn" onclick="postGroupThread('${g.id}')">Post to group forum</button></div></div>` : '<div class="hint">Sign in to post in this group forum.</div>'}
-    ${d.threads.length ? `<div class="ftable tt">${d.threads.map(gThreadRow).join('')}</div>` : '<div class="empty">No threads in this group forum yet. Be the first!</div>'}
-    <h3 class="sec">MEMBERS (${d.members.length})</h3>
-    ${d.members.length ? `<div class="frow" style="flex-wrap:wrap">${d.members.map(m => `<a class="au" href="#/user/${m.uid}">${avatar(m, 48)}<small style="color:var(--link);font-size:11px;word-break:break-word">${E(m.name)}${adminBadge(m)}</small></a>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No members yet.</div>'}`;
+    ${(d.threads || []).length ? `<div class="ftable tt">${d.threads.map(gThreadRow).join('')}</div>` : '<div class="empty">No threads in this group forum yet. Be the first!</div>'}
+    <h3 class="sec">MEMBERS (${members.length}) · ROLES</h3>
+    <div class="gperm">
+      <div><b><span class="rolechip owner">OWNER</span> runs the group</b><small>Creates the group, promotes & demotes admins, can delete the group and anything in it.</small></div>
+      <div><b><span class="rolechip admin">ADMIN</span> builds the library</b><small>Adds and removes group games, keeps the forum tidy, kicks regular members.</small></div>
+      <div><b><span class="rolechip member">MEMBER</span> plays &amp; posts</b><small>Joins the group, plays the group games and posts in the group forum.</small></div>
+    </div>
+    <div class="card">${members.length ? members.map(mRow).join('') : '<div class="empty">No members yet.</div>'}</div>`;
 }
 async function postGroupThread(gid) {
   const r = await rq('POST', `/api/groups/${gid}/forum`, { title: $('#gtTitle').value, body: $('#gtBody').value });
@@ -1581,7 +1916,7 @@ function route() {
   if (p[0] === 'user') return userPage(p[1]);
   if (p[0] === 'avatar') return avatarPage();
   if (p[0] === 'marketplace') return marketplacePage();
-  if (p[0] === 'settings') return settingsPage();
+  if (p[0] === 'settings') return (location.hash = '#/profile'); // Settings now lives inside the Profile page
   if (p[0] === 'friends') return friendsPage();
   if (p[0] === 'notifications') return notificationsPage();
   if (p[0] === 'profile') return profilePage();
@@ -1594,7 +1929,7 @@ function route() {
     return forumPage();
   }
   if (p[0] === 'dev') {
-    if (p[1] === 'new') return editPage(null);
+    if (p[1] === 'new') return editPage(null, p[2]); // p[2] = optional group id → group game
     if (p[1] === 'edit') return editPage(p[2]);
     if (p[1] === 'changelog') return changelogPage(p[2]);
     if (p[1] === 'stats') return statsPage(p[2]);
