@@ -28,14 +28,200 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Voxely</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>(function(){try{var t=JSON.parse(localStorage.getItem("voxelyTheme")||"null");if(t&&t.v){var r=document.documentElement;for(var k in t.v)r.style.setProperty(k,t.v[k]);r.style.colorScheme=t.l?"light":"dark";}}catch(e){}})();</script>
 <style>
 /* =====================================================================
    VOXELY 2008 SKIN
+   Taruh sebagai <style> TERAKHIR (tepat sebelum <style>
+/* ===== VOXELY 2008 SKIN ===== */
+/* =====================================================================
+   VOXELY 2008 SKIN
    Taruh sebagai <style> TERAKHIR (tepat sebelum </head>), setelah
+   "VOXELY DESIGN LAYER". Semua warna tetap lewat variabel tema.
+   ===================================================================== */
+:root{
+  --bg:#e9edf4;--panel:#ffffff;--panel3:#eef2f9;--input:#ffffff;--row2:#f5f8fc;--hover:#e6eefb;
+  --track:#d4dce9;--alt:#dde4f0;--line:#b4c1d6;--blue:#3b6ab8;--blue2:#27508f;--blue-hover:#5886d0;
+  --link:#1f4e9c;--text:#222222;--dim:#6b7a90;--soft:#3d4b61;--strong:#111111;--on:#ffffff;
+  --notice1:#fffbe0;--notice2:#fff3b0;
+  --fd:"Trebuchet MS","Lucida Grande",Tahoma,Verdana,sans-serif;
+  --fb:"Lucida Grande",Tahoma,Verdana,Arial,sans-serif;
+  --gloss:linear-gradient(180deg,color-mix(in srgb,var(--blue-hover) 72%,#fff) 0,var(--blue-hover) 49%,var(--blue) 50%,var(--blue2) 100%);
+}
+html{scrollbar-color:auto}
+body{font:13px/1.5 var(--fb);background-color:var(--bg);
+  background-image:linear-gradient(color-mix(in srgb,var(--blue) 16%,var(--bg)),var(--bg) 280px);background-repeat:no-repeat}
+body::before{display:none}
+::selection{background:var(--blue);color:#fff}
+::-webkit-scrollbar{width:auto;height:auto}
+::-webkit-scrollbar-thumb{background:none;border:0}
+::-webkit-scrollbar-track{background:none}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:1px dotted var(--strong);outline-offset:1px}
+*{border-radius:0}
+
+/* ---------- header ---------- */
+.top{background:var(--gloss);backdrop-filter:none;-webkit-backdrop-filter:none;border-bottom:1px solid var(--blue2);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.top::after{display:none}
+.logo{color:#fff;font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:1px;font-style:italic;text-shadow:1px 1px 0 rgba(0,0,0,.45)}
+.logo svg{transition:none;filter:none}.logo:hover svg{transform:none}
+.sub{gap:4px}
+.sub a{position:relative;color:#e8f0ff;font-family:var(--fb);font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;
+  padding:0 14px;border-bottom:0;text-shadow:0 -1px 0 rgba(0,0,0,.35)}
+.sub a::after{content:none!important}
+.sub a:hover{color:#fff;background:rgba(255,255,255,.16)}
+.sub a.on{color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.12));box-shadow:inset 0 2px 4px rgba(0,0,0,.4);border-bottom:0}
+.user>button{color:#fff;text-shadow:0 -1px 0 rgba(0,0,0,.4)}
+.av{border:1px solid var(--line);background-clip:padding-box}
+.user>button .av{border-color:#fff}
+.burger{clip-path:none;color:#fff;border:1px solid rgba(255,255,255,.6);background:rgba(255,255,255,.12)}
+.burger:hover{color:#fff;border-color:#fff;background:rgba(255,255,255,.25)}
+.menu{top:44px;border:1px solid var(--blue2);border-radius:0;box-shadow:2px 3px 8px rgba(0,0,0,.35);background:#fff}
+.menu .mh{background:linear-gradient(var(--panel),var(--alt))}
+.menu a:hover{background:var(--blue);color:#fff}
+.menu .out{color:#b00020}.menu .out:hover{background:#b00020;color:#fff}
+
+/* ---------- footer ---------- */
+footer.foot{background:var(--panel3);border-top:1px solid var(--line)}
+.fbrand::before{display:none}
+.fbrand b{font-family:var(--fd);letter-spacing:1px;font-style:italic;color:var(--link)}
+.foot nav a{font-family:var(--fb);font-size:12px;letter-spacing:0;text-transform:none;color:var(--link);font-weight:400}
+.foot nav a:hover{text-decoration:underline;color:var(--link)}
+
+/* ---------- headings ---------- */
+.label{font:700 14px var(--fd);letter-spacing:0;color:var(--link);border-bottom:1px solid var(--line);padding:0 0 4px;margin:2px 0 12px;display:block}
+.label::before,.label::after{content:none}
+h3.sec{font:700 12px var(--fd);letter-spacing:0;text-transform:none;color:var(--link);border-bottom:1px dotted var(--line);padding-bottom:3px;margin:24px 0 10px}
+.ftitle,.gtitle{font:700 22px var(--fd);color:var(--link)}
+.ft{font:700 14px var(--fd);color:var(--link);border-bottom:1px dotted var(--line);padding-bottom:4px;margin-bottom:8px}
+.step .ft{border:0}
+.crumb{font:11px var(--fb);letter-spacing:0;text-transform:none}
+.crumb a{color:var(--link)}.crumb a:hover{text-decoration:underline}
+.car h2{font:700 24px var(--fd);color:var(--link)}
+.car .meta{color:var(--soft)}
+.pbname{font-family:var(--fd)}
+
+/* ---------- buttons: glossy web 2.0 ---------- */
+.btn{font:700 13px var(--fb);letter-spacing:0;clip-path:none;border:1px solid var(--blue2);border-radius:4px;color:#fff;
+  background:var(--gloss);text-shadow:0 -1px 0 rgba(0,0,0,.4);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 1px 2px rgba(0,0,0,.3);transition:none}
+.btn:hover{transform:none;filter:brightness(1.1);background:var(--gloss)}
+.btn:active{transform:none;filter:brightness(.9);box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+.btn.alt,.btn.alt:hover{color:var(--strong);text-shadow:0 1px 0 #fff;border-color:var(--line);
+  background:linear-gradient(var(--panel),var(--alt));box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(0,0,0,.15)}
+.btn.alt:hover{filter:brightness(.97);border-color:var(--blue)}
+.btn:disabled{opacity:.5;filter:grayscale(.6)}
+.gbtn{background:#fff!important;color:#222!important;border:1px solid var(--line)!important;text-shadow:none!important}
+.x{clip-path:none;border:1px solid var(--line);border-radius:4px;color:var(--strong);cursor:pointer;
+  background:linear-gradient(var(--panel),var(--alt));box-shadow:inset 0 1px 0 #fff}
+.x:hover{background:linear-gradient(#e86a6a,#b83228);color:#fff;border-color:#8c1d14}
+.vb{clip-path:none;border:1px solid var(--line);border-radius:4px;color:var(--link);font-weight:700;
+  background:linear-gradient(var(--panel),var(--alt))}
+.vb.on{color:#fff;border-color:var(--blue2);background:var(--gloss);text-shadow:0 -1px 0 rgba(0,0,0,.35)}
+.vb:hover:not(:disabled):not(.on){border-color:var(--blue)}
+.arr{clip-path:none;border:1px solid var(--blue2);background:var(--gloss);width:30px;height:46px;margin-top:-23px}
+.arr:hover{filter:brightness(1.1);background:var(--gloss)}
+.flag:hover{color:#b00020}
+
+/* ---------- boxes / cards ---------- */
+.card,.gc,.gcard,.market-card,.pc,.rv,.post,.rform,.badge-form,.stc,.ftable,.atable,.pcard,.car,.srv{
+  border:1px solid var(--line);border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.card h4{font:700 11px var(--fd);letter-spacing:0;color:var(--link);border-bottom:1px solid var(--line);
+  background:linear-gradient(var(--panel),var(--alt));padding:7px 12px}
+.card{transition:none}
+.gc,.gcard,.market-card{transition:none}
+.gc:hover,.gcard:hover,.market-card:hover{transform:none;border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 35%,transparent)}
+.gc:hover .art img,.trend:hover .art img{transform:none}
+.gc .art img,.trend .art img{transition:none}
+.gc .in b,.trend .in b{font-family:var(--fb);font-weight:700;color:var(--link)}
+.gc .in b:hover{text-decoration:underline}
+.ftag{clip-path:none;border-radius:2px;background:linear-gradient(#ffb04a,#e8801a);color:#fff;font-family:var(--fb);letter-spacing:.06em;text-shadow:0 -1px 0 rgba(0,0,0,.3)}
+.tag{clip-path:none;border-radius:8px;background:var(--panel3);border:1px solid var(--line);color:var(--link);font-weight:400;letter-spacing:0}
+.glabel{border-radius:2px}
+.dots b{height:8px;width:18px;border:1px solid var(--line);background:var(--alt);transition:none}
+.dots b.on{width:18px;background:var(--blue);border-color:var(--blue2)}
+.on-dot{border-radius:50%;animation:none;box-shadow:none}
+.live{border-radius:50%}
+.free{border-radius:3px;background:var(--panel3)}
+.about a,.hint a{color:var(--link);text-decoration:underline}
+
+/* hint = kotak kuning ala 2008 */
+.hint{background:linear-gradient(var(--notice1),var(--notice2));border:1px solid #e2c822;border-left:1px solid #e2c822;color:#4a3f00;border-radius:3px}
+.notice{background:linear-gradient(var(--notice1),var(--notice2));border:1px solid #e2c822;color:#4a3f00;border-radius:3px}
+.notice small,.notice b{color:#4a3f00!important}
+.empty{border:1px solid var(--line);background:var(--panel3);font-family:var(--fb);letter-spacing:0;color:var(--dim)}
+
+/* ---------- tabel forum ---------- */
+.ftable .fh,.fh{clip-path:none;font:700 12px var(--fb);letter-spacing:0;text-transform:none;background:var(--gloss);
+  text-shadow:0 -1px 0 rgba(0,0,0,.35)}
+.fc b,.tl{color:var(--link)}.tl:hover,.fc b:hover{text-decoration:underline}
+.rec{border-radius:3px;background:var(--gloss);text-shadow:0 -1px 0 rgba(0,0,0,.3)}
+.rec.neg{background:linear-gradient(#e86a6a,#c0392b 50%,#a52a20 50%,#b83228)}
+
+/* ---------- form ---------- */
+.pad input:not([type=color]),.pad textarea,.pad select,.search,.box input,.bsel,.rform textarea,.badge-form input,.badge-form textarea{
+  background:#fff;color:var(--strong);border:1px solid var(--line);border-top-color:#8e9bb3;border-radius:2px;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.14);font-family:var(--fb)}
+.pad input:not([type=color]):focus,.pad textarea:focus,.pad select:focus,.search:focus,.box input:focus,.bsel:focus,.fsearch .search:focus{
+  border-color:var(--blue);box-shadow:inset 0 1px 2px rgba(0,0,0,.14),0 0 4px color-mix(in srgb,var(--blue) 55%,transparent)}
+.pad label{color:var(--soft);font-weight:700;font-size:12px}
+.ban-field{color:var(--soft);font-weight:700}
+.swb.on,.skacc button.on{border-color:#000;outline:1px solid #fff}
+.skacc button{clip-path:none;border:1px solid var(--line)}
+.sbar{border:1px solid var(--line);background:#fff}
+
+/* ---------- modal & toast ---------- */
+.veil{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(20,30,50,.6)}
+.box{clip-path:none;border:1px solid var(--blue2);border-radius:5px;padding:0 18px 18px;overflow:hidden;
+  box-shadow:0 6px 24px rgba(0,0,0,.55);background:#fff}
+.box h3{margin:0 -18px 14px;padding:9px 18px;font:700 14px var(--fd);color:#fff;text-shadow:0 -1px 0 rgba(0,0,0,.4);background:var(--gloss)}
+.box p{color:var(--soft)}
+#banModal .box h3{color:#fff!important;background:linear-gradient(#e86a6a,#c0392b 50%,#a52a20 50%,#b83228)}
+#banModal .box{border-color:#8c1d14!important}
+#toast{clip-path:none;background:#fffbe0;color:#4a3f00;border:1px solid #e2c822;border-radius:3px;font-weight:700;
+  box-shadow:0 2px 8px rgba(0,0,0,.35);animation:none}
+#loginErr{color:#b00020!important}.err{color:#b00020}
+#banScreen .box{border-color:#8c1d14}
+.ban-x{padding-top:18px}
+.ban-title{color:#b00020}.ban-sorry{color:var(--soft)}
+.ban-card{background:#fff0f0;border:1px solid #e0a0a0}
+.ban-row{color:var(--strong)}.ban-row .bk{color:#b00020}
+.bantag{color:#b00020;border:1px solid #e0a0a0;background:#fff0f0;letter-spacing:0}
+.arow.bannedRow{background:#fff0f0;border-left:3px solid #c0392b}
+.fpop{background:rgba(255,255,255,.97);border:1px solid var(--blue2);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+
+/* ---------- banner profil: teks putih tetap terbaca di tema terang ---------- */
+.pband{background:linear-gradient(180deg,color-mix(in srgb,var(--pac) 82%,#fff),color-mix(in srgb,var(--pac) 70%,#000))}
+.pbveil{background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 40%,rgba(0,0,0,.5))}
+.pbin .av{border:4px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.55)}
+.pbstats span{clip-path:none;border-radius:3px;background:rgba(0,0,0,.4)}
+.pbin .acts .btn{backdrop-filter:none}
+.pcard{overflow:hidden}
+
+/* ---------- grup & role ---------- */
+.rolechip{clip-path:none;border-radius:2px;font-family:var(--fb);letter-spacing:.04em}
+.gicon{border:1px solid rgba(0,0,0,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.ghero .gicon{box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.gperm>div{border-top:3px solid var(--blue);border-radius:2px}
+.gperm b{font-family:var(--fb);letter-spacing:0}
+.gstat b{font-family:var(--fb)}
+.thm{clip-path:none;border-radius:3px}
+.thm.on{box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 35%,transparent)}
+.thm b{font-family:var(--fb);letter-spacing:0}
+.market-card .btn{width:100%}
+.verified,.abadge{vertical-align:-3px}
+
+/* ---------- animasi dimatikan: 2008 tidak punya fade/slide ---------- */
+#view>*{animation:none}
+
+@media (max-width:860px){
+  .sub{background:var(--blue2);border-bottom:1px solid #000;padding:0}
+  .sub a{padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.15)}
+  .sub a.on{background:rgba(0,0,0,.35);box-shadow:none}
+  .logo{font-size:19px}
+}
+
+</style>
+</head>), setelah
    "VOXELY DESIGN LAYER". Semua warna tetap lewat variabel tema.
    ===================================================================== */
 :root{
@@ -454,6 +640,7 @@ async function play(id, room) {
 }
 
 const THEMES = {
+  'classic-2008': { n: "Classic 2008", d: "Default", l: 1, v: ["#e9edf4", "#ffffff", "#eef2f9", "#ffffff", "#f5f8fc", "#e6eefb", "#d4dce9", "#dde4f0", "#b4c1d6", "#3b6ab8", "#27508f", "#5886d0", "#1f4e9c", "#222222", "#6b7a90", "#3d4b61", "#111111", "#ffffff", "#fffbe0", "#fff3b0"] },
   'blue-dark': { n: "Dark Blue", d: "Default", l: 0, v: ["#04060b", "#0a0f1a", "#071127", "#050913", "#0d1524", "#101c33", "#0b1428", "#1b2a4a", "#15233f", "#1463ff", "#0a3fb8", "#3a82ff", "#6fa8ff", "#e6edf7", "#7d8aa3", "#b6c2d9", "#ffffff", "#ffffff", "#0f2a5c", "#0a1c3d"] },
   'red-dark': { n: "Dark Red", d: "", l: 0, v: ["#0b0507", "#150b0e", "#1a0d11", "#0f0709", "#190d10", "#251318", "#1f1014", "#3b1b22", "#2e161b", "#e23b4b", "#a8212f", "#ff5a68", "#ff8a95", "#f3e7e8", "#a58a8d", "#d6bfc2", "#ffffff", "#ffffff", "#4a1219", "#2b0a0e"] },
   'ayu-dark': { n: "Ayu Dark", d: "", l: 0, v: ["#0b0e14", "#11151c", "#0d1017", "#0a0d12", "#0e1218", "#171c26", "#161b24", "#232a36", "#232a36", "#ff8f40", "#cc6f26", "#ffa769", "#ffb454", "#bfbdb6", "#6c7380", "#a0a6b2", "#f0eee8", "#0b0e14", "#2a1d10", "#1a1209"] },
@@ -463,7 +650,7 @@ const THEMES = {
 };
 const TK = ["--bg", "--panel", "--panel3", "--input", "--row2", "--hover", "--track", "--alt", "--line", "--blue", "--blue2", "--blue-hover", "--link", "--text", "--dim", "--soft", "--strong", "--on", "--notice1", "--notice2"];
 function applyTheme(id) {
-  const t = THEMES[id] || THEMES['blue-dark'], v = {}, r = document.documentElement;
+  const t = THEMES[id] || THEMES['classic-2008'], v = {}, r = document.documentElement;
   TK.forEach((k, i) => { v[k] = t.v[i]; r.style.setProperty(k, t.v[i]); });
   r.style.colorScheme = t.l ? 'light' : 'dark';
   localStorage.setItem('voxelyTheme', JSON.stringify({ id, l: t.l, v }));
@@ -923,7 +1110,7 @@ async function profilePage() {
   const mine = await gj('/api/me/badges');
   if (!$('#view')) return;
   skLoad(u);
-  let cur = 'blue-dark'; try { cur = JSON.parse(localStorage.getItem('voxelyTheme')).id || cur; } catch (e) {}
+  let cur = 'classic-2008'; try { cur = JSON.parse(localStorage.getItem('voxelyTheme')).id || cur; } catch (e) {}
   $('#view').innerHTML = `<span class="label">PROFILE &amp; SETTINGS</span>
     <div class="pcard" style="--pac:${E(mySkin.accent)}"><div class="pband pat-${E(mySkin.pattern || 'grid')}" id="pvBand">${mySkin.banner ? `<img class="pbimg" src="${mySkin.banner}" alt="">` : ''}<div class="pbveil"></div>
     <div class="pbin">${avatar(u, 92)}<div class="pbid">
@@ -1696,6 +1883,10 @@ function route() {
   location.hash = '#/';
 }
 addEventListener('hashchange', route);
+
+/* ---------- close modals: Esc or click on backdrop ---------- */
+addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.veil.on:not(#banScreen)').forEach(v => v.classList.remove('on')); });
+document.querySelectorAll('.veil:not(#banScreen)').forEach(v => v.addEventListener('mousedown', e => { if (e.target === v) v.classList.remove('on'); }));
 
 /* ---------- Google login (Supabase) & boot ---------- */
 async function googleLogin(at) {
