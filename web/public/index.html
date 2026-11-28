@@ -30,447 +30,225 @@
 <title>Voxely</title>
 <script>(function(){try{var t=JSON.parse(localStorage.getItem("voxelyTheme")||"null");if(t&&t.v){var r=document.documentElement;for(var k in t.v)r.style.setProperty(k,t.v[k]);r.style.colorScheme=t.l?"light":"dark";}}catch(e){}})();</script>
 <style>
-/* =====================================================================
-   VOXELY DESIGN LAYER — base layout & structure for index.html.
-   All colors go through the theme variables; the "VOXELY 2008 SKIN"
-   block that follows this one decides the final look (gloss, fonts,
-   flat corners). No border-radius here on purpose.
-
-   2008 rules kept in mind: 13px body text, tight 8-10px gutters,
-   4:3 thumbnails, small bold labels WITHOUT letter-spacing tracking,
-   era palette (no neon greens / rose reds), game art drawn as a
-   retro "sky + grass + plastic bricks" scene instead of abstract
-   diagonal gradients.
-   ===================================================================== */
-*{box-sizing:border-box}
-:root{
-  --bg:#e9edf4;--panel:#ffffff;--panel3:#eef2f9;--input:#ffffff;--row2:#f5f8fc;--hover:#e6eefb;
-  --track:#d4dce9;--alt:#dde4f0;--line:#b4c1d6;--blue:#3b6ab8;--blue2:#27508f;--blue-hover:#5886d0;
-  --link:#1f4e9c;--text:#222222;--dim:#6b7a90;--soft:#3d4b61;--strong:#111111;--on:#ffffff;
-  --notice1:#fffbe0;--notice2:#fff3b0;
-  --grn:#3fa32c;--grn2:#247018;--red1:#e86a6a;--red2:#b83228;--red3:#8c1d14;
-}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;font:13px/1.5 var(--fb,Verdana,Tahoma,Arial,sans-serif);color:var(--text);
-  background:var(--bg)}
-a{color:var(--link);text-decoration:none}
-img{display:block}
-h1{font-size:24px;margin:0}
-h2{font-size:20px;margin:0}
-h3{font-size:15px;margin:0}
-h4{font-size:11px;margin:0}
-p{margin:0}
-b,strong{font-weight:700}
-small{font-size:11px}
-button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-input,textarea,select{font:inherit}
-::placeholder{color:var(--dim)}
-
-/* ---------- page frame: 980px era column, tighter gutters ---------- */
-.wrap{width:100%;max-width:980px;margin:0 auto;padding:0 14px}
-main{padding:14px 0 36px}
-.foot{display:flex;align-items:center;gap:8px}
-footer.foot{background:var(--panel3);border-top:1px solid var(--line)}
-.footin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0}
-.fbrand{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.fbrand small{color:var(--dim)}
-footer.foot nav{display:flex;gap:14px;flex-wrap:wrap}
-
-/* ---------- header ---------- */
-.top{position:sticky;top:0;z-index:50;background:var(--blue);color:var(--on)}
-.topin{display:flex;align-items:center;gap:14px;flex-wrap:wrap;min-height:48px}
-.logo{display:flex;align-items:center;gap:8px;font-size:21px;font-weight:800}
-.logo svg{width:26px;height:26px;flex:none}
-.sub{display:flex;align-items:center;gap:0}
-.sub a{display:flex;align-items:center;min-height:48px;padding:0 13px;font-weight:700}
-.tright{display:flex;align-items:center;gap:8px;margin-left:auto}
+/* ===== BASE LAYOUT ===== */
+*{box-sizing:border-box;margin:0;border-radius:0}
+body{background:var(--bg);color:var(--text);font:14px "Segoe UI",Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit;text-decoration:none;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+.top{position:sticky;top:0;z-index:30;background:var(--panel3);border-bottom:1px solid var(--line)}
+.topin{height:54px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+.logo{display:inline-flex;align-items:center;gap:9px;font-size:15px;font-weight:800;letter-spacing:5px;color:var(--strong)}
+.logo svg{width:21px;height:21px;flex:none}
+.sub{display:flex;justify-content:center;align-items:stretch;height:54px;gap:30px}
+.sub a{display:flex;align-items:center;padding:0 2px;color:var(--dim);font-weight:600;border-bottom:2px solid transparent}
+.sub a:hover{color:var(--strong)}.sub a.on{color:var(--strong);border-bottom-color:var(--blue)}
+.tright{display:flex;align-items:center;gap:10px;justify-self:end}
+.burger{display:none;background:none;border:1px solid var(--line);color:var(--strong);font-size:18px;line-height:1;padding:7px 11px;cursor:pointer}
 .user{position:relative}
-.user>button{display:flex;align-items:center;gap:7px;padding:5px 9px;min-height:36px}
-.burger{display:none;width:34px;height:34px;align-items:center;justify-content:center;font-size:18px}
-.menu{position:absolute;top:42px;right:0;min-width:200px;display:none;z-index:60;
-  background:var(--panel);border:1px solid var(--line);box-shadow:2px 3px 8px rgba(0,0,0,.3)}
-.menu.on{display:block}
-.menu .mh{padding:8px 12px;border-bottom:1px solid var(--line)}
-.menu .mh b{display:block;color:var(--strong)}
-.menu .mh small{display:block;color:var(--dim)}
-.menu a{display:block;padding:7px 12px;color:var(--text)}
-.av{display:inline-block;vertical-align:middle;object-fit:cover;background:var(--track);border:1px solid var(--line)}
-.bdg{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 4px;
-  margin-left:6px;color:#fff;font-size:10px;font-weight:700;line-height:1;
-  background:linear-gradient(var(--red1),var(--red2));border:1px solid var(--red3)}
-.bdg:empty{display:none}
-.verified,.abadge{width:15px;height:15px;flex:none}
-.verified path[fill="#1463ff"]{fill:var(--link)}
-
-/* ---------- buttons / inputs ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:7px 14px;
-  font-weight:700;cursor:pointer;background:var(--blue);color:#fff;border:1px solid var(--blue2)}
-.btn.sm{padding:4px 10px;font-size:12px}
-.btn.see{margin-top:10px;align-self:flex-start}
-.x{padding:5px 9px;font-size:13px;line-height:1;cursor:pointer;background:var(--panel);
-  border:1px solid var(--line);color:var(--strong)}
-.vb{padding:5px 10px;font-weight:700;cursor:pointer;background:var(--panel);border:1px solid var(--line);color:var(--link)}
-.flag{padding:2px 5px;font-size:13px;cursor:pointer;color:var(--dim)}
-label{display:block;margin:10px 0 3px;font-size:11px;font-weight:700;color:var(--soft)}
-input:not([type=color]):not([type=checkbox]):not([type=radio]),textarea,select{
-  width:100%;padding:6px 8px;font-size:13px;background:var(--input);color:var(--strong);
-  border:1px solid var(--line);font-family:inherit}
-textarea{min-height:64px;resize:vertical}
-input[type=color]{padding:1px;cursor:pointer}
-select{cursor:pointer}
-.fsearch{display:flex;gap:8px;max-width:560px;margin-bottom:12px}
-.fsearch .search{flex:1;width:auto}
-.acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
-.pact{display:flex;gap:8px;flex-wrap:wrap}
-
-/* ---------- tags & chips: square, bold, no tracking ---------- */
-.tag{display:inline-block;padding:1px 7px;font-size:11px;background:var(--panel3);
-  border:1px solid var(--line);color:var(--link)}
-.ctags{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
-.glabel{display:inline-block;margin-left:6px;padding:1px 5px;font-size:10px;font-weight:700;
-  text-transform:uppercase;color:#fff;vertical-align:2px}
-.glabel.beta{background:var(--blue)}
-.glabel.alpha{background:#e8801a}
-.glabel.wip{background:var(--dim)}
-.ftag{display:inline-block;align-self:flex-start;padding:1px 7px;font-size:10px;font-weight:700;
-  margin-bottom:4px;color:#fff;background:linear-gradient(#ffb04a,#e8801a)}
-.free{display:inline-block;padding:1px 8px;font-size:11px;font-weight:700;color:var(--grn2);background:var(--panel3)}
-.on-dot{display:inline-block;width:8px;height:8px;background:var(--grn);border:1px solid var(--grn2);flex:none}
-.live{display:inline-block;width:8px;height:8px;background:var(--grn);border:1px solid var(--grn2);flex:none;margin-right:6px}
-.num{font-variant-numeric:tabular-nums}
-.err{font-size:12px;min-height:1em;margin:2px 0 8px}
-.empty{padding:14px;margin:8px 0;text-align:center;font-size:12px;color:var(--dim)}
-.hint,.notice{padding:10px 12px;margin:0 0 12px;font-size:12px}
-.notice b,.notice small{display:block;margin:2px 0}
-
-/* ---------- game art: retro "sky + grass + plastic bricks" scene ----------
-   Replaces the old 160deg AI-gradient. The <i> bars emitted by the app
-   become opaque beveled bricks standing on a grass strip. Real <img>
-   thumbnails cover the whole box as before. */
-.art{position:relative;overflow:hidden;
-  background:linear-gradient(180deg,
-    color-mix(in srgb,var(--a,#3b6ab8) 20%,#fff) 0,
-    color-mix(in srgb,var(--a,#3b6ab8) 45%,#fff) 58%,
-    color-mix(in srgb,var(--b,#27508f) 35%,#fff) 58%,
-    color-mix(in srgb,var(--b,#27508f) 65%,#fff) 100%)}
-.art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:15%;z-index:-1;
-  background:linear-gradient(180deg,#8abf55,#5f9531);border-top:2px solid #4a7524}
-.art i{position:absolute;bottom:0;background:var(--a,#3b6ab8);
-  border:1px solid color-mix(in srgb,var(--b,#27508f) 55%,#000);
-  box-shadow:inset 0 2px 0 rgba(255,255,255,.4),inset 0 -3px 0 rgba(0,0,0,.22)}
-.art i:nth-child(even){background:var(--b,#27508f);
-  border-color:color-mix(in srgb,var(--a,#3b6ab8) 55%,#000)}
+.user>button{background:none;border:0;color:var(--strong);display:flex;align-items:center;gap:8px;font:inherit;font-weight:600;cursor:pointer}
+.av{width:28px;height:28px;display:inline-block;border:1px solid rgba(255,255,255,.4)}
+img.av{object-fit:cover}
+.menu{display:none;position:absolute;right:0;top:46px;width:230px;background:var(--panel);border:1px solid var(--line);z-index:40}.menu.on{display:block}
+.menu .mh{padding:12px 14px;border-bottom:1px solid var(--line)}.menu .mh small{display:block;color:var(--dim);margin-top:2px}
+.menu a{display:block;padding:10px 14px}.menu a:hover{background:var(--hover)}
+.menu .out{color:#ff5c6c;border-top:1px solid var(--line)}
+footer.foot{margin-top:auto;border-top:1px solid var(--line)}
+.footin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.fbrand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.fbrand b{font-size:14px;letter-spacing:4px;color:var(--strong)}.fbrand small{color:var(--dim)}
+.foot nav{display:flex;gap:18px;flex-wrap:wrap}.foot nav a{color:var(--dim);font-size:13px;font-weight:600}.foot nav a:hover{color:var(--strong)}
+main{flex:1;width:100%;padding:22px 0 60px}
+.label{display:flex;align-items:center;gap:12px;color:var(--text);font-weight:700;letter-spacing:.12em;margin:2px 0 14px;font-size:13px}
+.cols{display:grid;grid-template-columns:1fr 300px;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line)}
+.card h4{color:var(--dim);font-size:11px;font-weight:700;letter-spacing:.16em;padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+.art{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--a),var(--b));width:100%;height:100%;min-height:60px}
+.art i{position:absolute;bottom:0;background:rgba(0,0,0,.3);border-top:3px solid rgba(255,255,255,.22)}
 .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-
-/* ---------- cards / grids: tight 2008 gutters, 4:3 thumbs ---------- */
-.card{background:var(--panel)}
-.card.pad{padding:12px}
-.card.info,.card.buy,.card.about{padding:12px}
-.card h4{margin:0}
-.trend>a{display:block}
-.trend .art{height:86px}
-.trend .in,.act .in{padding:7px 9px}
-.act svg{display:block;width:100%;height:44px}
-.act svg polyline{stroke:var(--grn2);stroke-width:2}
-.act .n{margin-top:6px;font-family:var(--fd,"Trebuchet MS",Tahoma,sans-serif);
-  font-size:22px;font-weight:700;color:var(--strong);line-height:1.1}
-.act .n small{display:block;font-size:10px;font-weight:700;color:var(--dim)}
-.in b{display:block;font-size:13px;word-break:break-word}
-.in small{display:block;margin-top:2px}
-.cols{display:grid;grid-template-columns:1.9fr 1fr;gap:12px;align-items:start}
-.side{display:flex;flex-direction:column;gap:10px;min-width:0}
-.cols .foot{padding:8px 10px;font-size:12px;color:var(--soft);background:var(--panel3);border:1px solid var(--line)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
-.gc{display:block;position:relative;background:var(--panel)}
-.gc .art{aspect-ratio:4/3}
-.gc .in{padding:6px 8px}
-.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-
-/* ---------- carousel: shorter era banner ---------- */
-.car{position:relative;display:flex;min-height:230px;overflow:hidden;background:var(--panel)}
-.car .l{flex:1.35;min-width:0;cursor:pointer;position:relative}
-.car .l .art{position:absolute;inset:0}
-.car .r{flex:1;min-width:260px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;background:var(--panel)}
-.car h2{line-height:1.2}
-.car .meta{color:var(--soft)}
-.shots{display:flex;gap:5px;margin-top:8px}
-.shots>div{flex:1;min-width:0;height:54px;overflow:hidden}
-.shots .art{height:100%}
-.arr{position:absolute;top:50%;z-index:6;font-size:20px;line-height:1;color:#fff;cursor:pointer}
-.dots{display:flex;justify-content:center;gap:5px;margin-top:6px}
-.dots b{cursor:pointer}
-
-/* ---------- headings ---------- */
-.label{display:block;margin:2px 0 12px}
-h3.sec{margin:22px 0 8px}
-.ftitle{display:block;margin:2px 0 8px}
-.gtitle{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:6px 0 12px}
-.crumb{margin:0 0 6px}
-.fhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 12px}
-.fstat{margin:8px 0;font-size:12px;color:var(--dim)}
-
-/* ---------- game page ---------- */
-.gmain{position:relative;display:flex;gap:12px;align-items:stretch}
-.gmain>.art{flex:1.35;min-width:0;min-height:260px}
-.gmain .card.info{flex:1;min-width:250px}
-dl,dl.info{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;margin:8px 0 0}
-dt{font-size:11px;font-weight:700;color:var(--dim);align-self:center}
-dd{margin:0;font-weight:700}
-.card.buy{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.card.buy>div{display:flex;align-items:center;gap:10px}
-.card.about{font-size:13px}
-.fpop{position:absolute;top:10px;left:10px;z-index:8;width:250px;padding:10px 12px;display:none}
-.clrow{display:flex;gap:10px;padding:8px 0;border-top:1px dashed var(--line)}
-.clrow b{flex:none;min-width:44px;color:var(--link)}
-.clrow>div{flex:1;min-width:0}
-.clrow small{display:block;color:var(--dim);margin-top:2px}
-
-/* ---------- forum / servers / posts ---------- */
-.ftable{background:var(--panel);margin-top:10px}
-.fh{display:grid;grid-template-columns:1fr 90px 90px;gap:10px;align-items:center;padding:7px 10px}
-.fh span:nth-child(2),.fh span:nth-child(3){text-align:right}
-.fr{display:grid;grid-template-columns:1fr 90px 90px;gap:10px;align-items:center;
-  padding:8px 10px;border-top:1px solid var(--line);color:var(--text)}
-.fr:hover{background:var(--hover)}
-.fr>span:nth-child(2),.fr>span:nth-child(3){text-align:right;font-weight:700}
-.fr.tt{grid-template-columns:220px 1fr}
-.fr.tt>span:nth-child(2){text-align:left;font-weight:400}
-.fr.tt .au{max-width:100%}
-.fc{display:flex;align-items:center;gap:8px;min-width:0}
-.fc b{display:block}
-.fc small,.gcard small,.sinfo small,.gmid small{display:block;color:var(--dim)}
-.cat-ic{width:28px;height:28px;flex:none;display:inline-flex;align-items:center;justify-content:center;
-  color:#fff;font-weight:700;font-size:14px}
-.tl{display:block;font-weight:700}
-.au{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;min-width:0}
-.au small{display:block;max-width:100%;word-break:break-word;line-height:1.25;color:var(--dim)}
-.post{display:flex;background:var(--panel)}
-.post .pa{width:140px;flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:10px;text-align:center;background:var(--row2);border-right:1px solid var(--line)}
-.post .pb{flex:1;min-width:0;padding:10px 14px}
-.ptext{white-space:pre-wrap;word-break:break-word}
-.srv{display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:1px solid var(--line)}
-.srv:first-child{border-top:0}
-.sinfo{flex:1;min-width:0}
-.sinfo b{display:block}
-.sbar{height:9px;margin-top:5px;background:#fff}
-.sbar i{display:block;height:100%;background:var(--blue)}
-.ftable .fr:first-child{border-top:0}
-
-/* ---------- reviews ---------- */
-.rec{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:8px 0}
-.rec .ic{width:24px;height:24px;flex:none;fill:#fff}
-.rec span{display:flex;flex-direction:column;line-height:1.25}
-.rec small{color:rgba(255,255,255,.78)}
-.sortbar{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:12px;color:var(--dim)}
-.rform{background:var(--panel);padding:12px;margin:8px 0}
-.rform>b{display:block}
-.tg{display:flex;gap:8px;margin:8px 0}
-.rv{display:flex;gap:10px;padding:10px;margin-top:8px;background:var(--panel)}
-.rv .au{align-items:flex-start;flex:none}
-.rvh{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:12px}
-.rvh span{color:var(--dim)}
-.rvr{margin-top:4px}
-.rvr p{white-space:pre-wrap;word-break:break-word}
-.rvf{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
-
-/* ---------- people / profile banner ---------- */
-.pc{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--panel)}
-.pc b{display:block}
-.pc small{display:block;margin-top:2px}
-.pcard{display:block;background:var(--panel)}
-.pband{position:relative;display:flex;align-items:center;min-height:180px;background:var(--pac,#3b6ab8);overflow:hidden}
-.pband::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none}
-.pat-grid::after{background-image:linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px),
-  linear-gradient(90deg,rgba(255,255,255,.22) 1px,transparent 1px);background-size:26px 26px}
-.pat-dots::after{background-image:radial-gradient(rgba(255,255,255,.35) 1.5px,transparent 1.6px);background-size:17px 17px}
-.pat-stripes::after{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.16) 0 12px,transparent 12px 26px)}
-.pbimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
-.pbveil{position:absolute;inset:0;z-index:1}
-.pbin{position:relative;z-index:2;display:flex;align-items:center;gap:16px;padding:22px 18px;width:100%;color:#fff}
-.pbid{flex:1;min-width:0}
-.pbname{margin:0;font-size:24px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.pbstats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.pbstats span{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;font-size:12px;
-  background:rgba(0,0,0,.4);color:#fff}
-.pbstats b{font-size:13px}
-.pbplay{display:inline-flex;align-items:center;gap:6px}
-.pbmeta{margin-top:8px;font-size:12px;color:rgba(255,255,255,.85)}
-.pbin .acts{margin-top:10px}
-
-/* ---------- profile settings / theme picker ---------- */
-.pset{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}
-.pset .span{grid-column:1/-1}
-.pgrid{display:grid;grid-template-columns:320px 1fr;gap:12px;margin-top:12px;align-items:start}
-.pgrid canvas{display:block;width:100%;height:auto;max-width:320px}
-.stc{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px;text-align:center;background:var(--panel)}
-.stc b{font-size:22px}
-.stc small{font-size:10px;font-weight:700;color:var(--dim)}
-.stgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:10px;margin:10px 0}
-.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;margin-top:8px}
-.badge-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;text-align:center;
-  background:var(--panel);border:1px solid var(--line)}
-.badge-icon{font-size:22px}
-.badge-name{font-size:11px;font-weight:700;color:var(--soft)}
-.frow{display:flex;gap:10px;flex-wrap:wrap}
-.frow .au{max-width:76px}
-.thmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
-.thm{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;text-align:center;
-  background:var(--panel);border:1px solid var(--line);cursor:pointer}
-.thm b{font-size:12px}
-.thm small{display:block;font-size:10px;color:var(--dim)}
-.sw3{display:flex}
-.sw3 i{width:15px;height:15px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
-.skacc{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.skacc button{width:26px;height:26px;padding:0;border:2px solid var(--line);cursor:pointer}
-.skacc input[type=color],.avpal input[type=color]{width:28px;height:28px;padding:1px;
-  border:1px solid var(--line);background:var(--input);cursor:pointer}
-.patpick{display:flex;flex-wrap:wrap;gap:6px}
-
-/* ---------- avatar editor ---------- */
-.avgrid{display:grid;grid-template-columns:360px 1fr;gap:12px;align-items:start}
-.avprev canvas{display:block;margin:0 auto;max-width:100%}
-.avpal{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.swb{width:22px;height:22px;padding:0;border:2px solid var(--line);cursor:pointer}
-.avtabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.adtabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.avtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
-.tile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;text-align:center;
-  background:var(--panel);border:1px solid var(--line);cursor:pointer}
-.tile.on{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
-.tile canvas{display:block;width:100%}
-.tile small{display:block}
-.tpl{display:flex;flex-wrap:wrap;gap:6px}
-.shirt-upload{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}
-.shirt-upload small{color:var(--dim)}
-
-/* ---------- marketplace ---------- */
-.market-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.market-head p{margin:3px 0 0;color:var(--soft)}
-.market-filter{display:flex;flex-wrap:wrap;gap:6px}
-.market-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:12px;margin-top:12px}
-.market-card{display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--panel)}
-.market-card h3{font-size:14px;margin:0}
-.market-card p{font-size:12px;color:var(--soft)}
-.market-meta{display:flex;justify-content:space-between;font-size:11px;font-weight:700}
-.market-meta span:first-child{color:var(--grn2)}
-.market-meta .owned{color:var(--dim)}
-.market-art{display:flex;align-items:center;justify-content:center;height:190px;overflow:hidden;background:var(--panel3)}
-.market-art canvas{height:100%;max-width:100%}
-
-/* ---------- groups ---------- */
-.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:10px}
-.gcard{display:block;padding:10px 12px;background:var(--panel)}
-.gicon{width:38px;height:38px;flex:none;display:inline-flex;align-items:center;justify-content:center;
-  color:#fff;font-weight:700;font-size:14px}
-.ghero .prof{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.follow-stat{display:flex;flex-wrap:wrap;gap:8px}
-.gstat{display:inline-flex;align-items:baseline;gap:4px;padding:2px 8px;font-size:12px;color:var(--soft);
-  background:var(--panel3);border:1px solid var(--line)}
-.gstat b{font-size:13px;color:var(--strong)}
-.gperm{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
-.gperm>div{padding-top:6px}
-.gperm b{display:block;font-size:13px;margin-bottom:2px;color:var(--strong)}
-.gperm small{color:var(--dim)}
-.gmrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
-.gmid{flex:1;min-width:170px}
-.gmid a{font-weight:700}
-.gmacts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.rolechip{display:inline-block;padding:1px 7px;font-size:10px;font-weight:700;text-transform:uppercase}
-.rolechip.owner{background:var(--blue);color:#fff}
-.rolechip.admin{background:#e8801a;color:#fff}
-.rolechip.member{background:var(--panel3);color:var(--soft);border:1px solid var(--line)}
-.rolechip.you{outline:1px dotted currentColor}
-.gmg{display:grid;grid-template-columns:repeat(auto-fill,minmax(156px,1fr));gap:10px;margin-top:10px}
-.rmgame{position:absolute;top:5px;right:5px;z-index:6;padding:1px 7px;font-size:11px}
-.edgroup{display:inline-block;margin-left:7px;padding:1px 6px;font-size:11px;font-weight:700;
-  color:var(--link);background:var(--panel3);border:1px dashed var(--line)}
-
-/* ---------- dev portal / editor / admin ---------- */
-.row2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px}
-.row2>div{min-width:0}
-.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
-#cv,#pv{display:block;width:100%;border:1px solid var(--line);background:var(--panel3)}
-.chk{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px}
-.mrow{display:flex;align-items:center;gap:10px;padding:6px 8px;border-top:1px solid var(--line)}
-.mrow>span{flex:1;min-width:0}
-.chart{display:flex;align-items:flex-end;gap:8px;height:180px;padding-top:8px}
-.cb{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
-  gap:3px;font-size:11px;color:var(--dim)}
-.cb i{display:block;width:100%;flex:none;max-height:calc(100% - 16px);background:var(--blue)}
-.gc.dv{display:block}
-.mgh{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:10px}
-.mga{flex:none;width:140px;display:block}
-.mga .art{height:92px}
-.badge-form{display:block;padding:12px;margin:10px 0;background:var(--panel)}
-.atable{margin-top:10px;background:var(--panel)}
-.arow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
-.atable .arow:first-child{border-top:0}
-.arow small{display:block;color:var(--dim)}
-.apact{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.bantag{display:inline-block;margin-left:6px;padding:1px 6px;font-size:10px;font-weight:700}
-
-/* ---------- notifications / friends ---------- */
-.nr{display:flex;align-items:center;gap:10px;padding:8px 10px;border-top:1px solid var(--line)}
-.nt{flex:1;min-width:0}
-.nt small{display:block;margin-top:2px;color:var(--dim)}
-
-/* ---------- modals & toast ---------- */
-.veil{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
-.veil.on{display:flex}
-.box{width:100%;max-width:min(94vw,430px);background:var(--panel);padding:0 16px 16px}
-.box p{margin:8px 0}
-.box>.btn{width:100%}
-.box .or{display:block;text-align:center;margin:10px 0 4px;font-size:11px;color:var(--dim)}
-.box .or::before,.box .or::after{content:none}
-#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:200;display:none;
-  max-width:min(92vw,420px);padding:9px 14px}
-.ban-x{text-align:center;font-size:34px;padding-top:14px}
-.ban-title{text-align:center;font-size:22px;font-weight:800;margin-top:4px}
-.ban-sorry{text-align:center;color:var(--soft);margin:6px 0 10px}
-.ban-card{padding:10px 12px;margin:8px 0 10px}
-.ban-row{display:flex;gap:8px;padding:3px 0;font-size:13px}
-
-/* ---------- responsive ---------- */
+.car{position:relative;display:grid;grid-template-columns:1.15fr 1fr;height:344px;background:var(--panel);border:1px solid var(--line)}
+.car .l{cursor:pointer}.car .r{padding:18px;display:flex;flex-direction:column;gap:6px;min-height:0}
+.car .meta{color:var(--link);font-size:13px}
+.ftag{display:block;color:var(--link);font-size:11px;font-weight:800;letter-spacing:.22em;align-self:flex-start}
+.ctags{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0}.ctags .tag{font-size:12px;padding:2px 10px}
+.car .see{margin-top:auto;align-self:flex-start;padding:10px 26px}
+.on-dot{display:inline-block;width:7px;height:7px;background:#22c55e;margin-right:5px}
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;flex:1;min-height:0}
+.shots>div:first-child{grid-column:span 2}.shots>div{min-height:0}
+.arr{position:absolute;top:50%;margin-top:-26px;width:34px;height:52px;background:rgba(3,7,14,.72);color:#fff;border:0;font-size:20px;cursor:pointer;z-index:2}
+.dots{display:flex;justify-content:center;gap:8px;margin:12px 0 0}.dots b{width:26px;height:6px;background:var(--alt);cursor:pointer}.dots b.on{background:var(--blue)}
+.side{display:flex;flex-direction:column;gap:18px}
+.trend .art{height:150px}.trend .in{padding:10px 12px}.trend b{font-size:16px;color:var(--strong);display:block}.trend small{color:var(--link)}
+.act .in{padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.act svg{width:150px;height:46px}.act .n{font-size:34px;font-weight:800;color:var(--strong);line-height:1;text-align:right}
+.act .n small{display:block;font-size:10px;color:var(--dim);letter-spacing:.06em;font-weight:600}
+.act .foot{padding:0 12px 12px;color:var(--dim);font-size:12px}.live{display:inline-block;width:8px;height:8px;background:#22c55e;margin-right:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.gc{background:var(--panel);border:1px solid var(--line);cursor:pointer}.gc:hover{border-color:var(--blue)}
+.gc .art{height:120px}.gc .in{padding:10px 12px}.gc b{color:var(--strong);display:block}.gc small{color:var(--dim)}
+h3.sec{margin:30px 0 12px;font-size:13px;letter-spacing:.06em;color:var(--dim)}
+.tag{display:inline-block;border:1px solid var(--blue);color:var(--link);padding:1px 8px;font-size:12px;margin:0 4px 4px 0}
+.crumb{color:var(--dim);font-size:12px;margin-bottom:8px}
+.gtitle{font-size:28px;color:var(--strong);margin-bottom:14px}
+.gmain{display:grid;grid-template-columns:1fr 320px;gap:18px;position:relative}.gmain .art{height:380px}
+.info{padding:16px;line-height:1.55}.info dt{color:var(--dim);font-size:11px;letter-spacing:.06em;margin-top:12px}.info dd{margin:2px 0 0}
+.buy{margin-top:18px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.buy h3{font-size:20px;color:var(--strong);font-weight:600}
+.btn{background:var(--blue);color:var(--on);border:0;padding:11px 34px;font:600 15px inherit;font-family:inherit;cursor:pointer}
+.btn.alt{color:var(--strong);background:var(--alt)}.btn.sm{padding:6px 14px;font-size:13px}.btn:disabled{opacity:.45;cursor:default}
+a.btn{display:inline-block;text-align:center}
+.about{margin-top:18px;padding:16px;line-height:1.6;color:var(--soft)}.about a{color:var(--link)}
+.free{border:1px solid var(--line);padding:6px 12px;color:var(--link);margin-right:10px}
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:60}.veil.on{display:flex}
+.box{width:360px;max-width:92vw;background:var(--panel);border:1px solid var(--blue);padding:26px}
+.box h3{color:var(--strong);font-size:20px;margin-bottom:6px}.box p{color:var(--dim);margin-bottom:16px;line-height:1.45}
+.box input{width:100%;background:var(--input);border:1px solid var(--line);color:var(--strong);padding:11px;margin-bottom:12px;font:inherit}.box .btn{width:100%}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--blue);color:var(--on);padding:10px 18px;display:none;z-index:70}
+.pad{padding:18px}.pad label{display:block;color:var(--dim);font-size:12px;margin:12px 0 4px}
+.pad input:not([type=color]),.pad textarea,.pad select,.search{width:100%;background:var(--input);border:1px solid var(--line);color:var(--strong);padding:9px;font:inherit}
+.pad textarea{height:70px;resize:vertical}.pad input[type=color]{width:100%;height:36px;background:var(--input);border:1px solid var(--line);padding:2px}
+.pad .btn{margin-top:6px}.ft{color:var(--strong);font-size:18px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.x{background:var(--alt);color:var(--strong);border:0;cursor:pointer;padding:7px 10px}
+#pv{width:100%;margin:14px 0 8px;border:1px solid var(--line);display:block}
+.mrow{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}.mrow a{flex:1;color:var(--link)}.mrow small{color:var(--dim)}
+.empty{padding:16px;color:var(--dim)}.search{margin-bottom:14px;max-width:420px}
+.pc{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);padding:12px}.pc small{display:block;color:var(--dim);margin-top:2px}a.pc:hover{border-color:var(--blue)}
+.prof{display:flex;gap:22px;align-items:center}
+.tools{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;vertical-align:middle}
+.ftitle{font-size:28px;color:var(--strong);margin-bottom:8px}
+.ftable{border:1px solid var(--line);background:var(--panel)}
+.fh{display:grid;grid-template-columns:1fr 110px 110px;background:var(--blue);color:var(--on);font-weight:600;padding:10px 14px}.fh span:not(:first-child){text-align:center}
+.fr{display:grid;grid-template-columns:1fr 110px 110px;align-items:center;padding:14px;border-top:1px solid var(--line);color:var(--text)}
+.ftable .fr:nth-child(even){background:var(--row2)}a.fr:hover{background:var(--hover)!important}.fr>span{text-align:center;font-weight:600}
+.fc{display:flex;gap:14px;align-items:center}.fc b{color:var(--link);font-size:16px;display:block}.fc small{color:var(--dim)}
+.fstat{margin-top:18px}.fstat div{margin-top:8px;color:var(--dim)}.fstat b{color:var(--strong)}
+.tt .fh,.tt .fr{grid-template-columns:150px 1fr}.au{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.tl{color:var(--link);font-weight:600;font-size:16px;display:block;margin-bottom:4px}.tt small{display:block;color:var(--dim)}
+.fhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.post{display:grid;grid-template-columns:140px 1fr;gap:14px;background:var(--panel);border:1px solid var(--line);padding:14px;margin-bottom:8px}
+.pa{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;word-break:break-word}.pb small{color:var(--dim)}
+.ptext{white-space:pre-wrap;margin:6px 0 10px;line-height:1.55;word-break:break-word}
+.fsearch{display:flex;gap:10px;margin-bottom:14px}.fsearch .search{margin:0;max-width:420px}.fsearch .btn{padding:9px 22px}
+.notice{background:linear-gradient(var(--notice1),var(--notice2));border:1px solid var(--blue);padding:26px;text-align:center;color:var(--soft);margin-bottom:16px}.notice small{display:block;margin-top:8px;color:var(--soft)}
+.sortbar{margin:16px 0;display:flex;gap:8px;align-items:center;color:var(--dim)}
+.rv{display:grid;grid-template-columns:70px 1fr;background:var(--panel);border:1px solid var(--line);padding:16px;margin-bottom:10px;position:relative}
+.rvh span{color:var(--dim)}.rec{display:inline-flex;align-items:center;gap:10px;background:var(--blue);color:var(--on);padding:8px 14px;margin:8px 0}.rec.neg{background:#8c2331}
+.rec b{display:block}.rec small{font-size:12px;opacity:.9}.rec .ic{width:26px;height:26px}
+.rvr p{white-space:pre-wrap;margin:6px 0 12px;word-break:break-word;line-height:1.5}
+.rvf{border-top:1px solid var(--line);padding-top:10px;color:var(--dim);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vb{background:none;border:1px solid var(--blue);color:var(--link);padding:4px 12px;cursor:pointer;font:inherit}.vb.on{background:var(--blue);color:var(--on)}.vb:disabled{opacity:.4;cursor:default}
+.flag{position:absolute;right:12px;top:12px;background:none;border:0;color:var(--dim);cursor:pointer}
+.rform{background:var(--panel);border:1px solid var(--line);padding:16px;margin-bottom:10px}
+.rform textarea{width:100%;height:90px;background:var(--input);border:1px solid var(--line);color:var(--strong);padding:9px;font:inherit;margin:10px 0}.rform .tg{display:flex;gap:8px}.rform .vb{padding:8px 16px}
+.bdg{background:#ef4444;color:#fff;font-size:11px;padding:1px 6px;margin-left:6px}.bdg:empty{display:none}
+.nr{display:flex;align-items:center;gap:14px;padding:14px;border-bottom:1px solid var(--line)}.nt{flex:1}.nt small{color:var(--dim)}.nt a{color:var(--link)}
+.step .ft{display:flex;align-items:center;gap:10px;margin-bottom:10px}.sn{background:var(--blue);color:var(--on);width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:14px}
+.hint{background:var(--panel3);border:1px solid var(--line);padding:10px 12px;color:var(--soft);margin:8px 0;line-height:1.5}.err{color:#ff5c6c;margin-bottom:8px}
+.tpl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0;color:var(--dim)}
+#cv{width:100%;border:1px solid var(--line);touch-action:none;cursor:crosshair;display:block}
+.selp{margin-top:12px;padding:12px;border:1px solid var(--line);background:var(--input)}
+.pad input[type=range]{background:none;border:0;padding:0;accent-color:var(--blue)}
+.sw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.swb{width:26px;height:26px;border:2px solid transparent;cursor:pointer}.swb.on{border-color:var(--strong)}
+.pad .chk{display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--text);font-size:13px}.pad .chk input[type=checkbox]{width:auto;padding:0}
+.acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.market-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:18px;flex-wrap:wrap}.market-head p{color:var(--soft);max-width:620px;line-height:1.5;margin-top:6px}
+.market-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.market-card{background:var(--panel);border:1px solid var(--line);padding:12px}
+.market-card .market-art{height:180px;background:linear-gradient(135deg,var(--panel3),var(--row2));display:flex;align-items:flex-end;justify-content:center;position:relative;overflow:hidden}
+.market-art canvas{height:180px;width:144px}
+.market-card h3{color:var(--strong);margin:12px 0 4px}.market-card p{color:var(--dim);min-height:34px;font-size:12px;line-height:1.4}
+.market-meta{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--link);font-size:12px}
+.owned{color:#22c55e;font-weight:700}.market-card .btn{width:100%;margin-top:10px}.market-filter{display:flex;gap:8px;flex-wrap:wrap}
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600}
+.or{color:var(--dim);text-align:center;font-size:12px;margin:14px 0 10px}
+.srv{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sinfo{flex:1;min-width:0}.sinfo b{color:var(--strong)}.sinfo small{display:block;color:var(--dim);margin-top:2px}
+.sbar{height:5px;background:var(--track);margin:8px 0 4px;max-width:260px}.sbar i{display:block;height:100%;background:var(--blue)}
+.thmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-top:14px}
+.thm{background:var(--panel3);border:2px solid var(--line);padding:14px;text-align:left;color:var(--text);cursor:pointer;font:inherit}.thm.on{border-color:var(--blue)}
+.thm b{display:block;margin:10px 0 2px;color:var(--strong)}.thm small{color:var(--dim)}.sw3{display:flex}.sw3 i{width:36px;height:36px;border:1px solid var(--line);margin-right:-1px}
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.badge-item{background:var(--panel3);border:1px solid var(--line);padding:10px;text-align:center}
+.badge-icon{font-size:24px;display:block;margin-bottom:4px}.badge-name{font-size:11px;color:var(--strong);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge-form{background:var(--panel);border:1px solid var(--line);padding:16px;margin-bottom:10px}.badge-form input,.badge-form textarea{width:100%;margin-bottom:10px}.badge-form textarea{height:60px}
+.avgrid{display:grid;grid-template-columns:360px 1fr;gap:18px}.avprev canvas{width:100%;display:block;background:var(--panel3);border:1px solid var(--line);margin-bottom:12px}
+.avtabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.avpal{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.avpal .swb{width:34px;height:34px}.avpal input[type=color]{width:46px;height:34px;padding:2px}
+.verified{width:18px;height:18px;vertical-align:-3px;margin-left:4px}.abadge{width:16px;height:16px;vertical-align:-3px;margin-left:4px}
+.follow-stat{color:var(--dim);margin-top:6px}.follow-stat b{color:var(--strong)}
+.shirt-upload{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.avtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.tile{background:var(--panel3);border:2px solid var(--line);padding:6px;cursor:pointer;color:var(--text);font:inherit}.tile.on{border-color:var(--blue)}.tile canvas{width:100%;display:block}.tile small{display:block;margin-top:4px;color:var(--dim)}
+#uav{background:var(--panel3);border:1px solid var(--line)}
+.stgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}.stc{background:var(--panel);border:1px solid var(--line);padding:16px}.stc b{display:block;font-size:26px;color:var(--strong)}.stc small{color:var(--dim)}
+.chart{display:flex;align-items:flex-end;gap:6px;height:180px;margin-top:12px}.cb{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;font-size:11px;color:var(--dim)}.cb i{display:block;width:100%;background:var(--blue);min-height:2px}
+.mgh{display:flex;gap:20px;align-items:center;flex-wrap:wrap}.mga{width:260px;height:146px;flex:none;position:relative}.gc.dv{cursor:default}.gc.dv .acts{margin-top:10px}
+.glabel{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 7px;vertical-align:3px;margin-left:8px;color:#fff}
+.glabel.beta{background:#b45309}.glabel.alpha{background:#6d28d9}.glabel.wip{background:#475569}
+.gc .glabel,.trend .glabel{font-size:9px;padding:1px 5px;vertical-align:2px;margin-left:6px}
+.clrow{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}.clrow:last-child{border-bottom:0}.clrow b{color:var(--link);min-width:52px;flex:none}
+.clrow span{display:block;color:var(--soft);line-height:1.5}.clrow small{color:var(--dim);display:block;margin-top:2px}
+.cat-ic{width:36px;height:36px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px}
+.pact{display:flex;gap:6px;flex:none;align-items:center}
+.pgrid{display:grid;grid-template-columns:320px 1fr;gap:18px;margin-top:18px}.pgrid canvas{width:100%;display:block;background:var(--panel3);border:1px solid var(--line)}
+.frow{display:flex;gap:14px;overflow-x:auto;padding-bottom:14px}.frow .au{flex:none;width:72px}
+.fpop{position:absolute;left:12px;top:12px;width:230px;max-width:calc(100% - 24px);background:rgba(4,6,11,.94);border:1px solid var(--blue);padding:10px 12px;z-index:3}
+.bantag{display:inline-block;color:#ff5c6c;border:1px solid #5b1a1a;font-size:11px;font-weight:700;padding:2px 8px;margin-left:8px;white-space:nowrap}
+.ban-field{display:block;color:var(--dim);font-size:12px;margin:12px 0 4px}
+.bsel{width:100%;background:var(--input);border:1px solid var(--line);color:var(--strong);padding:10px;font:inherit;margin-bottom:12px}
+#banScreen{z-index:90}#banScreen .box{text-align:center}
+.ban-x{font-size:44px;line-height:1;margin-bottom:12px}.ban-title{font-size:26px;font-weight:800;margin-bottom:6px}.ban-sorry{margin-bottom:20px}
+.ban-card{display:inline-block;text-align:left;border:1px dashed #5b1a1a;padding:16px 26px}.ban-row{padding:4px 0;font-size:15px}.ban-row .bk{font-weight:700;margin-right:8px}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.gcard{background:var(--panel);border:1px solid var(--line);padding:14px;cursor:pointer;display:block}.gcard:hover{border-color:var(--blue)}
+.gicon{width:48px;height:48px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:22px}
+.adtabs{display:flex;gap:8px;margin:12px 0 16px;flex-wrap:wrap}
+.atable{border:1px solid var(--line);background:var(--panel)}
+.arow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}.arow:first-child{border-top:0}
+.arow b{color:var(--strong);word-break:break-word}.arow small{display:block;color:var(--dim);margin-top:2px}.apact{display:flex;gap:6px;flex:none;align-items:center}
+/* profile banner */
+.pcard{background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.pband{position:relative;min-height:190px;display:flex;align-items:flex-end;overflow:hidden}
+.pband .pbimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.pbveil{position:absolute;inset:0}
+.pband.pat-grid::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.13) 1px,transparent 1px);background-size:22px 22px}
+.pband.pat-dots::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.25) 2px,transparent 2.6px);background-size:17px 17px}
+.pband.pat-stripes::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.11) 0 2px,transparent 2px 26px)}
+.pbin{position:relative;display:flex;gap:18px;align-items:flex-end;padding:0 22px 16px;width:100%;flex-wrap:wrap;z-index:2}.pbin .av{margin-bottom:4px}
+.pbid{flex:1;min-width:220px}.pbname{font-size:30px;color:#fff;line-height:1.05;margin:0 0 7px;text-shadow:0 2px 14px rgba(0,0,0,.6)}
+.pbstats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:7px}.pbstats span{background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12px;padding:3px 10px}.pbplay b{color:#fff}
+.pbmeta{color:rgba(255,255,255,.9);font-size:12px;margin-bottom:9px;text-shadow:0 1px 6px rgba(0,0,0,.55)}.pbin .acts{margin:0}
+.skacc{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}.skacc button{width:36px;height:36px;border:2px solid transparent;cursor:pointer}.skacc input[type=color]{width:44px;height:36px;padding:2px}
+.patpick{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.pset{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px;margin-top:18px;align-items:start}.pset .span{grid-column:1/-1}
+/* group roles & games */
+.rolechip{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.12em;padding:2px 9px}
+.rolechip.owner{background:#f5b301;color:#191002}.rolechip.admin{background:var(--blue);color:#fff}.rolechip.member{background:var(--alt);color:var(--strong)}.rolechip.you{outline:1px dashed var(--strong);outline-offset:2px}
+.gmrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}.gmrow:hover{background:var(--hover)}
+.gmrow .gmid{flex:1;min-width:180px}.gmrow .gmid a{color:var(--strong);font-weight:600}.gmrow .gmid small{display:block;color:var(--dim);font-size:11px;margin-top:1px}
+.gmacts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.gperm{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:10px 0}.gperm>div{background:var(--panel3);border:1px solid var(--line);border-top:3px solid var(--blue);padding:12px}
+.gperm b{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--strong)}.gperm small{display:block;color:var(--dim);margin-top:6px;line-height:1.5}.gperm .rolechip{flex:none}
+.gmg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}.gmg .gc{position:relative}
+.gmg .rmgame{position:absolute;top:8px;right:8px;z-index:3;background:rgba(3,7,14,.78);border:1px solid #5b1a1a;color:#ff8f8f}
+.edgroup{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--blue);color:var(--link);font-size:12px;letter-spacing:.08em;padding:5px 12px}
+.gstat{display:inline-flex;align-items:center;gap:6px;background:var(--panel3);border:1px solid var(--line);padding:4px 12px;font-size:12px;color:var(--soft);margin-right:6px}.gstat b{color:var(--strong)}
 @media (max-width:860px){
-  .burger{display:inline-flex}
-  .sub{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;gap:0;
-    background:var(--blue2);box-shadow:0 6px 14px rgba(0,0,0,.3)}
-  .sub.on{display:flex}
-  .sub a{min-height:0}
-  .topin{gap:10px;min-height:44px}
-  .wrap{padding:0 10px}
-  .cols{grid-template-columns:1fr}
-  .car{flex-direction:column}
-  .car .l{min-height:200px}
-  .car .r{min-width:0}
-  .gmain{flex-direction:column}
-  .gmain>.art{min-height:200px}
-  .gmain .card.info{min-width:0}
-  .fpop{position:static;width:auto;margin-top:10px}
-  .pgrid,.pset,.avgrid,.row2,.gperm{grid-template-columns:1fr}
-  .pset .span{grid-column:auto}
-  .pband{min-height:150px}
-  .pbin{padding:16px 12px;gap:12px;flex-wrap:wrap}
-  .pbin .av{width:64px!important;height:64px!important}
-  .pbname{font-size:20px}
-  .post{flex-direction:column}
-  .post .pa{width:100%;flex-direction:row;align-items:center;gap:8px;text-align:left;padding:8px 10px;
-    border-right:0;border-bottom:1px solid var(--line)}
-  .fr{grid-template-columns:1fr 64px 64px;gap:8px}
-  .fr.tt{grid-template-columns:1fr}
-  .fr.tt .au{flex-direction:row;align-items:center;gap:8px;max-width:none;text-align:left}
-  .ftable .fh{grid-template-columns:1fr 64px 64px}
-  .market-head{flex-direction:column;align-items:flex-start}
-  .market-grid{grid-template-columns:repeat(auto-fill,minmax(146px,1fr))}
-  .thmgrid{grid-template-columns:repeat(2,1fr)}
-  .fsearch{max-width:none}
-  .chart{height:150px}
-  .mga{width:120px}
+  .avgrid,.pgrid{grid-template-columns:1fr}
+  .cols,.gmain,.car{grid-template-columns:1fr}.car{height:auto}.car .l{height:200px}.gmain .art{height:240px}
+  .arr{top:100px;margin-top:0}
+  .topin{display:flex;justify-content:space-between}
+  .sub{position:absolute;top:100%;left:0;right:0;display:none;flex-direction:column;height:auto;gap:0;background:var(--panel3);border-bottom:1px solid var(--line);padding:6px 0}.sub.on{display:flex}
+  .sub a{padding:12px 18px;border-bottom:0}
+  .burger{display:block}.footin{flex-direction:column;align-items:flex-start}
+  .pband{min-height:150px}.pbname{font-size:24px}.pbin{padding:0 14px 12px;gap:12px}.pbin .av{width:64px!important;height:64px!important}
 }
-</style>
-<style>
-/* ===== VOXELY 2008 SKIN — inlined. Keep this as the LAST style block of the head. ===== */
+
+/* ===== VOXELY 2008 SKIN ===== */
+/* =====================================================================
+   VOXELY 2008 SKIN
+   Skin ini harus paling akhir di head, setelah
+   "VOXELY DESIGN LAYER". Semua warna tetap lewat variabel tema.
+   ===================================================================== */
 :root{
   --bg:#e9edf4;--panel:#ffffff;--panel3:#eef2f9;--input:#ffffff;--row2:#f5f8fc;--hover:#e6eefb;
   --track:#d4dce9;--alt:#dde4f0;--line:#b4c1d6;--blue:#3b6ab8;--blue2:#27508f;--blue-hover:#5886d0;
@@ -556,18 +334,18 @@ h3.sec{font:700 12px var(--fd);letter-spacing:0;text-transform:none;color:var(--
 
 /* ---------- boxes / cards ---------- */
 .card,.gc,.gcard,.market-card,.pc,.rv,.post,.rform,.badge-form,.stc,.ftable,.atable,.pcard,.car,.srv{
-  border:1px solid var(--line);border-radius:3px;box-shadow:1px 2px 3px rgba(0,0,0,.18)}
+  border:1px solid var(--line);border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .card h4{font:700 11px var(--fd);letter-spacing:0;color:var(--link);border-bottom:1px solid var(--line);
   background:linear-gradient(var(--panel),var(--alt));padding:7px 12px}
 .card{transition:none}
 .gc,.gcard,.market-card{transition:none}
-.gc:hover,.gcard:hover,.market-card:hover{transform:none;border-color:var(--blue);box-shadow:0 2px 5px rgba(0,0,0,.25)}
+.gc:hover,.gcard:hover,.market-card:hover{transform:none;border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 35%,transparent)}
 .gc:hover .art img,.trend:hover .art img{transform:none}
 .gc .art img,.trend .art img{transition:none}
 .gc .in b,.trend .in b{font-family:var(--fb);font-weight:700;color:var(--link)}
 .gc .in b:hover{text-decoration:underline}
 .ftag{clip-path:none;border-radius:2px;background:linear-gradient(#ffb04a,#e8801a);color:#fff;font-family:var(--fb);letter-spacing:.06em;text-shadow:0 -1px 0 rgba(0,0,0,.3)}
-.tag{clip-path:none;border-radius:2px;background:var(--panel3);border:1px solid var(--line);color:var(--link);font-weight:400;letter-spacing:0}
+.tag{clip-path:none;border-radius:8px;background:var(--panel3);border:1px solid var(--line);color:var(--link);font-weight:400;letter-spacing:0}
 .glabel{border-radius:2px}
 .dots b{height:8px;width:18px;border:1px solid var(--line);background:var(--alt);transition:none}
 .dots b.on{width:18px;background:var(--blue);border-color:var(--blue2)}
@@ -637,7 +415,7 @@ h3.sec{font:700 12px var(--fd);letter-spacing:0;text-transform:none;color:var(--
 .gperm b{font-family:var(--fb);letter-spacing:0}
 .gstat b{font-family:var(--fb)}
 .thm{clip-path:none;border-radius:3px}
-.thm.on{box-shadow:0 2px 5px rgba(0,0,0,.25)}
+.thm.on{box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 35%,transparent)}
 .thm b{font-family:var(--fb);letter-spacing:0}
 .market-card .btn{width:100%}
 .verified,.abadge{vertical-align:-3px}
@@ -651,6 +429,24 @@ h3.sec{font:700 12px var(--fd);letter-spacing:0;text-transform:none;color:var(--
   .sub a.on{background:rgba(0,0,0,.35);box-shadow:none}
   .logo{font-size:19px}
 }
+
+
+/* fix: tombol View game tidak menimpa thumbnail */
+.shots .art{min-height:0}.shots{overflow:hidden}.car .see{flex:none;position:relative;z-index:1}
+
+/* ===== votes, game page customization ===== */
+.vtag{color:var(--link);font-weight:700}.vtag.mine{color:#e8801a}
+.gvote{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.gvote small{color:var(--dim)}
+#gband:empty{display:none}
+.gband{position:relative;height:150px;margin-bottom:14px;overflow:hidden;border:1px solid var(--line);display:flex;align-items:flex-end;background:linear-gradient(180deg,color-mix(in srgb,var(--pac) 82%,#fff),color-mix(in srgb,var(--pac) 70%,#000))}
+.gband .pbimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.gband .pbveil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent 40%,rgba(0,0,0,.5))}
+.gband.pat-grid::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.13) 1px,transparent 1px);background-size:22px 22px}
+.gband.pat-dots::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.25) 2px,transparent 2.6px);background-size:17px 17px}
+.gband.pat-stripes::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.11) 0 2px,transparent 2px 26px)}
+.gbin{position:relative;z-index:2;padding:0 20px 14px}.gbin b{color:#fff;font:700 26px var(--fd);text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.gvid{position:relative;padding-top:56.25%;max-width:720px;width:100%}.gvid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#gpv{margin:12px 0}
 </style>
 </head>
 <body>
@@ -825,7 +621,7 @@ function drawCar() {
   $('#car').innerHTML = `<button class="arr" style="left:0" aria-label="Previous game" onclick="go(-1)">‹</button><button class="arr" style="right:0" aria-label="Next game" onclick="go(1)">›</button>
     <div class="l" onclick="location.hash='#/game/${g.id}'">${art(g)}</div>
     <div class="r"><span class="ftag">FEATURED</span><h2>${E(g.title)}${lbl(g)}</h2><div class="meta">${E(g.tagline)}</div>
-    <div class="ctags">${tags(g)}</div><small style="color:var(--dim)">${g.online} players online</small>
+    <div class="ctags">${tags(g)}</div><small style="color:var(--dim)">${g.online} players online${voteTag(g.id) && ' · ' + voteTag(g.id)}</small>
     <div class="shots">${(g.thumb ? [0] : [1, 2, 3]).map(n => art(g, n)).map(a => `<div>${a}</div>`).join('')}</div>
     <a class="btn see" href="#/game/${g.id}">View game</a></div>`;
   $('#dots').innerHTML = games.map((_, i) => `<b class="${i === idx ? 'on' : ''}" onclick="idx=${i};drawCar()"></b>`).join('');
@@ -837,12 +633,12 @@ function home() {
   $('#view').innerHTML = `<div id="frbar"></div><span class="label">FEATURED &amp; RECOMMENDED</span>
     <div class="cols"><div><div class="car" id="car"></div><div class="dots" id="dots"></div></div>
     <div class="side">
-      <div class="card trend"><h4>TRENDING NOW</h4><a href="#/game/${top.id}">${art(top)}<div class="in"><b>${E(top.title)}${lbl(top)}</b><small>${top.online ? '<i class="on-dot"></i>' : ''}${top.online} online</small></div></a></div>
+      <div class="card trend"><h4>TRENDING NOW</h4><a href="#/game/${top.id}">${art(top)}<div class="in"><b>${E(top.title)}${lbl(top)}</b><small>${top.online ? '<i class="on-dot"></i>' : ''}${top.online} online${voteTag(top.id) && ' · ' + voteTag(top.id)}</small></div></a></div>
       <div class="card act"><h4>COMMUNITY ACTIVITY</h4><div class="in">${spark()}<div class="n">${total()}<small>GAMERS ONLINE</small></div></div>
       <div class="foot"><span class="live"></span>${games.filter(g => g.online).length} games live right now</div></div>
     </div></div>
     <div id="fpl"></div><h3 class="sec">ALL GAMES</h3>
-    <div class="grid">${games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online ? '<i class="on-dot"></i>' : ''}${g.online} online · Free</small></div></a>`).join('')}</div>`;
+    <div class="grid">${games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online ? '<i class="on-dot"></i>' : ''}${g.online} online · Free${voteTag(g.id) && ' · ' + voteTag(g.id)}</small></div></a>`).join('')}</div>`;
   idx = Math.min(idx, games.length - 1); drawCar(); if (session) loadFriendsHome();
   timer = setInterval(() => $('#car') && go(1), 6000);
 }
@@ -850,14 +646,14 @@ function home() {
 function gamePage(id) {
   const g = games.find(x => x.id === id); if (!g) return (location.hash = '#/');
   const cl = g.changelog || [];
-  $('#view').innerHTML = `<div class="crumb"><a href="#/">Games</a> &gt; ${E(g.title)}</div><div class="gtitle">${E(g.title)}${lbl(g)}</div>
+  $('#view').innerHTML = `<div class="crumb"><a href="#/">Games</a> &gt; ${E(g.title)}</div><div class="gtitle">${E(g.title)}${lbl(g)}</div><div id="gband"></div>
     <div class="gmain">${art(g)}<div class="fpop" id="fpop" style="display:none"></div><div class="card info"><div>${E(g.tagline)}</div><p style="color:var(--soft);margin-top:8px">${E(g.desc)}</p>
       <dl><dt>PLAYERS ONLINE</dt><dd>${g.online}</dd><dt>VISITS</dt><dd>${g.visits || 0}</dd><dt>TAGS</dt><dd>${tags(g)}</dd><dt>CREATED BY</dt><dd>${E(g.owner || 'Voxely')}</dd></dl></div></div>
-    <div class="card buy"><h3>Play ${E(g.title)}</h3><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
+    <div class="card buy"><h3>Play ${E(g.title)}</h3><div class="gvote" id="gvote"></div><div><span class="free">Free</span><button class="btn" onclick="play('${g.id}')">Play</button></div></div>
     <div class="card about"><b style="color:var(--strong)">About this game</b><br>${E(g.desc)}<br><br>Play right from your mobile browser, or use the Voxely Client on PC. <a onclick="download()">Download Voxely Client</a> is available for desktop.</div>
     ${cl.length ? `<div class="card pad" style="margin-top:18px"><h3 class="ft">CHANGELOG — updates from the developer</h3>${cl.map(e => `<div class="clrow"><b>${E(e.ver)}</b><div><span>${E(e.text)}</span><small>${dateStr(e.ts)}</small></div></div>`).join('')}</div>` : ''}
-    <div id="servers"></div><div id="reviews"></div>`;
-  rvDraft = null; loadServers(id); loadReviews(id); loadFriendsPlayed(id);
+    <div id="gcustom"></div><div id="servers"></div><div id="reviews"></div>`;
+  rvDraft = null; loadServers(id); loadReviews(id); loadFriendsPlayed(id); loadGameVote(id); loadGameCustom(id);
 }
 
 function download() {
@@ -1265,7 +1061,7 @@ function rvRow(r, gid) {
 async function loadReviews(id) {
   const el = $('#reviews'); if (!el) return;
   rvGame = id;
-  const d = await gj('/api/games/' + id + '/reviews?sort=' + (rvSort === 'helpful' ? 'helpful' : 'recent'));
+  const d = (sb && await reviewsSB(id).catch(() => null)) || await gj('/api/games/' + id + '/reviews?sort=' + (rvSort === 'helpful' ? 'helpful' : 'recent'));
   if (!el) return;
   if (!d) { el.innerHTML = ''; return; }
   const pct = d.total ? Math.round(100 * d.up / d.total) : 0;
@@ -1277,13 +1073,39 @@ async function loadReviews(id) {
 }
 async function sendReview() {
   const text = ($('#rvText')?.value || '').trim();
-  const r = await rq('POST', '/api/games/' + rvGame + '/reviews', { up: rvVote, text });
-  if (!r.ok) return toast(r.data.error || 'Failed to post review');
+  if (!text) return toast('Write something first');
+  let r = { ok: true, status: 0, data: {} };
+  try { r = await rq('POST', '/api/games/' + rvGame + '/reviews', { up: rvVote, text }); } catch (e) { if (e.message === 'login') return; }
+  if (!r.ok && r.status !== 404) return toast(r.data.error || 'Failed to post review');
+  if (sb) {
+    const u = session.user;
+    const { error } = await sb.from('game_reviews').upsert({ game_id: rvGame, uid: u.uid, name: u.name, av: u.av ? String(u.av) : null, color: u.color || null, up: rvVote, text: text.slice(0, 1000), ts: Date.now() }, { onConflict: 'game_id,uid' });
+    if (error) return toast('Database sync failed: ' + error.message);
+  }
   rvDraft = null; toast('Review saved'); loadReviews(rvGame);
 }
-async function delReview(gid) { if (!confirm('Delete your review?')) return; rvDraft = null; await rq('DELETE', '/api/games/' + gid + '/reviews'); toast('Review deleted'); loadReviews(gid); }
-async function voteReview(gid, rid, v) { if (needLogin()) return; const r = await rq('POST', `/api/games/${gid}/reviews/${rid}/vote`, { v }); if (!r.ok) return toast(r.data.error || 'Vote failed'); loadReviews(gid); }
-async function reportReview(gid, rid) { if (needLogin()) return; await rq('POST', `/api/games/${gid}/reviews/${rid}/report`); toast('Review reported. Thank you!'); }
+async function delReview(gid) {
+  if (!confirm('Delete your review?')) return; rvDraft = null;
+  try { await rq('DELETE', '/api/games/' + gid + '/reviews'); } catch (e) { if (e.message === 'login') return; }
+  if (sb) await sb.from('game_reviews').delete().match({ game_id: gid, uid: session.user.uid });
+  toast('Review deleted'); loadReviews(gid);
+}
+async function voteReview(gid, rid, v) {
+  if (needLogin()) return;
+  if (sb) {
+    const uid = session.user.uid, cur = ((await sb.from('review_votes').select('v').match({ review_id: rid, uid })).data || [])[0];
+    const { error } = await (cur && cur.v === v ? sb.from('review_votes').delete().match({ review_id: rid, uid }) : sb.from('review_votes').upsert({ review_id: rid, game_id: gid, uid, v }, { onConflict: 'review_id,uid' }));
+    if (error) return toast(error.message);
+    return loadReviews(gid);
+  }
+  const r = await rq('POST', `/api/games/${gid}/reviews/${rid}/vote`, { v }); if (!r.ok) return toast(r.data.error || 'Vote failed'); loadReviews(gid);
+}
+async function reportReview(gid, rid) {
+  if (needLogin()) return;
+  if (sb) await sb.from('review_reports').upsert({ review_id: rid, uid: session.user.uid }, { onConflict: 'review_id,uid' });
+  else await rq('POST', `/api/games/${gid}/reviews/${rid}/report`);
+  toast('Review reported. Thank you!');
+}
 
 /* ---------- People ---------- */
 let peopleQ = '', peopleCache = null;
@@ -1329,7 +1151,7 @@ async function userPage(uid) {
       <h3 class="ft">Level</h3><div class="stc" style="margin:8px 0 16px;display:inline-block"><b>${u.level}</b><small>LEVEL</small></div>
       <h3 class="ft">Friends (${u.friends})</h3>${u.friendList && u.friendList.length ? `<div class="frow" style="flex-wrap:wrap;margin-top:10px">${u.friendList.map(f => `<a class="au" href="#/user/${f.uid}">${avatar(f, 48)}<small style="color:var(--link);font-size:11px;word-break:break-word">${E(f.name)}</small></a>`).join('')}</div>` : '<div class="empty" style="padding:8px 0">No friends yet.</div>'}</div></div>
     <h3 class="sec">GAMES BY ${E(u.name).toUpperCase()}</h3>
-    ${u.games.length ? `<div class="grid">${u.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online} online · Free</small></div></a>`).join('')}</div>` : '<div class="empty">Hasn&#39;t created any games yet.</div>'}`;
+    ${u.games.length ? `<div class="grid">${u.games.map(g => `<a class="gc" href="#/game/${g.id}">${art(g)}<div class="in"><b>${E(g.title)}${lbl(g)}</b><small>${g.online} online · Free${voteTag(g.id) && ' · ' + voteTag(g.id)}</small></div></a>`).join('')}</div>` : '<div class="empty">Hasn&#39;t created any games yet.</div>'}`;
   V3D.render($('#uav'), u.outfit);
 }
 async function friendAction(uid, act) {
@@ -1525,7 +1347,7 @@ async function devPage() {
   $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span>
     ${devTabs('games')}<div class="fhead"><h1 class="ftitle">My Games</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="location.hash='#/dev/new'">＋ Create New Game</button><button class="btn sm alt" onclick="openStudio('new')">＋ New game in Studio</button><button class="btn sm alt" onclick="location.hash='#/dev/badges'">Manage Badges</button></div></div>
     <div class="hint">You can create up to 5 games. Build the world in Voxely Studio, set a release label (WIP / ALPHA / BETA), then log every update in the changelog so players know what's new.</div>
-    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b>${g.group ? `<span class="edgroup" style="margin-left:8px">⚒ ${E(g.group.name || String(g.group))}</span>` : ''}<small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="openStudio('${id}')">Edit in Voxely Studio</button><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Quick Web Editor</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
+    ${mine.length ? mine.map(([id, g]) => `<div class="gc dv" style="margin-bottom:10px;cursor:default"><div class="mgh"><a class="mga" href="#/game/${id}">${art(g)}</a><div style="flex:1;min-width:260px"><b style="color:var(--strong);font-size:18px">${E(g.title)}${lbl(g)}</b>${g.group ? `<span class="edgroup" style="margin-left:8px">⚒ ${E(g.group.name || String(g.group))}</span>` : ''}<small style="display:block;color:var(--dim);margin-top:4px">${E(g.tagline)}</small><small style="display:block;color:var(--link);margin-top:6px" class="num">${g.online} online · ${g.visits || 0} visits · ${(g.changelog || []).length} update entries</small><div class="acts"><button class="btn sm" onclick="openStudio('${id}')">Edit in Voxely Studio</button><button class="btn sm" onclick="location.hash='#/dev/edit/${id}'">Quick Web Editor</button><button class="btn sm" onclick="location.hash='#/dev/page/${id}'">Customize page</button><button class="btn sm alt" onclick="location.hash='#/dev/changelog/${id}'">Changelog</button><button class="btn sm alt" onclick="location.hash='#/dev/stats/${id}'">Stats</button><button class="x" onclick="delGame('${id}')">Delete</button></div></div></div></div>`).join('') : '<div class="empty">No games yet. Click "Create New Game" to get started!</div>'}`;
 }
 async function delGame(id) { if (!confirm('Delete this game permanently?')) return; await rq('DELETE', '/api/games/' + id); await loadGames(); devPage(); toast('Game deleted'); }
 
@@ -1710,7 +1532,8 @@ async function saveGameEd() {
   if (ED.thumb) b.thumb = ED.thumb;
   const r = ED.id ? await rq('PUT', '/api/games/' + ED.id, b) : await rq('POST', '/api/games', b);
   if (!r.ok) return toast(r.data.error || 'Failed to save game');
-  if (!ED.id) ED.id = r.data.id;
+  const wasNew = !ED.id; if (!ED.id) ED.id = r.data.id;
+  if (ED.group && wasNew) { try { await VDB.linkGroupGame(ED.group, ED.id); } catch (e) {} }
   await loadGames();
   toast('Game saved');
   location.hash = '#/dev';
@@ -1932,15 +1755,16 @@ async function gKick(gid, uid) {
   toast('Member removed'); groupPage(gid);
 }
 async function gAddGame(gid, gameId) {
-  const r = await rq('POST', `/api/groups/${gid}/games`, { gameId });
+  let r = { ok: false, data: {} }; try { r = await rq('POST', `/api/groups/${gid}/games`, { gameId }); } catch (e) { if (e.message === 'login') return; }
   $('#gAdd')?.classList.remove('on');
-  if (!r.ok) return toast(r.data.error || 'Failed to add game');
+  if (!r.ok && !sb) return toast(r.data.error || 'Failed to add game');
+  try { await VDB.linkGroupGame(gid, gameId); } catch (e) {}
   toast('Game added to the group'); groupPage(gid);
 }
 async function gRemoveGame(gid, gameId) {
   if (!confirm('Remove this game from the group? The game itself is NOT deleted.')) return;
-  const r = await rq('DELETE', `/api/groups/${gid}/games/${gameId}`);
-  if (!r.ok) return toast(r.data.error || 'Failed to remove game');
+  try { await rq('DELETE', `/api/groups/${gid}/games/${gameId}`); } catch (e) { if (e.message === 'login') return; }
+  try { await VDB.unlinkGroupGame(gid, gameId); } catch (e) {}
   toast('Game removed from the group'); groupPage(gid);
 }
 function gAddModal(gid) {
@@ -1957,7 +1781,8 @@ async function groupPage(id) {
   if (!$('#view')) return;
   if (!d) return (location.hash = '#/groups');
   const g = d.group;
-  const gGames = d.games || [];
+  const linked = await VDB.groupGames(g.id).catch(() => []);
+  const gGames = [...(d.games || []), ...games.filter(x => linked.includes(x.id) && !(d.games || []).some(y => y.id === x.id))];
   const myRole = d.role || (d.own ? 'owner' : d.joined ? 'member' : null);
   const canManage = myRole === 'owner' || myRole === 'admin';
   const canDelete = myRole === 'owner' || session?.user?.admin || String(session?.user?.name || '').toLowerCase() === 'zerks';
@@ -1982,7 +1807,7 @@ async function groupPage(id) {
         ${canDelete ? `<button class="x" onclick="groupDelete('${g.id}')">Delete group</button>` : ''}</div></div></div></div>
     <h3 class="sec">GROUP GAMES (${gGames.length})</h3>
     ${canManage ? `<div class="acts" style="margin:0 0 12px"><button class="btn sm" onclick="gAddModal('${g.id}')">＋ Add my game</button><button class="btn sm alt" onclick="location.hash='#/dev/new/${g.id}'">＋ Create group game</button><small style="color:var(--dim)">Admins build the group's game library</small></div>` : `<div class="hint" style="margin-bottom:12px">Games made together by this group. ${session && !d.joined ? '<b>Join the group</b> to team up — ' : ''}admins can add games here.</div>`}
-    ${gGames.length ? `<div class="gmg">${gGames.map(x => `<a class="gc" href="#/game/${x.id}">${art(x)}<div class="in"><b>${E(x.title)}${lbl(x)}</b><small>${x.online} online · Free</small></div>${canManage ? `<button class="rmgame x" title="Remove from group" onclick="event.preventDefault();event.stopPropagation();gRemoveGame('${g.id}','${x.id}')">✕</button>` : ''}</a>`).join('')}</div>` : '<div class="empty">No games in this group yet.</div>'}
+    ${gGames.length ? `<div class="gmg">${gGames.map(x => `<a class="gc" href="#/game/${x.id}">${art(x)}<div class="in"><b>${E(x.title)}${lbl(x)}</b><small>${x.online} online · Free${voteTag(x.id) && ' · ' + voteTag(x.id)}</small></div>${canManage ? `<button class="rmgame x" title="Remove from group" onclick="event.preventDefault();event.stopPropagation();gRemoveGame('${g.id}','${x.id}')">✕</button>` : ''}</a>`).join('')}</div>` : '<div class="empty">No games in this group yet.</div>'}
     <h3 class="sec">GROUP FORUM</h3>
     ${session ? `<div class="card pad" style="max-width:640px;margin-bottom:14px"><h3 class="ft">Start a new thread</h3><div class="err" id="gterr"></div>
       <label>Title</label><input id="gtTitle" maxlength="100" placeholder="Thread title">
@@ -2085,6 +1910,115 @@ async function adminDeleteThread(gid, tid) {
   toast('Thread deleted'); adminPage();
 }
 
+/* ---------- Supabase sync: upvotes, reviews, game pages, group-game links ---------- */
+const VDB = {
+  on: () => !!sb,
+  async votes(ids) {
+    const m = {}; ids.forEach(i => (m[i] = { up: 0, down: 0, mine: 0 }));
+    if (!sb || !ids.length) return m;
+    const { data, error } = await sb.from('game_votes').select('game_id,uid,v').in('game_id', ids);
+    if (error) return null;
+    (data || []).forEach(r => { const o = m[r.game_id]; if (!o) return; r.v > 0 ? o.up++ : o.down++; if (session && r.uid === session.user.uid) o.mine = r.v; });
+    return m;
+  },
+  setVote(gid, v) { const uid = session.user.uid; return v === 0 ? sb.from('game_votes').delete().match({ game_id: gid, uid }) : sb.from('game_votes').upsert({ game_id: gid, uid, v }, { onConflict: 'game_id,uid' }); },
+  async page(id) { if (!sb) return null; const { data } = await sb.from('game_pages').select('data').eq('game_id', id).maybeSingle(); return data ? data.data : null; },
+  savePage(id, d) { return sb.from('game_pages').upsert({ game_id: id, uid: session.user.uid, data: d, updated: new Date().toISOString() }, { onConflict: 'game_id' }); },
+  async groupGames(gid) { if (!sb) return []; const { data } = await sb.from('group_games').select('game_id').eq('group_id', gid); return (data || []).map(r => r.game_id); },
+  async linkGroupGame(gid, gameId) { if (sb) await sb.from('group_games').upsert({ group_id: gid, game_id: gameId, uid: session.user.uid }, { onConflict: 'group_id,game_id' }); },
+  async unlinkGroupGame(gid, gameId) { if (sb) await sb.from('group_games').delete().match({ group_id: gid, game_id: gameId }); }
+};
+const vPct = o => (o.up + o.down ? Math.round(100 * o.up / (o.up + o.down)) : null);
+const voteTag = id => (sb ? `<span class="vtag" data-vote="${E(id)}">▲ …</span>` : '');
+async function paintVotes() {
+  const els = [...document.querySelectorAll('.vtag[data-vote]:not([data-done])')]; if (!els.length) return;
+  els.forEach(e => (e.dataset.done = 1));
+  const m = await VDB.votes([...new Set(els.map(e => e.dataset.vote))]);
+  els.forEach(e => {
+    const o = m && m[e.dataset.vote]; if (!o) return (e.textContent = '');
+    const p = vPct(o); e.className = 'vtag' + (o.mine > 0 ? ' mine' : '');
+    e.title = o.up + ' upvotes · ' + o.down + ' downvotes'; e.textContent = '▲ ' + o.up + (p === null ? '' : ' · ' + p + '%');
+  });
+}
+new MutationObserver(() => { clearTimeout(window._pv); window._pv = setTimeout(paintVotes, 100); }).observe($('#view'), { childList: true, subtree: true });
+async function loadGameVote(id) {
+  const el = $('#gvote'); if (!el || !sb) return;
+  const m = await VDB.votes([id]); if (!$('#gvote') || !m) return;
+  const o = m[id], p = vPct(o);
+  $('#gvote').innerHTML = `<button class="vb ${o.mine > 0 ? 'on' : ''}" onclick="castVote('${id}',${o.mine > 0 ? 0 : 1})">▲ Upvote ${o.up}</button><button class="vb ${o.mine < 0 ? 'on' : ''}" onclick="castVote('${id}',${o.mine < 0 ? 0 : -1})">▼ ${o.down}</button><small>${p === null ? 'No votes yet' : p + '% liked this game'}</small>`;
+}
+async function castVote(id, v) {
+  if (needLogin()) return;
+  const r = await VDB.setVote(id, v); if (r.error) return toast('Vote failed: ' + r.error.message);
+  loadGameVote(id);
+}
+async function reviewsSB(id) {
+  const [rv, vt] = await Promise.all([sb.from('game_reviews').select('*').eq('game_id', id), sb.from('review_votes').select('review_id,uid,v').eq('game_id', id)]);
+  if (rv.error) return null;
+  const me = session ? session.user.uid : null, votes = vt.data || [];
+  const list = (rv.data || []).map(r => { const vs = votes.filter(x => x.review_id === r.id); return { id: r.id, uid: r.uid, name: r.name, av: r.av, color: r.color || '#888', up: r.up, text: r.text, ts: Number(r.ts), own: r.uid === me, yes: vs.filter(x => x.v === 'yes').length, no: vs.filter(x => x.v === 'no').length, mine: (vs.find(x => x.uid === me) || {}).v || '' }; });
+  list.sort(rvSort === 'helpful' ? (a, b) => (b.yes - b.no) - (a.yes - a.no) : (a, b) => b.ts - a.ts);
+  const mine = list.find(r => r.own);
+  return { total: list.length, up: list.filter(r => r.up).length, reviews: list, canReview: !!session, mine: mine ? { text: mine.text, up: mine.up } : null };
+}
+/* ---- developer-customizable game page ---- */
+const ytId = v => { const s = String(v || '').trim(), m = s.match(/(?:youtu\.be\/|[?&]v=|embed\/)([\w-]{11})/) || s.match(/^([\w-]{11})$/); return m ? m[1] : ''; };
+const safeUrl = u => (/^https?:\/\//i.test(String(u || '').trim()) ? String(u).trim() : '');
+const okBanner = b => (/^data:image\/(jpeg|png|webp);base64,/.test(String(b || '')) ? b : '');
+const okAcc = a => (/^#[0-9a-f]{6}$/i.test(String(a || '')) ? a : '#3b6ab8');
+const gbandHTML = (d, title) => `<div class="gband pat-${E(['grid', 'dots', 'stripes', 'plain'].includes(d.pattern) ? d.pattern : 'grid')}" style="--pac:${okAcc(d.accent)}">${okBanner(d.banner) ? `<img class="pbimg" src="${okBanner(d.banner)}" alt="">` : ''}<div class="pbveil"></div><div class="gbin"><b>${E(d.headline || title || '')}</b></div></div>`;
+async function loadGameCustom(id) {
+  const d = await VDB.page(id).catch(() => null); if (!d || !$('#gband')) return;
+  const g = games.find(x => x.id === id), ac = okAcc(d.accent), yt = ytId(d.video);
+  $('#gband').innerHTML = gbandHTML(d, g && g.title);
+  $('#gcustom').innerHTML = (yt ? `<div class="card pad" style="margin-top:18px"><h3 class="ft" style="border-color:${ac}">Trailer</h3><div class="gvid"><iframe src="https://www.youtube-nocookie.com/embed/${yt}" allowfullscreen loading="lazy" referrerpolicy="no-referrer"></iframe></div></div>` : '')
+    + (d.sections || []).slice(0, 4).map(s => `<div class="card pad" style="margin-top:18px"><h3 class="ft" style="border-color:${ac}">${E(s.t || '')}</h3><p style="white-space:pre-wrap;word-break:break-word;color:var(--soft)">${E(s.x || '')}</p></div>`).join('')
+    + ((d.links || []).filter(l => safeUrl(l.u)).length ? `<div class="acts" style="margin-top:14px">${d.links.filter(l => safeUrl(l.u)).slice(0, 4).map(l => `<a class="btn sm" href="${E(safeUrl(l.u))}" target="_blank" rel="noopener noreferrer nofollow">${E(l.l || 'Link')}</a>`).join('')}</div>` : '');
+  const t = document.querySelector('.gtitle'); if (t) t.style.borderBottom = '3px solid ' + ac;
+}
+let PG = null;
+async function pageEditor(id) {
+  if (!session) return (location.hash = '#/');
+  const g = games.find(x => x.id === id);
+  if (!g || !g.mine) return (location.hash = '#/dev');
+  if (!sb) { $('#view').innerHTML = '<span class="label">DEVELOPER PORTAL</span><div class="hint">The database (Supabase) is not configured, so game pages cannot be customized yet.</div>'; return; }
+  const d = (await VDB.page(id)) || {};
+  PG = { id, title: g.title, accent: okAcc(d.accent), pattern: d.pattern || 'grid', banner: okBanner(d.banner) || null, headline: d.headline || '', video: d.video || '', sections: (d.sections || []).map(s => ({ ...s })), links: (d.links || []).map(l => ({ ...l })) };
+  $('#view').innerHTML = `<span class="label">DEVELOPER PORTAL</span><div class="fhead"><h1 class="ftitle">Customize page — ${E(g.title)}</h1><div class="acts" style="margin:0"><button class="btn sm" onclick="pgSave()">💾 Save page</button><a class="btn sm alt" href="#/game/${id}">View game page</a><button class="btn sm alt" onclick="location.hash='#/dev'">← Back</button></div></div>
+    <div class="hint">Everything here is shown to every player on your game page and saved in the database.</div>
+    <div id="gpv"></div>
+    <div class="pset"><div class="card pad"><h3 class="ft">Look</h3>
+      <label>Headline on the banner</label><input maxlength="60" value="${E(PG.headline)}" placeholder="${E(g.title)}" oninput="PG.headline=this.value;pgDraw()">
+      <label>Accent color</label><div class="skacc">${SKINS.map(([c, n]) => `<button type="button" data-acc="${c}" title="${n}" style="background:${c}" onclick="PG.accent='${c}';pgDraw()"></button>`).join('')}<input type="color" value="${PG.accent}" oninput="PG.accent=this.value;pgDraw()"></div>
+      <label>Banner pattern</label><div class="patpick">${PATS.map(([k, n]) => `<button type="button" class="vb" data-pat="${k}" onclick="PG.pattern='${k}';pgDraw()">${n}</button>`).join('')}</div>
+      <label>Banner image</label><div class="shirt-upload"><button class="btn sm alt" onclick="pickImage(900,220,d=>{PG.banner=d;pgDraw()},90000)">Upload banner</button><button class="x" onclick="PG.banner=null;pgDraw()">Remove</button></div></div>
+    <div class="card pad"><h3 class="ft">Trailer &amp; links</h3>
+      <label>YouTube trailer (link or video id)</label><input value="${E(PG.video)}" placeholder="https://youtu.be/…" oninput="PG.video=this.value">
+      <label>Buttons (max 4: Discord, website, …)</label><div id="pgLinks"></div><div class="acts"><button class="btn sm alt" onclick="pgAdd('links')">＋ Add link</button></div></div>
+    <div class="card pad span"><h3 class="ft">Custom sections (max 4)</h3><div id="pgSecs"></div><div class="acts"><button class="btn sm alt" onclick="pgAdd('sections')">＋ Add section</button></div></div></div>
+    <div class="acts" style="margin:14px 0 40px"><button class="btn" onclick="pgSave()">💾 Save page</button></div>`;
+  pgDraw();
+}
+function pgAdd(k) { if (PG[k].length >= 4) return toast('Max 4'); PG[k].push(k === 'links' ? { l: '', u: '' } : { t: '', x: '' }); pgDraw(); }
+function pgDraw() {
+  if (!PG) return;
+  const pv = $('#gpv'); if (pv) pv.innerHTML = gbandHTML(PG, PG.title);
+  const s = $('#pgSecs'); if (s) s.innerHTML = PG.sections.map((x, i) => `<div class="selp"><input value="${E(x.t || '')}" maxlength="40" placeholder="Section title" oninput="PG.sections[${i}].t=this.value"><textarea maxlength="600" placeholder="Text…" oninput="PG.sections[${i}].x=this.value">${E(x.x || '')}</textarea><button class="x" onclick="PG.sections.splice(${i},1);pgDraw()">Remove</button></div>`).join('') || '<div class="empty">No sections yet.</div>';
+  const l = $('#pgLinks'); if (l) l.innerHTML = PG.links.map((x, i) => `<div class="row2" style="margin-bottom:6px"><input value="${E(x.l || '')}" maxlength="24" placeholder="Label" oninput="PG.links[${i}].l=this.value"><div style="display:flex;gap:6px"><input value="${E(x.u || '')}" placeholder="https://…" oninput="PG.links[${i}].u=this.value"><button class="x" onclick="PG.links.splice(${i},1);pgDraw()">✕</button></div></div>`).join('') || '<div class="empty" style="padding:6px 0">No links yet.</div>';
+  document.querySelectorAll('.skacc button[data-acc]').forEach(x => x.classList.toggle('on', x.dataset.acc.toLowerCase() === PG.accent.toLowerCase()));
+  document.querySelectorAll('.patpick button[data-pat]').forEach(x => x.classList.toggle('on', x.dataset.pat === PG.pattern));
+}
+async function pgSave() {
+  if (!PG) return;
+  if (PG.video.trim() && !ytId(PG.video)) return toast('That is not a valid YouTube link');
+  const d = { accent: okAcc(PG.accent), pattern: PG.pattern, banner: okBanner(PG.banner) || null, headline: PG.headline.trim().slice(0, 60), video: PG.video.trim(),
+    sections: PG.sections.filter(s => (s.t || '').trim() || (s.x || '').trim()).slice(0, 4).map(s => ({ t: (s.t || '').slice(0, 40), x: (s.x || '').slice(0, 600) })),
+    links: PG.links.filter(l => safeUrl(l.u) && (l.l || '').trim()).slice(0, 4).map(l => ({ l: l.l.slice(0, 24), u: safeUrl(l.u) })) };
+  const { error } = await VDB.savePage(PG.id, d);
+  if (error) return toast('Could not save: ' + error.message);
+  toast('Game page saved — players see it now');
+}
+
 /* ---------- router ---------- */
 function route() {
   scrollTo(0, 0);
@@ -2121,6 +2055,7 @@ function route() {
     if (p[1] === 'new') return editPage(null, p[2]); // p[2] = optional group id → group game
     if (p[1] === 'edit') return editPage(p[2]);
     if (p[1] === 'changelog') return changelogPage(p[2]);
+    if (p[1] === 'page') return pageEditor(p[2]);
     if (p[1] === 'stats') return statsPage(p[2]);
     if (p[1] === 'badges') return badgesPage();
     if (p[1] === 'shirts') return itemsPage('shirts');
